@@ -20,7 +20,7 @@ class BottomNavBar extends StatelessWidget {
           icon: SizedBox(
             height: 24,
             width: 24,
-            child: SvgPicture.asset('assets/icons/home-2.svg', color: secondary),
+            child: SvgPicture.asset('assets/icons/PersAwal-2.svg', color: secondary),
           ),
           label: 'Beranda',
         ),

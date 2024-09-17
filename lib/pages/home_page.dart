@@ -22,7 +22,7 @@ class _HomePageState extends State<HomePage> {
 
   // Daftar halaman yang akan ditampilkan berdasarkan indeks
   static List<Widget> _widgetOptions = <Widget>[
-    _HomeContent(), // Halaman Beranda
+    _PersAwalContent(), // Halaman Beranda
     ReportPage(),
     ProfilePage()   // Halaman Laporan
   ];
@@ -104,7 +104,7 @@ class _HomePageState extends State<HomePage> {
 }
 
 // Konten Beranda
-class _HomeContent extends StatelessWidget {
+class _PersAwalContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(

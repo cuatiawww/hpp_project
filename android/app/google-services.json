@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "112732122079",
+    "project_id": "hpp-project-f1d88",
+    "storage_bucket": "hpp-project-f1d88.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:112732122079:android:267127df828c8c4890f26a",
+        "android_client_info": {
+          "package_name": "com.example.hpp_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcMeqEvjQOG6-qhnJKPjA8gglDezExmjk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
