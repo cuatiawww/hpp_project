@@ -4,6 +4,9 @@ import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
 import 'report_page.dart';
 
+import 'package:get/get.dart';
+import 'package:hpp_project/user_auth/auth_controller.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -13,6 +16,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0; // Default index untuk Beranda
+  final authC = Get.find<AuthController>();
 
   void _onItemTapped(int index) {
     setState(() {
@@ -252,15 +256,20 @@ class _PersAwalContent extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final itemWidth = (constraints.maxWidth - 20) / 4; 
+          final itemWidth = (constraints.maxWidth - 20) / 3; 
           return Wrap(
             spacing: 2,
             runSpacing: 2,
             children: [
-              _buildMenuItem(Icons.calculate, "Calc. HPP", itemWidth),
-              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth),
-              _buildMenuItem(Icons.report, "Pembelian", itemWidth),
-              _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth),
+              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
+                Get.toNamed('/persediaan_awal');
+              }),
+              _buildMenuItem(Icons.report, "Pembelian", itemWidth, onPressed: () {
+                
+              }),
+              _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth, onPressed: () {
+                
+              }),
             ],
           );
         },
@@ -268,18 +277,20 @@ class _PersAwalContent extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String label, double itemWidth) {
+  Widget _buildMenuItem(IconData icon, String label, double itemWidth,
+      {Function()? onPressed}) {
     return Container(
       width: itemWidth,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            height: 60,
-            width: 60,
-            decoration: BoxDecoration(
-              color: secondary,
-              shape: BoxShape.circle,
+          ElevatedButton(
+            onPressed: onPressed,
+            style: ElevatedButton.styleFrom(
+              shape: CircleBorder(),
+              padding: EdgeInsets.all(15),
+              fixedSize: Size(60, 60),
+              backgroundColor: Color(0xFF080C67),
             ),
             child: Center(
               child: Icon(

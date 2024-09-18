@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hpp_project/theme.dart';
+import 'package:hpp_project/user_auth/auth_controller.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -8,6 +10,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool isEditing = false; // Untuk melacak mode edit
+  final authC = Get.find<AuthController>(); // Inisialisasi AuthController
 
   // Controller untuk TextFormField
   final _nameController = TextEditingController(text: 'Zendaya Coleman');
@@ -100,9 +103,7 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildEditableTextField('Alamat Usaha', _storeAddressController),
               SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, '/login'); // Ganti '/login' dengan route login Anda
-                },
+                onPressed: () => authC.logout(), // Memanggil fungsi logout pada authController
                 style: ElevatedButton.styleFrom(
                   foregroundColor: Colors.white,
                   backgroundColor: Colors.red, // Warna merah untuk tombol log out
