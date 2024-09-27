@@ -6,6 +6,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:hpp_project/auth/regist_page.dart';
 import 'package:hpp_project/auth/forgot.dart';
 import 'package:hpp_project/pages/home_page.dart';
+import 'package:hpp_project/routes/routes.dart';
 import 'package:hpp_project/user_auth/auth_controller.dart';
 
 class LoginPage extends StatefulWidget {
@@ -18,8 +19,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool isChecked = false; // State untuk Checkbox
 
-  final emailC = TextEditingController(text: "testlogin@gmail.com");
-  final passC = TextEditingController(text: "123123");
+  final emailC = TextEditingController(); //text: "testlogin@gmail.com"
+  final passC = TextEditingController(); //text: "123123"
 
   final authC = Get.find<AuthController>();
 
@@ -30,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
             child: SingleChildScrollView(
       child: Column(
         children: [
-          SizedBox(height: 50),
+          SizedBox(height: 50), //BISA DI WRAP DENGAN PADDING BIAR LEBIH RAPIH
           Image.asset(
             'assets/images/logo-taxcenter.png',
             width: 209,
@@ -158,12 +159,7 @@ class _LoginPageState extends State<LoginPage> {
                         Row(
                           children: [
                             TextButton(
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => ForgotPage()));
-                              },
+                              onPressed: () => Get.toNamed(Routes.forgot),
                               child: Text(
                                 'Lupa Password?',
                               ),
@@ -188,7 +184,6 @@ class _LoginPageState extends State<LoginPage> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                         ),
-                        key: Key('Login'),
                         onPressed: () => authC.login(emailC.text, passC.text),
                         child: Text(
                           style: TextStyle(
@@ -215,12 +210,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         key: Key('Regist'),
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => RegistPage()));
-                        },
+                        onPressed: () => Get.toNamed(Routes.regist),
                         child: Text(
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
