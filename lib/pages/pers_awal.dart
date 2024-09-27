@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/pages/input_pers_awal.dart';
 import 'package:hpp_project/pages/pembelian.dart';
-import 'package:hpp_project/pages/pers_akhir.dart';
+import 'package:hpp_project/pages/pers_akhir_page.dart';
 import 'package:hpp_project/service/database.dart';
 
 class PersAwal extends StatefulWidget {
@@ -19,7 +19,7 @@ class _PersAwalState extends State<PersAwal> {
     Tab(text: 'P. Akhir'),
   ];
 
-  Stream? PersAwalStream;
+  Stream<QuerySnapshot>? persAwalStream; // Perbaiki tipe stream
 
   @override
   void initState() {
@@ -27,30 +27,33 @@ class _PersAwalState extends State<PersAwal> {
     getontheload();
   }
 
-  getontheload() async {
-    PersAwalStream = await DatabaseMethods().getBarangDetails();
+  getontheload() {
+    persAwalStream = DatabaseMethods().getBarangDetails(); // Perbaiki pemanggilan
     setState(() {});
   }
 
   Widget allBarangDetails() {
-  return StreamBuilder(
-    stream: PersAwalStream,
-    builder: (context, AsyncSnapshot snapshot) {
+  return StreamBuilder<QuerySnapshot>(
+    stream: persAwalStream,
+    builder: (context, snapshot) {
       if (!snapshot.hasData) {
         return Center(child: CircularProgressIndicator());
       }
 
-      if (snapshot.data.docs.length == 0) {
+      // Tambahkan log untuk melihat berapa banyak dokumen yang diterima
+      print("Jumlah dokumen: ${snapshot.data!.docs.length}");
+
+      if (snapshot.data!.docs.isEmpty) {
         return Center(child: Text("Tidak ada data barang yang ditemukan."));
       }
 
       return ListView.builder(
-        itemCount: snapshot.data.docs.length,
+        itemCount: snapshot.data!.docs.length,
         itemBuilder: (context, index) {
-          DocumentSnapshot ds = snapshot.data.docs[index];
-          int jumlah = ds["Jumlah"]; // Mengambil Jumlah dari database
-          int pricePerItem = ds["Price"]; // Mengambil Price dari database
-          String satuan = ds["Satuan"]; // Mengambil Satuan dari database
+          DocumentSnapshot ds = snapshot.data!.docs[index];
+          int jumlah = ds["Jumlah"]; 
+          int pricePerItem = ds["Price"]; 
+          String satuan = ds["Satuan"]; 
           int totalPrice = jumlah * pricePerItem;
 
           return Container(
@@ -142,90 +145,89 @@ class _PersAwalState extends State<PersAwal> {
             // Pembelian Tab
             Pembelian(),
             // P. Akhir Tab
-            // PersAkhir()
-            // PersAkhirPage()
+            PersAkhirPage()
           ],
         ),
       ),
     );
   }
 
- Future<void> EditBarangDetail(DocumentSnapshot ds) {
-  TextEditingController nameController = TextEditingController(text: ds["Name"]);
-  TextEditingController priceController = TextEditingController(text: ds["Price"].toString());
-  TextEditingController jumlahController = TextEditingController(text: ds["Jumlah"].toString());
+  Future<void> EditBarangDetail(DocumentSnapshot ds) {
+    TextEditingController nameController = TextEditingController(text: ds["Name"]);
+    TextEditingController priceController = TextEditingController(text: ds["Price"].toString());
+    TextEditingController jumlahController = TextEditingController(text: ds["Jumlah"].toString());
 
-  return showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text("Edit Barang"),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Nama Barang", style: TextStyle(fontWeight: FontWeight.bold)),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(border: OutlineInputBorder()),
-            ),
-            SizedBox(height: 10),
-            Text("Harga per Pcs", style: TextStyle(fontWeight: FontWeight.bold)),
-            TextField(
-              controller: priceController,
-              decoration: InputDecoration(border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 10),
-            Text("Jumlah", style: TextStyle(fontWeight: FontWeight.bold)),
-            TextField(
-              controller: jumlahController,
-              decoration: InputDecoration(border: OutlineInputBorder()),
-              keyboardType: TextInputType.number,
-            ),
-          ],
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Edit Barang"),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Nama Barang", style: TextStyle(fontWeight: FontWeight.bold)),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(border: OutlineInputBorder()),
+              ),
+              SizedBox(height: 10),
+              Text("Harga per Pcs", style: TextStyle(fontWeight: FontWeight.bold)),
+              TextField(
+                controller: priceController,
+                decoration: InputDecoration(border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: 10),
+              Text("Jumlah", style: TextStyle(fontWeight: FontWeight.bold)),
+              TextField(
+                controller: jumlahController,
+                decoration: InputDecoration(border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: Text("Batal"),
-        ),
-        TextButton(
-          onPressed: () async {
-            Map<String, dynamic> updateInfo = {
-              "Name": nameController.text,
-              "Price": int.parse(priceController.text),
-              "Jumlah": int.parse(jumlahController.text),
-            };
-            try {
-              // Attempt to update the document
-              await DatabaseMethods().updateBarangDetail(ds.id, updateInfo);
+        actions: [
+          TextButton(
+            onPressed: () {
               Navigator.pop(context);
-            } catch (e) {
-              // Show an error message if the update fails
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text("Error"),
-                  content: Text("Failed to update data: ${e.toString()}"),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: Text("Ok"),
-                    ),
-                  ],
-                ),
-              );
-            }
-          },
-          child: Text("Update"),
-        ),
-      ],
-    ),
-  );
-}
+            },
+            child: Text("Batal"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Map<String, dynamic> updateInfo = {
+                "Name": nameController.text,
+                "Price": int.parse(priceController.text),
+                "Jumlah": int.parse(jumlahController.text),
+              };
+              try {
+                // Attempt to update the document
+                await DatabaseMethods().updateBarangDetail(ds.id, updateInfo);
+                Navigator.pop(context);
+              } catch (e) {
+                // Show an error message if the update fails
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: Text("Error"),
+                    content: Text("Failed to update data: ${e.toString()}"),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text("Ok"),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            child: Text("Update"),
+          ),
+        ],
+      ),
+    );
+  }
 }
