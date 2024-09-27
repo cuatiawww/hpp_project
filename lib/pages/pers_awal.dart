@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/pages/input_pers_awal.dart';
-// import 'package:hpp_project/theme.dart';
-// import 'package:flutter_svg/svg.dart';
+import 'package:hpp_project/pages/pembelian.dart';
+import 'package:hpp_project/pages/pers_akhir.dart';
+import 'package:hpp_project/service/database.dart';
 
 class PersAwal extends StatefulWidget {
   const PersAwal({super.key});
@@ -11,58 +13,219 @@ class PersAwal extends StatefulWidget {
 }
 
 class _PersAwalState extends State<PersAwal> {
-    TextEditingController namecontroller = new TextEditingController();
-  TextEditingController agecontroller = new TextEditingController();
-  TextEditingController locationcontroller = new TextEditingController();
-  Stream? EmployeeStream;
-  
+  List<Tab> myTab = [
+    Tab(text: 'P. Awal'),
+    Tab(text: 'Pembelian'),
+    Tab(text: 'P. Akhir'),
+  ];
+
+  Stream? PersAwalStream;
+
+  @override
+  void initState() {
+    super.initState();
+    getontheload();
+  }
+
+  getontheload() async {
+    PersAwalStream = await DatabaseMethods().getBarangDetails();
+    setState(() {});
+  }
+
+  Widget allBarangDetails() {
+  return StreamBuilder(
+    stream: PersAwalStream,
+    builder: (context, AsyncSnapshot snapshot) {
+      if (!snapshot.hasData) {
+        return Center(child: CircularProgressIndicator());
+      }
+
+      if (snapshot.data.docs.length == 0) {
+        return Center(child: Text("Tidak ada data barang yang ditemukan."));
+      }
+
+      return ListView.builder(
+        itemCount: snapshot.data.docs.length,
+        itemBuilder: (context, index) {
+          DocumentSnapshot ds = snapshot.data.docs[index];
+          int jumlah = ds["Jumlah"]; // Mengambil Jumlah dari database
+          int pricePerItem = ds["Price"]; // Mengambil Price dari database
+          String satuan = ds["Satuan"]; // Mengambil Satuan dari database
+          int totalPrice = jumlah * pricePerItem;
+
+          return Container(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                      side: BorderSide(color: Colors.black),
+                    ),
+                    leading: GestureDetector(
+                      onTap: () {
+                        EditBarangDetail(ds);
+                      },
+                      child: Icon(Icons.edit),
+                    ),
+                    title: Text(
+                      ds["Name"],
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 23),
+                    ),
+                    subtitle: Text(
+                      '$jumlah $satuan - Rp ${pricePerItem}/$satuan',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w400, fontSize: 12),
+                    ),
+                    trailing: Text(
+                      'Rp $totalPrice',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500, fontSize: 18),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-              context, MaterialPageRoute(builder: (context) => InputPersAwal()));
-        },
-        child: Icon(Icons.add),
-      ),
-      appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Perusahaan",
-              style: TextStyle(
-                  color: Colors.blue,
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.bold),
-            ),
-            Text(
-              "Dagang",
-              style: TextStyle(
-                  color: Colors.orange,
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.bold),
-            )
-          ],
+    return DefaultTabController(
+      initialIndex: 0,
+      length: myTab.length,
+      child: Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => InputPersAwal()));
+          },
+          child: Icon(Icons.add),
         ),
-      ),
-      body: Container(
-        margin: EdgeInsets.only(left: 20.0, right: 20.0, top: 30.0),
-        child: Column(
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text(
+            'Perusahaan Dagang',
+            style: TextStyle(
+              color: Color(0xFFFFFFFF),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(60),
+            child: TabBar(
+              indicatorColor: Color(0xFFFFFFFF),
+              indicatorPadding: EdgeInsets.all(5),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Color(0xFFFFFFFF),
+              labelStyle: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: TextStyle(
+                color: Color(0xFFFFFFFF),
+              ),
+              tabs: myTab,
+            ),
+          ),
+          backgroundColor: Color(0xFF080C67),
+        ),
+        body: TabBarView(
           children: [
-            // Expanded(child: allEmployeeDetails()),
+            // P. Awal Tab
+            allBarangDetails(),
+            // Pembelian Tab
+            Pembelian(),
+            // P. Akhir Tab
+            // PersAkhir()
+            // PersAkhirPage()
           ],
         ),
       ),
     );
   }
 
-}
+ Future<void> EditBarangDetail(DocumentSnapshot ds) {
+  TextEditingController nameController = TextEditingController(text: ds["Name"]);
+  TextEditingController priceController = TextEditingController(text: ds["Price"].toString());
+  TextEditingController jumlahController = TextEditingController(text: ds["Jumlah"].toString());
 
-  // getontheload()async{
-  //   EmployeeStream= await DatabaseMethods().getEmployeeDetails();
-  //   setState(() {
-      
-  //   });
-  // }
+  return showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text("Edit Barang"),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Nama Barang", style: TextStyle(fontWeight: FontWeight.bold)),
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(border: OutlineInputBorder()),
+            ),
+            SizedBox(height: 10),
+            Text("Harga per Pcs", style: TextStyle(fontWeight: FontWeight.bold)),
+            TextField(
+              controller: priceController,
+              decoration: InputDecoration(border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+            ),
+            SizedBox(height: 10),
+            Text("Jumlah", style: TextStyle(fontWeight: FontWeight.bold)),
+            TextField(
+              controller: jumlahController,
+              decoration: InputDecoration(border: OutlineInputBorder()),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: Text("Batal"),
+        ),
+        TextButton(
+          onPressed: () async {
+            Map<String, dynamic> updateInfo = {
+              "Name": nameController.text,
+              "Price": int.parse(priceController.text),
+              "Jumlah": int.parse(jumlahController.text),
+            };
+            try {
+              // Attempt to update the document
+              await DatabaseMethods().updateBarangDetail(ds.id, updateInfo);
+              Navigator.pop(context);
+            } catch (e) {
+              // Show an error message if the update fails
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: Text("Error"),
+                  content: Text("Failed to update data: ${e.toString()}"),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: Text("Ok"),
+                    ),
+                  ],
+                ),
+              );
+            }
+          },
+          child: Text("Update"),
+        ),
+      ],
+    ),
+  );
+}
+}

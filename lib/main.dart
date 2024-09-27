@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 import 'package:hpp_project/pages/home_page.dart';
 import 'package:hpp_project/pages/input_pers_awal.dart';
 import 'package:hpp_project/pages/pers_awal.dart';
-import 'package:hpp_project/pages/persediaan_awal.dart';
 import 'package:hpp_project/pages/splash_view.dart';
 
 import 'package:hpp_project/routes/routes.dart';
@@ -60,7 +59,6 @@ class MyApp extends StatelessWidget {
               GetPage(name: Routes.otpSuccess, page: () => OtpSuccess()),
               GetPage(name: Routes.reset, page: () => ResetPage()),
               GetPage(name: Routes.home, page: () => HomePage()),
-              GetPage(name: Routes.persediaanAwal, page: () => PerAwal()),
               GetPage(name: Routes.inputPersAwal, page: () => InputPersAwal()),
               GetPage(name: Routes.persAwal, page: () => PersAwal()),
             ],
