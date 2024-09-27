@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:hpp_project/pages/pembelian.dart';
 import 'package:hpp_project/pages/profile_page.dart';
+import 'package:hpp_project/pages/report_page.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
 import 'report_page.dart';
+import 'package:hpp_project/pages/pers_awal.dart'; // Add this import for the Pers Awal page
+
 
 import 'package:get/get.dart';
 import 'package:hpp_project/user_auth/auth_controller.dart';
@@ -27,7 +31,7 @@ class _HomePageState extends State<HomePage> {
   // Daftar halaman yang akan ditampilkan berdasarkan indeks
   static List<Widget> _widgetOptions = <Widget>[
     _PersAwalContent(), // Halaman Beranda
-    ReportPage(),
+    ReportPembelian(),
     ProfilePage()   // Halaman Laporan
   ];
 
@@ -261,12 +265,17 @@ class _PersAwalContent extends StatelessWidget {
             spacing: 2,
             runSpacing: 2,
             children: [
+              // _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
+              //   Get.toNamed('/persediaan_awal');
+              // }),
               _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
-                Get.toNamed('/persediaan_awal');
-              }),
-              _buildMenuItem(Icons.report, "Pembelian", itemWidth, onPressed: () {
-                
-              }),
+  // Use Get.to() to navigate to the PersAwal page
+  Get.to(() => PersAwal());
+}),
+_buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
+  // Use Get.to() to navigate to the PersAwal page
+  Get.to(() => ReportPembelian());
+}),
               _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth, onPressed: () {
                 
               }),

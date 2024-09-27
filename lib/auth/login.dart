@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:hpp_project/auth/regist_page.dart';
 import 'package:hpp_project/auth/forgot.dart';
 import 'package:hpp_project/pages/home_page.dart';

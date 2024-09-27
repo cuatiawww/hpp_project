@@ -27,37 +27,26 @@ class DatabaseMethods {
   Future<void> deleteBarang(String itemId) async {
     try {
       await FirebaseFirestore.instance.collection('Barang').doc(itemId).delete();
-      print("Item deleted successfully.");
     } catch (e) {
       print("Error deleting item: $e");
     }
   }
 
   Future<void> logDeletion(String itemId) async {
-    try {
-      await FirebaseFirestore.instance.collection('purchases').add({
-        'item_id': itemId,
-        'action': 'delete',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print("Deletion logged successfully.");
-    } catch (e) {
-      print("Failed to log deletion: $e");
-    }
+    await FirebaseFirestore.instance.collection('history').add({
+      'item_id': itemId,
+      'action': 'delete',
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> logQuantityRemoval(String itemId, int quantityRemoved) async {
-    try {
-      await FirebaseFirestore.instance.collection('purchases').add({
-        'item_id': itemId,
-        'action': 'remove',
-        'quantity': -quantityRemoved,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print("Quantity removal logged successfully.");
-    } catch (e) {
-      print("Failed to log quantity removal: $e");
-    }
+    await FirebaseFirestore.instance.collection('history').add({
+      'item_id': itemId,
+      'action': 'remove',
+      'quantity': -quantityRemoved,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> removeQuantity(String itemId, int quantity) async {
@@ -79,22 +68,22 @@ class DatabaseMethods {
       List<Map<String, dynamic>> finalInventory = [];
 
       for (var barangDoc in barangSnapshot.docs) {
-        var barangData = barangDoc.data() as Map<String, dynamic>? ?? {};
-        var initialQuantity = barangData['Jumlah'] ?? 0;
-        var initialPrice = barangData['Price']?.toDouble() ?? 0.0;
+        var barangData = barangDoc.data() as Map<String, dynamic>?;
+        var initialQuantity = barangData?['Jumlah'] ?? 0;
+        var initialPrice = barangData?['Price']?.toDouble() ?? 0.0;
 
         QuerySnapshot purchaseSnapshot = await firestore
             .collection('purchases')
-            .where('item_id', isEqualTo: barangDoc.id)
+            .where('Id', isEqualTo: barangDoc.id)
             .get();
 
         int totalPurchasedQuantity = 0;
         double totalPrice = 0.0;
 
         for (var purchaseDoc in purchaseSnapshot.docs) {
-          var purchaseData = purchaseDoc.data() as Map<String, dynamic>? ?? {};
-          totalPurchasedQuantity += (purchaseData['quantity'] as int?) ?? 0; // Pastikan sesuai
-          totalPrice += (purchaseData['price']?.toDouble() ?? 0.0) * (purchaseData['quantity'] ?? 0);
+          var purchaseData = purchaseDoc.data() as Map<String, dynamic>?;
+          totalPurchasedQuantity += (purchaseData?['Jumlah'] as int?) ?? 0;
+          totalPrice += ((purchaseData?['Harga']?.toDouble() ?? 0.0) * (purchaseData?['Jumlah'] ?? 0));
         }
 
         double averagePrice = totalPurchasedQuantity > 0
@@ -103,7 +92,7 @@ class DatabaseMethods {
 
         finalInventory.add({
           'id': barangDoc.id,
-          'name': barangData['Name'] ?? '',
+          'name': barangData?['Name'] ?? '',
           'initial_quantity': initialQuantity,
           'purchased_quantity': totalPurchasedQuantity,
           'total_quantity': initialQuantity + totalPurchasedQuantity,
