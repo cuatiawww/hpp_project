@@ -2,8 +2,11 @@
 
 plugins {
     id "com.android.application"
-    id 'com.google.gms.google-services' // Pastikan plugin ini diterapkan sebelum plugin Flutter
     id "kotlin-android"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services' // Pastikan plugin ini diterapkan sebelum plugin Flutter
+    id 'com.google.firebase.firebase-perf'
+    // START: FlutterFire Configuration
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -23,7 +26,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.hpp_project"
-        minSdkVersion = 23
+        minSdkVersion 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -43,7 +46,7 @@ flutter {
 
 dependencies {
     // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:33.3.0"))
+    implementation platform("com.google.firebase:firebase-bom:33.3.0")
     implementation 'com.android.support:multidex:1.0.3'
 
     // Firebase dependencies
