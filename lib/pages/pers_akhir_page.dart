@@ -40,7 +40,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            headingRowColor: MaterialStateProperty.all(Colors.blueAccent),
+            headingRowColor: WidgetStateProperty.all(Colors.blueAccent),
             columnSpacing: 20,
             dataTextStyle: TextStyle(color: Colors.black),
             headingTextStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
