@@ -7,6 +7,7 @@ import 'package:hpp_project/pages/home_page.dart';
 import 'package:hpp_project/pages/input_pers_awal.dart';
 import 'package:hpp_project/pages/pers_awal.dart';
 import 'package:hpp_project/pages/splash_view.dart';
+import 'package:hpp_project/pages/hpp_calculation_page.dart';
 
 import 'package:hpp_project/routes/routes.dart';
 import 'package:hpp_project/user_auth/auth_controller.dart';

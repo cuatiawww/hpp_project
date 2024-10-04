@@ -1,10 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/pages/profile_page.dart';
+import 'package:hpp_project/service/database.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hpp_project/pages/pers_awal.dart'; // Add this import for the Pers Awal page
-
-
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/user_auth/auth_controller.dart';
 
@@ -348,25 +351,60 @@ _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
           fontWeight: FontWeight.bold,
         ),
       ),
-      ElevatedButton(
-        onPressed: () {
+      
+ElevatedButton(
+  onPressed: () async {
+    final pdf = pw.Document();
+    
+    // Fetch data from Firestore
+    final snapshot = await FirebaseFirestore.instance
+        .collection("Pembelian")
+        .orderBy("Timestamp", descending: true)
+        .get();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.ListView.builder(
+            itemCount: snapshot.docs.length,
+            itemBuilder: (context, index) {
+              var pembelian = snapshot.docs[index];
+              String barangName = pembelian["BarangName"] ?? "Unknown";
+              int jumlah = pembelian["Jumlah"] ?? 0;
+              int price = pembelian["Price"] ?? 0;
+              int totalCost = jumlah * price;
+
+              return pw.Container(
+                margin: pw.EdgeInsets.symmetric(vertical: 8),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(barangName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                    pw.Text("$jumlah pcs - Rp $price/pcs"),
+                    pw.Text("Total: Rp $totalCost", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.Divider(),
+                  ],
+                ),
+              );
+            },
+          );
         },
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Color(0xFF080C67), 
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.document_scanner , size: 16), 
-            SizedBox(width: 8), // Jarak antara ikon dan teks
-            Text('Print PDF'),
-          ],
-        ),
       ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  },
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(Icons.document_scanner, size: 16),
+      SizedBox(width: 8),
+      Text('Print PDF'),
+    ],
+  ),
+),
     ],
   ),
   SizedBox(height: 16),
@@ -403,50 +441,84 @@ _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
     );
   }
 
-  Widget _buildRiwayat() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 25),
-      padding: EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
+ Widget _buildRiwayat() {
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 25),
+    padding: EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.5),
+          spreadRadius: 2,
+          blurRadius: 5,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        Text(
+          'Riwayat',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
-        ],
-      ),
-      child: Column(
-                      children: [
-                        Text(
-                          'Riwayat',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        Container(
-                          height: 300, // Set a fixed height for the list
-                          child: ListView.builder(
-                            itemCount: 4, // Replace with your actual data length
-                            shrinkWrap: true, // Allow the list to shrink to fit its content
-                            itemBuilder: (context, index) {
-                              return RiwayatItem(
-                                title: "Pensil",
-                                description: "100 pcs - 10.000/pcs",
-                                price: "Rp 1.000.000",
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-  }
+        ),
+        SizedBox(height: 16),
+        StreamBuilder<QuerySnapshot>(
+          stream: DatabaseMethods().getPembelianDetails(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return CircularProgressIndicator();
+            }
+
+            List<RiwayatItem> riwayatItems = [];
+            snapshot.data!.docs.forEach((doc) {
+              riwayatItems.add(
+                RiwayatItem(
+                  title: doc["BarangId"],
+                  description: "${doc["Jumlah"]} unit - Rp ${doc["Price"]}",
+                  price: "Rp ${doc["Jumlah"] * doc["Price"]}",
+                ),
+              );
+            });
+
+            return Container(
+              height: 300, // Set a fixed height for the list
+              child: ListView.builder(
+                itemCount: riwayatItems.length,
+                shrinkWrap: true, // Allow the list to shrink to fit its content
+                itemBuilder: (context, index) {
+                  return riwayatItems[index];
+                },
+              ),
+            );
+          },
+        ),
+        SizedBox(height: 16),
+        Text(
+          'Total Biaya: Rp ${_calculateTotalBiaya()}',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+int _calculateTotalBiaya() {
+  int totalBiaya = 0;
+  DatabaseMethods().getPembelianDetails().listen((event) {
+    event.docs.forEach((doc) {
+      totalBiaya += (doc["Jumlah"] * doc["Price"]) as int;
+    });
+  });
+  return totalBiaya;
+}
 }
 
 class RiwayatItem extends StatelessWidget {

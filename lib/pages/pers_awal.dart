@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hpp_project/pages/hpp_calculation_page.dart';
 import 'package:hpp_project/pages/input_pers_awal.dart';
 import 'package:hpp_project/pages/pembelian.dart';
 import 'package:hpp_project/pages/pers_akhir_page.dart';
@@ -96,11 +97,24 @@ class _PersAwalState extends State<PersAwal> {
       initialIndex: 0,
       length: myTab.length,
       child: Scaffold(
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => InputPersAwal()));
-          },
-          child: Icon(Icons.add),
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            FloatingActionButton(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => InputPersAwal()));
+              },
+              child: Icon(Icons.add),
+            ),
+            SizedBox(height: 16),
+            FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (context) => HPPCalculationPage()));
+              },
+              label: Text('Hitung HPP'),
+              icon: Icon(Icons.calculate),
+            ),
+          ],
         ),
         appBar: AppBar(
           centerTitle: true,

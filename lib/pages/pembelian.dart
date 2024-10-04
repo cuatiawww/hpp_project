@@ -143,7 +143,6 @@ class _PembelianPageState extends State<PembelianPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Pembelian Barang")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
