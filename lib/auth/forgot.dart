@@ -31,14 +31,15 @@ class _ForgotPageState extends State<ForgotPage> {
               ),
               SizedBox(height: 50),
               Container(
-                  clipBehavior: Clip.antiAliasWithSaveLayer,
-                  height: 550,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(50),
-                        topRight: Radius.circular(50)),
-                    color: Color(0xffFFFFFF),
-                  ),
+                padding: EdgeInsets.symmetric(horizontal: 32),
+                clipBehavior: Clip.antiAliasWithSaveLayer,
+                height: 650,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(50),
+                      topRight: Radius.circular(50)),
+                  color: Color(0xffFFFFFF),
+                ),
                   child: Column(
                     children: [
                       SizedBox(height: 40),
@@ -46,53 +47,48 @@ class _ForgotPageState extends State<ForgotPage> {
                           style: TextStyle(
                               fontWeight: FontWeight.w600, fontSize: 24)),
                       SizedBox(height: 5),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 30),
-                        child: Text(
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          'Kami akan mengirimkan email berisi tautan untuk mengatur ulang kata sandi Anda.',
-                          textAlign: TextAlign.center,
+                      Text(
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
+                        'Kami akan mengirimkan email berisi tautan untuk mengatur ulang kata sandi Anda.',
+                        textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 60),
                       // INPUT EMAIL
                       Row(
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              'Email',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                              textAlign: TextAlign.start,
+                          Text(
+                            'Email',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
+                            textAlign: TextAlign.start,
                           ),
                         ],
                       ),
                       SizedBox(height: 5),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: FormBuilderTextField(
-                          controller: emailC,
-                          key: Key('email'),
-                          name: 'email',
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(),
-                            ),
-                            hintText: 'Masukkan Email Anda*',
+                      FormBuilderTextField(
+                        controller: emailC,
+                        validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Email tidak boleh kosong';
+                        }
+                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                          return 'Masukkan email yang valid';
+                        }
+                        return null;
+                      },
+                        key: Key('email'),
+                        name: 'email',
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(),
                           ),
-                          validator: FormBuilderValidators.compose([
-                            FormBuilderValidators.required(
-                                errorText: 'Email wajib diisi'),
-                            FormBuilderValidators.email(),
-                          ]),
+                          hintText: 'Masukkan Email Anda*',
                         ),
                       ),
                       // END INPUT EMAIL
@@ -102,28 +98,25 @@ class _ForgotPageState extends State<ForgotPage> {
                       Container(
                         width: 360,
                         height: 50,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF080C67),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFF080C67),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                            key: Key('forgot'),
-                            onPressed: () =>
-                                authC.resetPassword(emailC.text),
-
-                            // {Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ResetPage()));},
-                            child: Text(
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16,
-                              ),
-                              'Kirim Email',
+                          ),
+                          key: Key('forgot'),
+                          onPressed: () =>
+                              authC.resetPassword(emailC.text),
+                        
+                          // {Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ResetPage()));},
+                          child: Text(
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
                             ),
+                            'Kirim Email',
                           ),
                         ),
                       ),
