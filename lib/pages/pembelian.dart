@@ -2,220 +2,214 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/service/database.dart';
 
-class Pembelian extends StatefulWidget {
-  const Pembelian({super.key});
+class PembelianPage extends StatefulWidget {
+  const PembelianPage({super.key});
 
   @override
-  State<Pembelian> createState() => _PembelianState();
+  State<PembelianPage> createState() => _PembelianPageState();
 }
 
-class _PembelianState extends State<Pembelian> {
+class _PembelianPageState extends State<PembelianPage> {
   String? selectedBarang;
-  List<DocumentSnapshot> barangList = [];
-  TextEditingController jumlahController = TextEditingController();
-  TextEditingController hargaController = TextEditingController();
-  String satuan = ""; // Field for storing the satuan value
+  String? selectedType;
+  TextEditingController unitController = TextEditingController();
+  TextEditingController priceController = TextEditingController();
+  TextEditingController typeController = TextEditingController();
+  Stream<QuerySnapshot>? barangStream;
+  bool isDifferentType = false; // New variable to indicate if the type is different
 
   @override
   void initState() {
     super.initState();
-    fetchBarangList();
+    loadBarangData();
   }
 
-  fetchBarangList() async {
-    DatabaseMethods().getBarangDetails().listen((QuerySnapshot snapshot) {
-      setState(() {
-        barangList = snapshot.docs;
-      });
-    });
+  loadBarangData() {
+    barangStream = DatabaseMethods().getBarangDetails(); // Ensure this is correct
+    setState(() {});
   }
 
- void addBarang() async {
-  if (selectedBarang != null &&
-      jumlahController.text.isNotEmpty &&
-      hargaController.text.isNotEmpty) {
-    // Fetching the selected barang details
-    DocumentSnapshot selectedDocument = barangList.firstWhere(
-      (doc) => doc.id == selectedBarang,
-      orElse: () => throw Exception("Barang tidak ditemukan"),
-    );
+  Widget barangDropdown() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: barangStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return CircularProgressIndicator();
+        }
 
-    Map<String, dynamic>? selectedData = selectedDocument.data() as Map<String, dynamic>?;
-
-    String barangName = selectedData?['Name'] ?? 'Nama tidak ditemukan';
-
-    Map<String, dynamic> newBarang = {
-      "Id": selectedBarang,
-      "Jumlah": int.parse(jumlahController.text),
-      "Satuan": satuan,
-      "Harga": int.parse(hargaController.text),
-      "Name": barangName, // Include the name of the barang
-      "Timestamp": FieldValue.serverTimestamp(),
-    };
-
-    await DatabaseMethods().addNewPurchase(newBarang);
-
-    // Show success alert with item details
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Success"),
-          content: Text("Barang berhasil ditambahkan:\n\n"
-              "Nama: $barangName\n"
-              "Jumlah: ${jumlahController.text} pcs\n"
-              "Harga: Rp ${hargaController.text}"),
-          actions: [
-            TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pop(context); // Close the Pembelian page as well
-              },
+        List<DropdownMenuItem<String>> barangItems = [];
+        snapshot.data!.docs.forEach((doc) {
+          barangItems.add(
+            DropdownMenuItem(
+              value: doc.id,
+              child: Text(doc["Name"]),
             ),
-          ],
-        );
-      },
-    );
-  } else {
-    // Handle error
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Error"),
-          content: Text("Harap isi semua field dengan benar."),
-          actions: [
-            TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-  Widget buildDropdown() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10.0),
-      decoration: BoxDecoration(
-        border: Border.all(),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: DropdownButton<String>(
-        value: selectedBarang,
-        hint: Text("Pilih Barang"),
-        isExpanded: true,
-        underline: SizedBox(), // Menghilangkan garis bawah
-        items: barangList.map((DocumentSnapshot ds) {
-          return DropdownMenuItem<String>(
-            value: ds.id,
-            child: Text(ds["Name"]), // Assuming the Firestore field is 'Name'
           );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            selectedBarang = value;
-            satuan = value != null
-                ? (barangList.firstWhere((doc) => doc.id == value)["Satuan"] ?? "")
-                : ""; // Set satuan based on selected barang
-          });
-        },
-      ),
+        });
+
+        return DropdownButton<String>(
+          isExpanded: true,
+          hint: Text("Pilih Barang"),
+          value: selectedBarang,
+          onChanged: (newValue) {
+            setState(() {
+              selectedBarang = newValue!;
+              priceController.clear(); // Clear previous price
+              typeController.clear(); // Clear previous type
+              isDifferentType = false; // Reset the different type flag
+            });
+            fetchSelectedBarangDetails(newValue!); // Fetch selected barang details
+          },
+          items: barangItems,
+        );
+      },
     );
   }
+
+  // Fetch details of the selected barang
+  Future<void> fetchSelectedBarangDetails(String barangId) async {
+    try {
+      DocumentSnapshot selectedDoc = await FirebaseFirestore.instance.collection("Barang").doc(barangId).get();
+      if (selectedDoc.exists) {
+        // Set the price and type based on the selected barang
+        priceController.text = selectedDoc["Price"].toString();
+        typeController.text = selectedDoc["Tipe"];
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching data: ${e.toString()}")));
+    }
+  }
+
+  Future<void> tambahBarang() async {
+    if (selectedBarang == null || unitController.text.isEmpty || (isDifferentType && (typeController.text.isEmpty || priceController.text.isEmpty))) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Harap isi semua field")));
+        return;
+    }
+
+    int additionalUnits = int.parse(unitController.text);
+    int newPrice = isDifferentType ? int.parse(priceController.text) : 0; // Use new price if type is different
+
+    try {
+        // Get the selected barang details
+        DocumentSnapshot selectedDoc = await FirebaseFirestore.instance.collection("Barang").doc(selectedBarang).get();
+
+        if (!selectedDoc.exists) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barang tidak ditemukan.")));
+            return;
+        }
+
+        // Check if the selected barang already exists in the Pembelian collection
+        QuerySnapshot pembelianQuery = await FirebaseFirestore.instance.collection("Pembelian")
+            .where("BarangId", isEqualTo: selectedBarang)
+            .where("Type", isEqualTo: isDifferentType ? typeController.text : selectedDoc["Tipe"]) // Check if the type is the same
+            .get();
+
+        if (pembelianQuery.docs.isNotEmpty) {
+            // If there's an existing entry with the same barang and type
+            DocumentSnapshot existingDoc = pembelianQuery.docs.first;
+
+            // Update the quantity
+            await existingDoc.reference.update({
+                "Jumlah": existingDoc["Jumlah"] + additionalUnits,
+                "Timestamp": FieldValue.serverTimestamp(),
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Jumlah barang berhasil diperbarui!")));
+        } else {
+            // If no existing entry, create a new document in Pembelian collection with item type
+            newPrice = isDifferentType ? newPrice : selectedDoc["Price"];
+
+            await FirebaseFirestore.instance.collection("Pembelian").add({
+                "BarangId": selectedBarang,
+                "Jumlah": additionalUnits,
+                "Price": newPrice,
+                "Type": isDifferentType ? typeController.text : selectedDoc["Tipe"], // Use new type if it's different
+                "Timestamp": FieldValue.serverTimestamp(),
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barang berhasil ditambahkan!")));
+        }
+
+        // Clear the input fields after submission
+        unitController.clear();
+        selectedBarang = null;
+        typeController.clear();
+        priceController.clear();
+    } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+    }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Nama Barang",
-                style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+      appBar: AppBar(title: Text("Pembelian Barang")),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            barangDropdown(),
+            SizedBox(height: 20),
+            TextField(
+              controller: unitController,
+              decoration: InputDecoration(
+                labelText: "Jumlah Unit",
+                border: OutlineInputBorder(),
               ),
-              SizedBox(height: 10.0),
-              buildDropdown(),
-              SizedBox(height: 20.0),
-              Text(
-                "Satuan",
-                style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10.0),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.0),
-                decoration: BoxDecoration(
-                  border: Border.all(),
-                  borderRadius: BorderRadius.circular(10),
+              keyboardType: TextInputType.number,
+            ),
+            SizedBox(height: 20),
+            Row(
+              children: [
+                Checkbox(
+                  value: isDifferentType,
+                  onChanged: (value) {
+                    setState(() {
+                      isDifferentType = value!;
+                      if (!isDifferentType) {
+                        priceController.clear(); // Clear price if type is the same
+                      }
+                    });
+                  },
                 ),
-                child: TextField(
-                  controller: TextEditingController(text: satuan),
-                  readOnly: true, // Make it non-editable
-                  decoration: InputDecoration(
-                    hintText: 'Satuan',
-                    border: InputBorder.none,
-                  ),
-                ),
-              ),
-              SizedBox(height: 20.0),
-              Text(
-                "Jumlah",
-                style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10.0),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.0),
-                decoration: BoxDecoration(
-                  border: Border.all(),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: TextField(
-                  controller: jumlahController,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan jumlah',
-                    border: InputBorder.none,
-                  ),
-                  keyboardType: TextInputType.number,
+                Text("Type berbeda")
+              ],
+            ),
+            if (isDifferentType) ...[
+              TextField(
+                controller: typeController,
+                decoration: InputDecoration(
+                  labelText: "Type Barang (input jika berbeda)",
+                  border: OutlineInputBorder(),
                 ),
               ),
-              SizedBox(height: 20.0),
-              Text(
-                "Harga per Satuan",
-                style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold),
+              SizedBox(height: 20),
+              TextField(
+                controller: priceController,
+                decoration: InputDecoration(
+                  labelText: "Harga per Unit",
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
               ),
-              SizedBox(height: 10.0),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.0),
-                decoration: BoxDecoration(
-                  border: Border.all(),
-                  borderRadius: BorderRadius.circular(10),
+            ] else ...[
+              TextField(
+                controller: priceController,
+                decoration: InputDecoration(
+                  labelText: "Harga per Unit (tidak bisa diubah)",
+                  border: OutlineInputBorder(),
                 ),
-                child: TextField(
-                  controller: hargaController,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan harga per satuan',
-                    border: InputBorder.none,
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              SizedBox(height: 30.0),
-              Center(
-                child: ElevatedButton(
-                  onPressed: addBarang,
-                  child: Text("Tambah Barang"),
-                ),
+                readOnly: true,
+                keyboardType: TextInputType.number,
               ),
             ],
-          ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: tambahBarang,
+              child: Text("Tambahkan Barang"),
+            ),
+          ],
         ),
       ),
     );

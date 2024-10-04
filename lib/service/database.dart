@@ -6,114 +6,64 @@ class DatabaseMethods {
     await FirebaseFirestore.instance.collection("Barang").doc(id).set(barangInfoMap);
   }
 
-  Future<void> addNewPurchase(Map<String, dynamic> newBarang) async {
-    await FirebaseFirestore.instance.collection('purchases').add(newBarang);
-  }
-
   // READ
-  Stream<QuerySnapshot> getPurchases() {
-    return FirebaseFirestore.instance.collection('purchases').snapshots();
-  }
-
   Stream<QuerySnapshot> getBarangDetails() {
     return FirebaseFirestore.instance.collection("Barang").snapshots();
   }
 
-  Stream<QuerySnapshot> getReportPembelian() {
-    return FirebaseFirestore.instance.collection('purchases').snapshots();
-  }
-
-  // DELETE
-  Future<void> deleteBarang(String itemId) async {
-    try {
-      await FirebaseFirestore.instance.collection('Barang').doc(itemId).delete();
-      print("Item deleted successfully.");
-    } catch (e) {
-      print("Error deleting item: $e");
-    }
-  }
-
-  Future<void> logDeletion(String itemId) async {
-    try {
-      await FirebaseFirestore.instance.collection('purchases').add({
-        'item_id': itemId,
-        'action': 'delete',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print("Deletion logged successfully.");
-    } catch (e) {
-      print("Failed to log deletion: $e");
-    }
-  }
-
-  Future<void> logQuantityRemoval(String itemId, int quantityRemoved) async {
-    try {
-      await FirebaseFirestore.instance.collection('purchases').add({
-        'item_id': itemId,
-        'action': 'remove',
-        'quantity': -quantityRemoved,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-      print("Quantity removal logged successfully.");
-    } catch (e) {
-      print("Failed to log quantity removal: $e");
-    }
-  }
-
-  Future<void> removeQuantity(String itemId, int quantity) async {
-    DocumentReference itemRef = FirebaseFirestore.instance.collection('Barang').doc(itemId);
-    await itemRef.update({
-      'Jumlah': FieldValue.increment(-quantity), // Decrease the quantity
-    });
+  Stream<QuerySnapshot> getPembelianDetails() {
+    return FirebaseFirestore.instance.collection("Pembelian").snapshots();
   }
 
   // UPDATE
   Future<void> updateBarangDetail(String id, Map<String, dynamic> updateInfo) async {
-    await FirebaseFirestore.instance.collection("Barang").doc(id).update(updateInfo);
-  }
-
-  Stream<List<Map<String, dynamic>>> getFinalInventory() async* {
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
-    while (true) {
-      QuerySnapshot barangSnapshot = await firestore.collection('Barang').get();
-      List<Map<String, dynamic>> finalInventory = [];
-
-      for (var barangDoc in barangSnapshot.docs) {
-        var barangData = barangDoc.data() as Map<String, dynamic>? ?? {};
-        var initialQuantity = barangData['Jumlah'] ?? 0;
-        var initialPrice = barangData['Price']?.toDouble() ?? 0.0;
-
-        QuerySnapshot purchaseSnapshot = await firestore
-            .collection('purchases')
-            .where('item_id', isEqualTo: barangDoc.id)
-            .get();
-
-        int totalPurchasedQuantity = 0;
-        double totalPrice = 0.0;
-
-        for (var purchaseDoc in purchaseSnapshot.docs) {
-          var purchaseData = purchaseDoc.data() as Map<String, dynamic>? ?? {};
-          totalPurchasedQuantity += (purchaseData['quantity'] as int?) ?? 0; // Pastikan sesuai
-          totalPrice += (purchaseData['price']?.toDouble() ?? 0.0) * (purchaseData['quantity'] ?? 0);
-        }
-
-        double averagePrice = totalPurchasedQuantity > 0
-            ? totalPrice / totalPurchasedQuantity
-            : initialPrice;
-
-        finalInventory.add({
-          'id': barangDoc.id,
-          'name': barangData['Name'] ?? '',
-          'initial_quantity': initialQuantity,
-          'purchased_quantity': totalPurchasedQuantity,
-          'total_quantity': initialQuantity + totalPurchasedQuantity,
-          'initial_price': initialPrice,
-          'average_price': averagePrice,
-        });
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance.collection("Barang").doc(id).get();
+      if (doc.exists) {
+        await FirebaseFirestore.instance.collection("Barang").doc(id).update(updateInfo);
+      } else {
+        throw Exception("Document with ID $id does not exist.");
       }
-
-      yield finalInventory;
-      await Future.delayed(Duration(seconds: 1));
+    } catch (e) {
+      print("Error updating document: $e");
+      // Handle the error appropriately (e.g., show a snackbar or alert)
     }
   }
- }
+
+  // DELETE
+  Future<void> deleteBarangDetail(String id) async {
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance.collection("Barang").doc(id).get();
+      if (doc.exists) {
+        // Delete Barang document
+        await FirebaseFirestore.instance.collection("Barang").doc(id).delete();
+
+        // Also delete corresponding Pembelian documents
+        await deletePembelianDetailByBarangId(id);
+      } else {
+        throw Exception("Document with ID $id does not exist.");
+      }
+    } catch (e) {
+      print("Error deleting document: $e");
+      // Handle the error appropriately
+    }
+  }
+
+  // DELETE Pembelian by Barang ID
+  Future<void> deletePembelianDetailByBarangId(String barangId) async {
+    try {
+      QuerySnapshot pembelianSnapshot = await FirebaseFirestore.instance
+          .collection("Pembelian")
+          .where("BarangId", isEqualTo: barangId)
+          .get();
+
+      // Delete each document in the Pembelian collection matching the Barang ID
+      for (var doc in pembelianSnapshot.docs) {
+        await doc.reference.delete();
+      }
+    } catch (e) {
+      print("Error deleting pembelian documents: $e");
+      // Handle the error appropriately
+    }
+  }
+}

@@ -19,7 +19,7 @@ class _PersAwalState extends State<PersAwal> {
     Tab(text: 'P. Akhir'),
   ];
 
-  Stream<QuerySnapshot>? persAwalStream; // Perbaiki tipe stream
+  Stream<QuerySnapshot>? persAwalStream;
 
   @override
   void initState() {
@@ -28,20 +28,17 @@ class _PersAwalState extends State<PersAwal> {
   }
 
   getontheload() {
-    persAwalStream = DatabaseMethods().getBarangDetails(); // Perbaiki pemanggilan
+    persAwalStream = DatabaseMethods().getBarangDetails();
     setState(() {});
   }
 
-  Widget allBarangDetails() {
+ Widget allBarangDetails() {
   return StreamBuilder<QuerySnapshot>(
     stream: persAwalStream,
     builder: (context, snapshot) {
       if (!snapshot.hasData) {
         return Center(child: CircularProgressIndicator());
       }
-
-      // Tambahkan log untuk melihat berapa banyak dokumen yang diterima
-      print("Jumlah dokumen: ${snapshot.data!.docs.length}");
 
       if (snapshot.data!.docs.isEmpty) {
         return Center(child: Text("Tidak ada data barang yang ditemukan."));
@@ -51,45 +48,40 @@ class _PersAwalState extends State<PersAwal> {
         itemCount: snapshot.data!.docs.length,
         itemBuilder: (context, index) {
           DocumentSnapshot ds = snapshot.data!.docs[index];
-          int jumlah = ds["Jumlah"]; 
-          int pricePerItem = ds["Price"]; 
-          String satuan = ds["Satuan"]; 
+          Map<String, dynamic>? data = ds.data() as Map<String, dynamic>?;
+
+          String name = data != null && data.containsKey("Name") ? data["Name"] : "Nama tidak ada";
+          String type = data != null && data.containsKey("Tipe") ? data["Tipe"] : "Tipe tidak ada"; // Retrieve Tipe
+          int jumlah = data != null && data.containsKey("Jumlah") ? data["Jumlah"] : 0;
+          int pricePerItem = data != null && data.containsKey("Price") ? data["Price"] : 0;
+          String satuan = data != null && data.containsKey("Satuan") ? data["Satuan"] : "Satuan tidak ada";
           int totalPrice = jumlah * pricePerItem;
 
-          return Container(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
-                  child: ListTile(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
-                      side: BorderSide(color: Colors.black),
-                    ),
-                    leading: GestureDetector(
-                      onTap: () {
-                        EditBarangDetail(ds);
-                      },
-                      child: Icon(Icons.edit),
-                    ),
-                    title: Text(
-                      ds["Name"],
-                      style: TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 23),
-                    ),
-                    subtitle: Text(
-                      '$jumlah $satuan - Rp ${pricePerItem}/$satuan',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w400, fontSize: 12),
-                    ),
-                    trailing: Text(
-                      'Rp $totalPrice',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 18),
-                    ),
-                  ),
-                ),
-              ],
+          return Padding(
+            padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+                side: BorderSide(color: Colors.black),
+              ),
+              leading: GestureDetector(
+                onTap: () {
+                  EditBarangDetail(ds);
+                },
+                child: Icon(Icons.edit),
+              ),
+              title: Text(
+                '$name ($type)', // Display name with type
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 23),
+              ),
+              subtitle: Text(
+                '$jumlah $satuan - Rp ${pricePerItem}/$satuan',
+                style: TextStyle(fontWeight: FontWeight.w400, fontSize: 12),
+              ),
+              trailing: Text(
+                'Rp $totalPrice',
+                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18),
+              ),
             ),
           );
         },
@@ -140,12 +132,9 @@ class _PersAwalState extends State<PersAwal> {
         ),
         body: TabBarView(
           children: [
-            // P. Awal Tab
             allBarangDetails(),
-            // Pembelian Tab
-            Pembelian(),
-            // P. Akhir Tab
-            PersAkhirPage()
+            PembelianPage(),
+            PersAkhirPage(),
           ],
         ),
       ),
@@ -156,6 +145,7 @@ class _PersAwalState extends State<PersAwal> {
     TextEditingController nameController = TextEditingController(text: ds["Name"]);
     TextEditingController priceController = TextEditingController(text: ds["Price"].toString());
     TextEditingController jumlahController = TextEditingController(text: ds["Jumlah"].toString());
+    TextEditingController tipeController = TextEditingController(text: ds["Tipe"] ?? ""); // Default to empty string if null
 
     return showDialog(
       context: context,
@@ -184,6 +174,12 @@ class _PersAwalState extends State<PersAwal> {
                 decoration: InputDecoration(border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
               ),
+              SizedBox(height: 10),
+              Text("Tipe", style: TextStyle(fontWeight: FontWeight.bold)),
+              TextField(
+                controller: tipeController,
+                decoration: InputDecoration(border: OutlineInputBorder()),
+              ),
             ],
           ),
         ),
@@ -200,13 +196,12 @@ class _PersAwalState extends State<PersAwal> {
                 "Name": nameController.text,
                 "Price": int.parse(priceController.text),
                 "Jumlah": int.parse(jumlahController.text),
+                "Tipe": tipeController.text, // Include Tipe in update
               };
               try {
-                // Attempt to update the document
                 await DatabaseMethods().updateBarangDetail(ds.id, updateInfo);
                 Navigator.pop(context);
               } catch (e) {
-                // Show an error message if the update fails
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(

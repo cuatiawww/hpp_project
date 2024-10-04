@@ -9,18 +9,17 @@ class InputPersAwal extends StatefulWidget {
   @override
   State<InputPersAwal> createState() => _InputPersAwalState();
 }
+
 class _InputPersAwalState extends State<InputPersAwal> {
   TextEditingController namabarangcontroller = TextEditingController();
   TextEditingController hargacontroller = TextEditingController();
-  TextEditingController unitController = TextEditingController();
-  TextEditingController satuanController = TextEditingController(); // Input manual untuk satuan
-  TextEditingController jumlahController = TextEditingController(); // Input untuk jumlah
+  TextEditingController satuanController = TextEditingController();
+  TextEditingController jumlahController = TextEditingController();
+  TextEditingController tipeController = TextEditingController(); // Input manual untuk tipe
 
-  // Tambahkan variabel untuk DropdownButton
-  String selectedUnit = 'Pcs'; // Default value
-  List<String> units = ['Pcs', 'Kg', 'Lt', 'Meter', 'Box', 'Lainnya']; // Daftar satuan
-
-  bool isOtherSelected = false; // Variabel untuk mengecek apakah "Lainnya" dipilih
+  String selectedUnit = 'Pcs';
+  List<String> units = ['Pcs', 'Kg', 'Lt', 'Meter', 'Box', 'Lainnya'];
+  bool isOtherSelected = false;
 
   @override
   Widget build(BuildContext context) {
@@ -31,17 +30,11 @@ class _InputPersAwalState extends State<InputPersAwal> {
           children: [
             Text(
               "Input",
-              style: TextStyle(
-                  color: Colors.blue,
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.blue, fontSize: 24.0, fontWeight: FontWeight.bold),
             ),
             Text(
               "PersAwal",
-              style: TextStyle(
-                  color: Colors.orange,
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.orange, fontSize: 24.0, fontWeight: FontWeight.bold),
             )
           ],
         ),
@@ -52,39 +45,30 @@ class _InputPersAwalState extends State<InputPersAwal> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Nama Barang",
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold),
-              ),
-              SizedBox(
-                height: 10.0,
-              ),
+              Text("Nama Barang", style: TextStyle(color: Colors.black, fontSize: 24.0, fontWeight: FontWeight.bold)),
+              SizedBox(height: 10.0),
               Container(
                 padding: EdgeInsets.only(left: 10.0),
-                decoration: BoxDecoration(
-                    border: Border.all(),
-                    borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(border: Border.all(), borderRadius: BorderRadius.circular(10)),
                 child: TextField(
                   controller: namabarangcontroller,
                   decoration: InputDecoration(border: InputBorder.none),
                 ),
               ),
-              SizedBox(
-                height: 20.0,
+              SizedBox(height: 20.0),
+              Text("Tipe", style: TextStyle(color: Colors.black, fontSize: 24.0, fontWeight: FontWeight.bold)),
+              SizedBox(height: 10.0),
+              Container(
+                padding: EdgeInsets.only(left: 10.0),
+                decoration: BoxDecoration(border: Border.all(), borderRadius: BorderRadius.circular(10)),
+                child: TextField(
+                  controller: tipeController,
+                  decoration: InputDecoration(border: InputBorder.none),
+                ),
               ),
-              Text(
-                "Satuan",
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold),
-              ),
-              SizedBox(
-                height: 10.0,
-              ),
+              SizedBox(height: 20.0),
+              Text("Satuan", style: TextStyle(color: Colors.black, fontSize: 24.0, fontWeight: FontWeight.bold)),
+              SizedBox(height: 10.0),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.0),
                 decoration: BoxDecoration(
@@ -92,10 +76,10 @@ class _InputPersAwalState extends State<InputPersAwal> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: DropdownButton<String>(
-                  value: selectedUnit, // Nilai terpilih
-                  isExpanded: true, // Membuat dropdown penuh
+                  value: selectedUnit,
+                  isExpanded: true,
                   icon: Icon(Icons.arrow_drop_down),
-                  underline: SizedBox(), // Menghilangkan garis bawah
+                  underline: SizedBox(),
                   items: units.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
@@ -111,151 +95,96 @@ class _InputPersAwalState extends State<InputPersAwal> {
                 ),
               ),
               SizedBox(height: 10.0),
-              // Tampilkan TextField jika "Lainnya" dipilih
               isOtherSelected
                   ? Container(
                       padding: EdgeInsets.only(left: 10.0),
-                      decoration: BoxDecoration(
-                          border: Border.all(),
-                          borderRadius: BorderRadius.circular(10)),
+                      decoration: BoxDecoration(border: Border.all(), borderRadius: BorderRadius.circular(10)),
                       child: TextField(
-                        controller: satuanController, // Input manual untuk satuan
-                        decoration: InputDecoration(
-                          hintText: 'Masukkan satuan',
-                          border: InputBorder.none,
-                        ),
+                        controller: satuanController,
+                        decoration: InputDecoration(hintText: 'Masukkan satuan', border: InputBorder.none),
                       ),
                     )
-                  : SizedBox(), // Jika bukan "Lainnya", kosongkan
-              
+                  : SizedBox(),
               SizedBox(height: 10.0),
-
-              // Inputan untuk jumlah
-              Text(
-                "Jumlah Satuan",
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold),
-              ),
+              Text("Jumlah Satuan", style: TextStyle(color: Colors.black, fontSize: 24.0, fontWeight: FontWeight.bold)),
               SizedBox(height: 10.0),
               Container(
                 padding: EdgeInsets.only(left: 10.0),
-                decoration: BoxDecoration(
-                    border: Border.all(),
-                    borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(border: Border.all(), borderRadius: BorderRadius.circular(10)),
                 child: TextField(
-                  controller: jumlahController, // Input manual untuk jumlah
-                  keyboardType: TextInputType.number, // Mengatur inputan ke angka
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan jumlah',
-                    border: InputBorder.none,
-                  ),
+                  controller: jumlahController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(hintText: 'Masukkan jumlah', border: InputBorder.none),
                 ),
               ),
-              
-              SizedBox(
-                height: 20.0,
-              ),
-              Text(
-                "Unit",
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold),
-              ),
-              SizedBox(
-                height: 10.0,
-              ),
+              SizedBox(height: 10.0),
+              Text("Harga", style: TextStyle(color: Colors.black, fontSize: 24.0, fontWeight: FontWeight.bold)),
+              SizedBox(height: 10.0),
               Container(
                 padding: EdgeInsets.only(left: 10.0),
-                decoration: BoxDecoration(
-                    border: Border.all(),
-                    borderRadius: BorderRadius.circular(10)),
-                child: TextField(
-                  controller: unitController,
-                  decoration: InputDecoration(border: InputBorder.none),
-                ),
-              ),
-              SizedBox(
-                height: 10.0,
-              ),
-              Text(
-                "Harga",
-                style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold),
-              ),
-              SizedBox(
-                height: 10.0,
-              ),
-              Container(
-                padding: EdgeInsets.only(left: 10.0),
-                decoration: BoxDecoration(
-                    border: Border.all(),
-                    borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(border: Border.all(), borderRadius: BorderRadius.circular(10)),
                 child: TextField(
                   controller: hargacontroller,
                   decoration: InputDecoration(border: InputBorder.none),
                 ),
               ),
-              SizedBox(
-                height: 30.0,
-              ),
+              SizedBox(height: 30.0),
               Center(
                 child: ElevatedButton(
                   onPressed: () async {
-  // Validasi input apakah semua field sudah diisi
-  if (namabarangcontroller.text.isEmpty ||
-      jumlahController.text.isEmpty || // Tambahkan validasi untuk jumlah
-      unitController.text.isEmpty ||
-      hargacontroller.text.isEmpty ||
-      (isOtherSelected && satuanController.text.isEmpty)) { // Validasi satuan hanya jika "Lainnya" dipilih
-    Fluttertoast.showToast(
-      msg: "Harap isi semua kolom!",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.CENTER,
-      backgroundColor: Colors.red,
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
-    return;
-  }
+                    if (namabarangcontroller.text.isEmpty ||
+                        jumlahController.text.isEmpty ||
+                        hargacontroller.text.isEmpty ||
+                        (isOtherSelected && satuanController.text.isEmpty) ||
+                        tipeController.text.isEmpty) {
+                      Fluttertoast.showToast(
+                        msg: "Harap isi semua kolom!",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.CENTER,
+                        backgroundColor: Colors.red,
+                        textColor: Colors.white,
+                        fontSize: 16.0,
+                      );
+                      return;
+                    }
 
-  // Mengonversi input menjadi tipe data yang sesuai
-  String namaBarang = namabarangcontroller.text;
-  String satuan = isOtherSelected ? satuanController.text : selectedUnit; // Gunakan unit dari dropdown jika bukan "Lainnya"
-  int jumlah = int.parse(jumlahController.text); // Parse jumlah satuan
-  int unit = int.parse(unitController.text);
-  int harga = int.parse(hargacontroller.text);
+                    String namaBarang = namabarangcontroller.text;
+                    String satuan = isOtherSelected ? satuanController.text : selectedUnit;
+                    int jumlah = int.parse(jumlahController.text);
+                    int harga = int.parse(hargacontroller.text);
+                    String tipe = tipeController.text; // Ambil tipe dari input
 
-  String Id = randomAlphaNumeric(10);
+                    String Id = randomAlphaNumeric(10);
 
-  Map<String, dynamic> barangInfoMap = {
-    "Name": namaBarang,
-    "Satuan": satuan,
-    "Jumlah": jumlah, // Tambahkan jumlah dalam map
-    "Unit": unit,
-    "Price": harga,
-    "Id": Id,
-  };
+                    Map<String, dynamic> barangInfoMap = {
+                      "Name": namaBarang,
+                      "Tipe": tipe, // Tambahkan tipe ke map
+                      "Satuan": satuan,
+                      "Jumlah": jumlah,
+                      "Price": harga,
+                      "Id": Id,
+                    };
 
-  await DatabaseMethods().addBarang(barangInfoMap, Id).then((value) {
-    Fluttertoast.showToast(
-      msg: "Barang Details has been uploaded successfully",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.CENTER,
-      backgroundColor: Colors.green,
-      textColor: Colors.white,
-      fontSize: 16.0);
-  });
-},
-
+                    await DatabaseMethods().addBarang(barangInfoMap, Id).then((value) {
+                      Fluttertoast.showToast(
+                        msg: "Barang Details has been uploaded successfully",
+                        toastLength: Toast.LENGTH_SHORT,
+                        gravity: ToastGravity.CENTER,
+                        backgroundColor: Colors.green,
+                        textColor: Colors.white,
+                        fontSize: 16.0,
+                      );
+                      // Clear the fields after adding
+                      namabarangcontroller.clear();
+                      hargacontroller.clear();
+                      satuanController.clear();
+                      jumlahController.clear();
+                      tipeController.clear();
+                    });
+                  },
                   child: Text(
                     "Add",
-                    style: TextStyle(
-                        fontSize: 20.0, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

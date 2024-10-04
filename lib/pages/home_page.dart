@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hpp_project/pages/profile_page.dart';
-import 'package:hpp_project/pages/report_page.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hpp_project/pages/pers_awal.dart'; // Add this import for the Pers Awal page
@@ -29,7 +28,7 @@ class _HomePageState extends State<HomePage> {
   // Daftar halaman yang akan ditampilkan berdasarkan indeks
   static List<Widget> _widgetOptions = <Widget>[
     _PersAwalContent(), // Halaman Beranda
-    ReportPembelian(),
+    // ReportPembelian(),
     ProfilePage()   // Halaman Laporan
   ];
 
@@ -272,7 +271,7 @@ class _PersAwalContent extends StatelessWidget {
 }),
 _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
   // Use Get.to() to navigate to the PersAwal page
-  Get.to(() => ReportPembelian());
+  // Get.to(() => ReportPembelian());
 }),
               _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth, onPressed: () {
                 
