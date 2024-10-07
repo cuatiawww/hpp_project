@@ -1,11 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:hpp_project/pages/pembelian.dart';
 import 'package:hpp_project/pages/profile_page.dart';
-import 'package:hpp_project/pages/report_page.dart';
+import 'package:hpp_project/service/database.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
-import 'report_page.dart';
 import 'package:hpp_project/pages/pers_awal.dart'; // Add this import for the Pers Awal page
+
 
 import 'package:get/get.dart';
 import 'package:hpp_project/user_auth/auth_controller.dart';
@@ -31,7 +31,7 @@ class _HomePageState extends State<HomePage> {
   static List<Widget> _widgetOptions = <Widget>[
     _PersAwalContent(), // Halaman Beranda
     ReportPembelian(),
-    ProfilePage() // Halaman Laporan
+    ProfilePage()   // Halaman Laporan
   ];
 
   @override
@@ -278,15 +278,16 @@ class _PersAwalContent extends StatelessWidget {
               // _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
               //   Get.toNamed('/persediaan_awal');
               // }),
-              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth,
-                  onPressed: () {
-                // Use Get.to() to navigate to the PersAwal page
-                Get.to(() => PersAwal());
-              }),
-              _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth,
-                  onPressed: () {
-                // Use Get.to() to navigate to the PersAwal page
-                Get.to(() => ReportPembelian());
+              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
+  // Use Get.to() to navigate to the PersAwal page
+  Get.to(() => PersAwal());
+}),
+_buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
+  // Use Get.to() to navigate to the PersAwal page
+  Get.to(() => ReportPembelian());
+}),
+              _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth, onPressed: () {
+                
               }),
               _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth,
                   onPressed: () {}),
@@ -353,38 +354,37 @@ class _PersAwalContent extends StatelessWidget {
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment
-                .spaceBetween, // Menjaga jarak antara teks dan tombol
-            children: [
-              Text(
-                'Laporan',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Color(0xFF080C67),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.document_scanner, color: Colors.white, size: 16),
-                    SizedBox(width: 8), // Jarak antara ikon dan teks
-                    Text('Print PDF'),
-                  ],
-                ),
-              ),
-            ],
+    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Menjaga jarak antara teks dan tombol
+    children: [
+      Text(
+        'Laporan',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      ElevatedButton(
+        onPressed: () {
+        },
+        style: ElevatedButton.styleFrom(
+          foregroundColor: Colors.white, backgroundColor: Color(0xFF080C67), 
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-          SizedBox(height: 16),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.document_scanner , size: 16), 
+            SizedBox(width: 8), // Jarak antara ikon dan teks
+            Text('Print PDF'),
+          ],
+        ),
+      ),
+    ],
+  ),
+  SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -437,32 +437,32 @@ class _PersAwalContent extends StatelessWidget {
         ],
       ),
       child: Column(
-        children: [
-          Text(
-            'Riwayat',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 30),
-          Container(
-            height: 300, // Set a fixed height for the list
-            child: ListView.builder(
-              itemCount: 4, // Replace with your actual data length
-              shrinkWrap: true, // Allow the list to shrink to fit its content
-              itemBuilder: (context, index) {
-                return RiwayatItem(
-                  title: "Pensil",
-                  description: "100 pcs - 10.000/pcs",
-                  price: "Rp 1.000.000",
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+                      children: [
+                        Text(
+                          'Riwayat',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        Container(
+                          height: 300, // Set a fixed height for the list
+                          child: ListView.builder(
+                            itemCount: 4, // Replace with your actual data length
+                            shrinkWrap: true, // Allow the list to shrink to fit its content
+                            itemBuilder: (context, index) {
+                              return RiwayatItem(
+                                title: "Pensil",
+                                description: "100 pcs - 10.000/pcs",
+                                price: "Rp 1.000.000",
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
   }
 }
 
