@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import 'package:hpp_project/pages/home_page.dart';
 import 'package:hpp_project/pages/input_pers_awal.dart';
 import 'package:hpp_project/pages/pers_awal.dart';
-import 'package:hpp_project/pages/splash_view.dart';
+import 'package:hpp_project/Onboarding/onboarding_view.dart';
 import 'package:hpp_project/pages/hpp_calculation_page.dart';
 
 import 'package:hpp_project/routes/routes.dart';
@@ -50,9 +50,9 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
               useMaterial3: true,
             ),
-            initialRoute: snapshot.data != null ? Routes.home : Routes.splash,
+            initialRoute: snapshot.data != null ? Routes.home : Routes.onboarding,
             getPages: [
-              GetPage(name: Routes.splash, page: () => SplashView()),
+              GetPage(name: Routes.onboarding, page: () => OnboardingView()),
               GetPage(name: Routes.login, page: () => LoginPage()),
               GetPage(name: Routes.regist, page: () => RegistPage()),
               GetPage(name: Routes.forgot, page: () => ForgotPage()),
@@ -63,7 +63,7 @@ class MyApp extends StatelessWidget {
               GetPage(name: Routes.inputPersAwal, page: () => InputPersAwal()),
               GetPage(name: Routes.persAwal, page: () => PersAwal()),
             ],
-            // home: snapshot.data != null ? HomePage() : SplashView(),
+            // home: snapshot.data != null ? HomePage() : onboardingView(),
           );
         }
         return LoadingView();
