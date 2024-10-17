@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:get/get.dart';
 import 'package:hpp_project/auth/login.dart';
+import 'package:hpp_project/user_auth/auth_controller.dart';
 
 
 class ResetPage extends StatelessWidget {
-  const ResetPage({super.key});
+
+  final authC = Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +143,7 @@ class ResetPage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                             ),
                           ),
-                          key: Key('forgot'),
+                          key: Key('reset'),
                           onPressed: () {
                             // if (_formKey.currentState!.validate()) {
                             //   ScaffoldMessenger.of(context).showSnackBar(

@@ -2,7 +2,7 @@
 class Routes {
   // Jika ingin pindah halaman:
   // initialRoute: Routes.splash,
-  static const String splash = '/splash';
+  static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String regist = '/regist';
   static const String forgot = '/forgot';

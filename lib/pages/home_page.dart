@@ -1,13 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/pages/pembelian.dart';
 import 'package:hpp_project/pages/profile_page.dart';
-import 'package:hpp_project/pages/report_page.dart';
+import 'package:hpp_project/service/database.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
-import 'report_page.dart';
 import 'package:hpp_project/pages/pers_awal.dart'; // Add this import for the Pers Awal page
-
-
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/user_auth/auth_controller.dart';
 
@@ -31,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   // Daftar halaman yang akan ditampilkan berdasarkan indeks
   static List<Widget> _widgetOptions = <Widget>[
     _PersAwalContent(), // Halaman Beranda
-    ReportPembelian(),
+    // ReportPembelian(),
     ProfilePage()   // Halaman Laporan
   ];
 
@@ -66,7 +67,7 @@ class _HomePageState extends State<HomePage> {
               width: 30,
               height: 30,
               child: Image.asset(
-                "../assets/icons/notification.png",
+                "assets/icons/notification.png",
                 fit: BoxFit.contain,
               ),
             ),
@@ -75,36 +76,46 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: primary1,
         elevation: 0,
       ),
-      body: _widgetOptions[_selectedIndex], 
+      body: _widgetOptions[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: SizedBox(
-        height: 24, // Sesuaikan ukuran ikon SVG
-        width: 24,
-        child: SvgPicture.asset('assets/icons/home-2.svg', color: secondary,),
-      ),
+              height: 24, // Sesuaikan ukuran ikon SVG
+              width: 24,
+              child: SvgPicture.asset(
+                'assets/icons/home-2.svg',
+                color: secondary,
+              ),
+            ),
             label: 'Beranda',
           ),
           BottomNavigationBarItem(
-      icon: SizedBox(
-        height: 24, // Sesuaikan ukuran ikon SVG
-        width: 24,
-        child: SvgPicture.asset('assets/icons/note.svg', color: secondary,),
-      ),
-      label: 'Laporan',
-    ),
+            icon: SizedBox(
+              height: 24, // Sesuaikan ukuran ikon SVG
+              width: 24,
+              child: SvgPicture.asset(
+                'assets/icons/note.svg',
+                color: secondary,
+              ),
+            ),
+            label: 'Laporan',
+          ),
           BottomNavigationBarItem(
             icon: SizedBox(
-        height: 24, // Sesuaikan ukuran ikon SVG
-        width: 24,
-        child: SvgPicture.asset('assets/icons/Profile.svg', color: secondary,),
-      ),
-            label: 'Profile',
+              height: 24, // Sesuaikan ukuran ikon SVG
+              width: 24,
+              child: SvgPicture.asset(
+                'assets/icons/Profile.svg',
+                color: secondary,
+              ),
+            ),
+            label: 'Akun',
           ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: secondary,
+        selectedFontSize: 14,
         onTap: _onItemTapped,
       ),
     );
@@ -152,9 +163,9 @@ class _PersAwalContent extends StatelessWidget {
                         Row(
                           children: [
                             Image.asset(
-                              "../assets/icons/shop.png",
+                              "assets/icons/shop.png",
                               height: 24, // Atur tinggi ikon sesuai kebutuhan
-                              width: 24,  // Atur lebar ikon sesuai kebutuhan
+                              width: 24, // Atur lebar ikon sesuai kebutuhan
                             ),
                             SizedBox(width: 8), // Jarak antara ikon dan teks
                             Expanded(
@@ -165,7 +176,8 @@ class _PersAwalContent extends StatelessWidget {
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
-                                overflow: TextOverflow.ellipsis, // Untuk teks panjang
+                                overflow:
+                                    TextOverflow.ellipsis, // Untuk teks panjang
                               ),
                             ),
                           ],
@@ -196,7 +208,7 @@ class _PersAwalContent extends StatelessWidget {
                         Row(
                           children: [
                             Image.asset(
-                              "../assets/icons/location.png",
+                              "assets/icons/location.png",
                               height: 24,
                               width: 24,
                             ),
@@ -229,7 +241,7 @@ class _PersAwalContent extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 24),
-                _buildMenu(context),  // Pass context to _buildMenu
+                _buildMenu(context), // Pass context to _buildMenu
                 SizedBox(height: 24),
                 _buildLaporan(),
                 SizedBox(height: 24),
@@ -260,7 +272,7 @@ class _PersAwalContent extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final itemWidth = (constraints.maxWidth - 20) / 3; 
+          final itemWidth = (constraints.maxWidth - 20) / 3;
           return Wrap(
             spacing: 2,
             runSpacing: 2,
@@ -274,11 +286,18 @@ class _PersAwalContent extends StatelessWidget {
 }),
 _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
   // Use Get.to() to navigate to the PersAwal page
-  Get.to(() => ReportPembelian());
+  // Get.to(() => ReportPembelian());
 }),
               _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth, onPressed: () {
                 
               }),
+              _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth,
+                  onPressed: () {
+                // Use Get.to() to navigate to the PersAwal page
+                Get.to(() => PembelianPage());
+              }),
+              _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth,
+                  onPressed: () {}),
             ],
           );
         },
@@ -351,25 +370,60 @@ _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
           fontWeight: FontWeight.bold,
         ),
       ),
-      ElevatedButton(
-        onPressed: () {
+      
+ElevatedButton(
+  onPressed: () async {
+    final pdf = pw.Document();
+    
+    // Fetch data from Firestore
+    final snapshot = await FirebaseFirestore.instance
+        .collection("Pembelian")
+        .orderBy("Timestamp", descending: true)
+        .get();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.ListView.builder(
+            itemCount: snapshot.docs.length,
+            itemBuilder: (context, index) {
+              var pembelian = snapshot.docs[index];
+              String barangName = pembelian["BarangName"] ?? "Unknown";
+              int jumlah = pembelian["Jumlah"] ?? 0;
+              int price = pembelian["Price"] ?? 0;
+              int totalCost = jumlah * price;
+
+              return pw.Container(
+                margin: pw.EdgeInsets.symmetric(vertical: 8),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(barangName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                    pw.Text("$jumlah pcs - Rp $price/pcs"),
+                    pw.Text("Total: Rp $totalCost", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.Divider(),
+                  ],
+                ),
+              );
+            },
+          );
         },
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.white, backgroundColor: Color(0xFF080C67), 
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.document_scanner , size: 16), 
-            SizedBox(width: 8), // Jarak antara ikon dan teks
-            Text('Print PDF'),
-          ],
-        ),
       ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  },
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(Icons.document_scanner, size: 16),
+      SizedBox(width: 8),
+      Text('Print PDF'),
+    ],
+  ),
+),
     ],
   ),
   SizedBox(height: 16),
@@ -383,7 +437,8 @@ _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
                     SizedBox(height: 8),
                     Text('Pemasukan'),
                     SizedBox(height: 4),
-                    Text('Rp 500.000', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Rp 500.000',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -395,7 +450,8 @@ _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
                     SizedBox(height: 8),
                     Text('Pengeluaran'),
                     SizedBox(height: 4),
-                    Text('Rp 10.000.000', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Rp 10.000.000',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -406,50 +462,84 @@ _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
     );
   }
 
-  Widget _buildRiwayat() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 25),
-      padding: EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
+ Widget _buildRiwayat() {
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 25),
+    padding: EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.5),
+          spreadRadius: 2,
+          blurRadius: 5,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        Text(
+          'Riwayat',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
-        ],
-      ),
-      child: Column(
-                      children: [
-                        Text(
-                          'Riwayat',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        Container(
-                          height: 300, // Set a fixed height for the list
-                          child: ListView.builder(
-                            itemCount: 4, // Replace with your actual data length
-                            shrinkWrap: true, // Allow the list to shrink to fit its content
-                            itemBuilder: (context, index) {
-                              return RiwayatItem(
-                                title: "Pensil",
-                                description: "100 pcs - 10.000/pcs",
-                                price: "Rp 1.000.000",
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-  }
+        ),
+        SizedBox(height: 16),
+        StreamBuilder<QuerySnapshot>(
+          stream: DatabaseMethods().getPembelianDetails(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return CircularProgressIndicator();
+            }
+
+            List<RiwayatItem> riwayatItems = [];
+            snapshot.data!.docs.forEach((doc) {
+              riwayatItems.add(
+                RiwayatItem(
+                  title: doc["BarangId"],
+                  description: "${doc["Jumlah"]} unit - Rp ${doc["Price"]}",
+                  price: "Rp ${doc["Jumlah"] * doc["Price"]}",
+                ),
+              );
+            });
+
+            return Container(
+              height: 300, // Set a fixed height for the list
+              child: ListView.builder(
+                itemCount: riwayatItems.length,
+                shrinkWrap: true, // Allow the list to shrink to fit its content
+                itemBuilder: (context, index) {
+                  return riwayatItems[index];
+                },
+              ),
+            );
+          },
+        ),
+        SizedBox(height: 16),
+        Text(
+          'Total Biaya: Rp ${_calculateTotalBiaya()}',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+int _calculateTotalBiaya() {
+  int totalBiaya = 0;
+  DatabaseMethods().getPembelianDetails().listen((event) {
+    event.docs.forEach((doc) {
+      totalBiaya += (doc["Jumlah"] * doc["Price"]) as int;
+    });
+  });
+  return totalBiaya;
+}
 }
 
 class RiwayatItem extends StatelessWidget {

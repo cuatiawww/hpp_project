@@ -10,7 +10,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool isEditing = false; // Untuk melacak mode edit
-  final authC = Get.find<AuthController>(); // Inisialisasi AuthController
+  final authC = Get.find<AuthController>(); // Inisialisasi AuthController untuk mengakses fungsi logout
 
   // Controller untuk TextFormField
   final _nameController = TextEditingController(text: 'Zendaya Coleman');
@@ -32,7 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
               Center(
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundImage: AssetImage('../assets/images/profile.jpg'),
+                  backgroundImage: AssetImage('assets/images/profile.jpg'),
                 ),
               ),
               SizedBox(height: 16),
@@ -70,7 +70,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 36, vertical: 8), 
                   ),
-                  child: Text(isEditing ? 'Simpan' : 'Edit'),
+                  child: Text(
+                    isEditing ? 'Simpan' : 'Edit Akun', 
+                    style: TextStyle(
+                      fontSize: 16, 
+                      fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
               SizedBox(height: 24),
@@ -101,18 +106,20 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildEditableTextField('Nama Usaha', _storeNameController),
               SizedBox(height: 16),
               _buildEditableTextField('Alamat Usaha', _storeAddressController),
-              SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => authC.logout(), // Memanggil fungsi logout pada authController
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  backgroundColor: Colors.red, // Warna merah untuk tombol log out
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              SizedBox(height: 40),
+              Center(
+                child: ElevatedButton(
+                  onPressed: () => authC.logout(), // Memanggil fungsi logout pada authController
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.red, // Warna merah untuk tombol log out
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 42, vertical: 12),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 36, vertical: 8),
+                  child: Text('Log Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
-                child: Text('Log Out'),
               ),
             ],
           ),
