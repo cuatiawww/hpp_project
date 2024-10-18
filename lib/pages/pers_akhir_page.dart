@@ -25,6 +25,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
     barangStream = DatabaseMethods().getBarangDetails();
     pembelianStream = DatabaseMethods().getPembelianDetails();
   }
+
   void generateMonths() {
     DateTime now = DateTime.now();
     for (int i = 0; i < 12; i++) {
@@ -45,8 +46,8 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
         for (var barang in barangSnapshot.data!.docs) {
           var barangData = barang.data() as Map<String, dynamic>;
           barangReference[barang.id] = {
-            "Name": barangData["Name"],
-            "Satuan": barangData["Satuan"],
+            "Name": barangData["Name"] ?? "N/A",
+            "Satuan": barangData["Satuan"] ?? "N/A",
             "docId": barang.id,
           };
         }
@@ -69,8 +70,8 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
 
               combinedData[key] = {
                 "id": barangId,
-                "Name": barangData["Name"],
-                "Satuan": barangData["Satuan"],
+                "Name": barangData["Name"] ?? "N/A",
+                "Satuan": barangData["Satuan"] ?? "N/A",
                 "Jumlah": barangData["Jumlah"] ?? 0,
                 "Price": barangData["Price"] ?? 0,
                 "Tipe": tipe,
@@ -81,7 +82,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
 
             // Menyimpan ID dokumen pembelian berdasarkan kombinasi BarangId dan Type
             Map<String, List<String>> pembelianDocs = {};
-            
+
             // Proses data pembelian
             for (var pembelian in pembelianSnapshot.data!.docs) {
               var pembelianData = pembelian.data() as Map<String, dynamic>;
@@ -98,10 +99,10 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
               var barangRef = barangReference[barangId];
 
               if (combinedData.containsKey(key)) {
-                combinedData[key]!["Jumlah"] = 
-                    (combinedData[key]!["Jumlah"] as int) + 
+                combinedData[key]!["Jumlah"] =
+                    (combinedData[key]!["Jumlah"] as int) +
                     (pembelianData["Jumlah"] as int);
-                
+
                 if (pembelianData["Price"] != null) {
                   combinedData[key]!["Price"] = pembelianData["Price"];
                 }
@@ -168,7 +169,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
   }
 
   Future<void> _editBarang(Map<String, dynamic> data, String key) async {
-    TextEditingController jumlahController = 
+    TextEditingController jumlahController =
         TextEditingController(text: data["Jumlah"].toString());
 
     await showDialog(
@@ -200,13 +201,11 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
           TextButton(
             onPressed: () async {
               if (data["isOriginal"] == true) {
-                // Update barang di collection Barang
                 await DatabaseMethods().updateBarangDetail(
                   data["docId"],
                   {"Jumlah": int.parse(jumlahController.text)},
                 );
               } else {
-                // Update semua dokumen pembelian yang terkait
                 List<String>? pembelianIds = data["pembelianIds"] as List<String>?;
                 if (pembelianIds != null) {
                   int newJumlahPerDoc = int.parse(jumlahController.text) ~/ pembelianIds.length;
@@ -251,10 +250,8 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
 
     if (confirm) {
       if (data["isOriginal"] == true) {
-        // Hapus barang dari collection Barang
         await DatabaseMethods().deleteBarangDetail(data["docId"]);
       } else {
-        // Hapus semua dokumen pembelian yang terkait
         List<String>? pembelianIds = data["pembelianIds"] as List<String>?;
         if (pembelianIds != null) {
           for (String pembelianId in pembelianIds) {
@@ -294,45 +291,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
             ),
           ),
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('Barang')
-                  .where('Tanggal', isGreaterThanOrEqualTo: '$selectedMonth-01')
-                  .where('Tanggal', isLessThan: '${DateFormat('yyyy-MM').format(DateTime.parse(selectedMonth + '-01').add(Duration(days: 32)))}')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                List<DataRow> rows = snapshot.data!.docs.map((doc) {
-                  Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(data['Name'] ?? '')),
-                      DataCell(Text(data['Tipe'] ?? '')),
-                      DataCell(Text(data['Jumlah'].toString())),
-                      DataCell(Text(data['Price'].toString())),
-                      DataCell(Text(data['Tanggal'] ?? '')),
-                    ],
-                  );
-                }).toList();
-
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: [
-                      DataColumn(label: Text('Nama')),
-                      DataColumn(label: Text('Tipe')),
-                      DataColumn(label: Text('Jumlah')),
-                      DataColumn(label: Text('Harga')),
-                      DataColumn(label: Text('Tanggal')),
-                    ],
-                    rows: rows,
-                  ),
-                );
-              },
-            ),
+            child: buildTable(),
           ),
         ],
       ),
