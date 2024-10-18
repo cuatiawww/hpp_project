@@ -1,147 +1,149 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
-import 'package:hpp_project/service/database.dart';
+  import 'package:cloud_firestore/cloud_firestore.dart';
+  import 'package:flutter/material.dart';
+  import 'package:hpp_project/service/database.dart';
+import 'package:intl/intl.dart';
 
-class PembelianPage extends StatefulWidget {
-  const PembelianPage({super.key});
+  class PembelianPage extends StatefulWidget {
+    const PembelianPage({super.key});
 
-  @override
-  State<PembelianPage> createState() => _PembelianPageState();
-}
+    @override
+    State<PembelianPage> createState() => _PembelianPageState();
+  }
 
-class _PembelianPageState extends State<PembelianPage> {
-  String? selectedBarang;
+  class _PembelianPageState extends State<PembelianPage> {
+     String? selectedBarang;
   String? selectedType;
   TextEditingController unitController = TextEditingController();
   TextEditingController priceController = TextEditingController();
   TextEditingController typeController = TextEditingController();
+  TextEditingController tanggalController = TextEditingController();
   Stream<QuerySnapshot>? barangStream;
-  bool isDifferentType = false; // New variable to indicate if the type is different
+  bool isDifferentType = false;
+  DateTime selectedDate = DateTime.now();
 
-  @override
-  void initState() {
+    @override
+    void initState() {
     super.initState();
     loadBarangData();
+    tanggalController.text = DateFormat('yyyy-MM-dd').format(selectedDate);
   }
 
-  loadBarangData() {
-    barangStream = DatabaseMethods().getBarangDetails(); // Ensure this is correct
-    setState(() {});
-  }
-
-  Widget barangDropdown() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: barangStream,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return CircularProgressIndicator();
-        }
-
-        List<DropdownMenuItem<String>> barangItems = [];
-        snapshot.data!.docs.forEach((doc) {
-          barangItems.add(
-            DropdownMenuItem(
-              value: doc.id,
-              child: Text(doc["Name"]),
-            ),
-          );
-        });
-
-        return DropdownButton<String>(
-          isExpanded: true,
-          hint: Text("Pilih Barang"),
-          value: selectedBarang,
-          onChanged: (newValue) {
-            setState(() {
-              selectedBarang = newValue!;
-              priceController.clear(); // Clear previous price
-              typeController.clear(); // Clear previous type
-              isDifferentType = false; // Reset the different type flag
-            });
-            fetchSelectedBarangDetails(newValue!); // Fetch selected barang details
-          },
-          items: barangItems,
-        );
-      },
+    loadBarangData() {
+      barangStream = DatabaseMethods().getBarangDetails(); // Ensure this is correct
+      setState(() {});
+    }
+    Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
     );
-  }
-
-  // Fetch details of the selected barang
-  Future<void> fetchSelectedBarangDetails(String barangId) async {
-    try {
-      DocumentSnapshot selectedDoc = await FirebaseFirestore.instance.collection("Barang").doc(barangId).get();
-      if (selectedDoc.exists) {
-        // Set the price and type based on the selected barang
-        priceController.text = selectedDoc["Price"].toString();
-        typeController.text = selectedDoc["Tipe"];
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching data: ${e.toString()}")));
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        tanggalController.text = DateFormat('yyyy-MM-dd').format(selectedDate);
+      });
     }
   }
 
-  Future<void> tambahBarang() async {
-    if (selectedBarang == null || unitController.text.isEmpty || (isDifferentType && (typeController.text.isEmpty || priceController.text.isEmpty))) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Harap isi semua field")));
-        return;
+    Widget barangDropdown() {
+      return StreamBuilder<QuerySnapshot>(
+        stream: barangStream,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return CircularProgressIndicator();
+          }
+
+          List<DropdownMenuItem<String>> barangItems = [];
+          snapshot.data!.docs.forEach((doc) {
+            barangItems.add(
+              DropdownMenuItem(
+                value: doc.id,
+                child: Text(doc["Name"]),
+              ),
+            );
+          });
+
+          return DropdownButton<String>(
+            isExpanded: true,
+            hint: Text("Pilih Barang"),
+            value: selectedBarang,
+            onChanged: (newValue) {
+              setState(() {
+                selectedBarang = newValue!;
+                priceController.clear(); // Clear previous price
+                typeController.clear(); // Clear previous type
+                isDifferentType = false; // Reset the different type flag
+              });
+              fetchSelectedBarangDetails(newValue!); // Fetch selected barang details
+            },
+            items: barangItems,
+          );
+        },
+      );
+    }
+
+    // Fetch details of the selected barang
+    Future<void> fetchSelectedBarangDetails(String barangId) async {
+      try {
+        DocumentSnapshot selectedDoc = await FirebaseFirestore.instance.collection("Barang").doc(barangId).get();
+        if (selectedDoc.exists) {
+          // Set the price and type based on the selected barang
+          priceController.text = selectedDoc["Price"].toString();
+          typeController.text = selectedDoc["Tipe"];
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching data: ${e.toString()}")));
+      }
+    }
+
+   Future<void> tambahBarang() async {
+    if (selectedBarang == null || unitController.text.isEmpty || tanggalController.text.isEmpty ||
+        (isDifferentType && (typeController.text.isEmpty || priceController.text.isEmpty))) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Harap isi semua field")));
+      return;
     }
 
     int additionalUnits = int.parse(unitController.text);
-    int newPrice = isDifferentType ? int.parse(priceController.text) : 0; // Use new price if type is different
+    int newPrice = isDifferentType ? int.parse(priceController.text) : 0;
 
     try {
-        // Get the selected barang details
-        DocumentSnapshot selectedDoc = await FirebaseFirestore.instance.collection("Barang").doc(selectedBarang).get();
+      DocumentSnapshot selectedDoc = await FirebaseFirestore.instance.collection("Barang").doc(selectedBarang).get();
+      if (!selectedDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barang tidak ditemukan.")));
+        return;
+      }
 
-        if (!selectedDoc.exists) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barang tidak ditemukan.")));
-            return;
-        }
+      // Update existing Barang document
+      await FirebaseFirestore.instance.collection("Barang").doc(selectedBarang).update({
+        "Jumlah": FieldValue.increment(additionalUnits),
+        "Tanggal": tanggalController.text,
+      });
 
-        // Check if the selected barang already exists in the Pembelian collection
-        QuerySnapshot pembelianQuery = await FirebaseFirestore.instance.collection("Pembelian")
-            .where("BarangId", isEqualTo: selectedBarang)
-            .where("Type", isEqualTo: isDifferentType ? typeController.text : selectedDoc["Tipe"]) // Check if the type is the same
-            .get();
+      // Add new Pembelian document
+      await FirebaseFirestore.instance.collection("Pembelian").add({
+        "BarangId": selectedBarang,
+        "Jumlah": additionalUnits,
+        "Price": isDifferentType ? newPrice : selectedDoc["Price"],
+        "Type": isDifferentType ? typeController.text : selectedDoc["Tipe"],
+        "Timestamp": FieldValue.serverTimestamp(),
+        "Tanggal": tanggalController.text,
+      });
 
-        if (pembelianQuery.docs.isNotEmpty) {
-            // If there's an existing entry with the same barang and type
-            DocumentSnapshot existingDoc = pembelianQuery.docs.first;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barang berhasil ditambahkan!")));
 
-            // Update the quantity
-            await existingDoc.reference.update({
-                "Jumlah": existingDoc["Jumlah"] + additionalUnits,
-                "Timestamp": FieldValue.serverTimestamp(),
-            });
-
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Jumlah barang berhasil diperbarui!")));
-        } else {
-            // If no existing entry, create a new document in Pembelian collection with item type
-            newPrice = isDifferentType ? newPrice : selectedDoc["Price"];
-
-            await FirebaseFirestore.instance.collection("Pembelian").add({
-                "BarangId": selectedBarang,
-                "Jumlah": additionalUnits,
-                "Price": newPrice,
-                "Type": isDifferentType ? typeController.text : selectedDoc["Tipe"], // Use new type if it's different
-                "Timestamp": FieldValue.serverTimestamp(),
-            });
-
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Barang berhasil ditambahkan!")));
-        }
-
-        // Clear the input fields after submission
-        unitController.clear();
-        selectedBarang = null;
-        typeController.clear();
-        priceController.clear();
+      unitController.clear();
+      selectedBarang = null;
+      typeController.clear();
+      priceController.clear();
+      setState(() {});
     } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
     }
-}
-
-  @override
-  Widget build(BuildContext context) {
+  }
+    @override
+Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -167,7 +169,7 @@ class _PembelianPageState extends State<PembelianPage> {
                     setState(() {
                       isDifferentType = value!;
                       if (!isDifferentType) {
-                        priceController.clear(); // Clear price if type is the same
+                        priceController.clear();
                       }
                     });
                   },
@@ -203,6 +205,20 @@ class _PembelianPageState extends State<PembelianPage> {
                 keyboardType: TextInputType.number,
               ),
             ],
+            SizedBox(height: 20),
+            GestureDetector(
+              onTap: () => _selectDate(context),
+              child: AbsorbPointer(
+                child: TextField(
+                  controller: tanggalController,
+                  decoration: InputDecoration(
+                    labelText: "Tanggal",
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                ),
+              ),
+            ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: tambahBarang,

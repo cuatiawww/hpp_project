@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hpp_project/service/database.dart';
+import 'package:intl/intl.dart';
 import 'package:random_string/random_string.dart';
 
 class InputPersAwal extends StatefulWidget {
@@ -15,11 +16,28 @@ class _InputPersAwalState extends State<InputPersAwal> {
   TextEditingController hargacontroller = TextEditingController();
   TextEditingController satuanController = TextEditingController();
   TextEditingController jumlahController = TextEditingController();
-  TextEditingController tipeController = TextEditingController(); // Input manual untuk tipe
+  TextEditingController tipeController = TextEditingController();
+  TextEditingController tanggalController = TextEditingController();
 
   String selectedUnit = 'Pcs';
   List<String> units = ['Pcs', 'Kg', 'Lt', 'Meter', 'Box', 'Lainnya'];
   bool isOtherSelected = false;
+  DateTime selectedDate = DateTime.now();
+  
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        tanggalController.text = DateFormat('yyyy-MM-dd').format(selectedDate);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +146,22 @@ class _InputPersAwalState extends State<InputPersAwal> {
                   decoration: InputDecoration(border: InputBorder.none),
                 ),
               ),
+              SizedBox(height: 20.0),
+              Text("Tanggal", style: TextStyle(color: Colors.black, fontSize: 24.0, fontWeight: FontWeight.bold)),
+              SizedBox(height: 10.0),
+              GestureDetector(
+                onTap: () => _selectDate(context),
+                child: AbsorbPointer(
+                  child: TextField(
+                    controller: tanggalController,
+                    decoration: InputDecoration(
+                      hintText: 'Pilih tanggal',
+                      border: OutlineInputBorder(),
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                  ),
+                ),
+              ),
               SizedBox(height: 30.0),
               Center(
                 child: ElevatedButton(
@@ -136,7 +170,8 @@ class _InputPersAwalState extends State<InputPersAwal> {
                         jumlahController.text.isEmpty ||
                         hargacontroller.text.isEmpty ||
                         (isOtherSelected && satuanController.text.isEmpty) ||
-                        tipeController.text.isEmpty) {
+                        tipeController.text.isEmpty ||
+                        tanggalController.text.isEmpty) {
                       Fluttertoast.showToast(
                         msg: "Harap isi semua kolom!",
                         toastLength: Toast.LENGTH_SHORT,
@@ -152,17 +187,18 @@ class _InputPersAwalState extends State<InputPersAwal> {
                     String satuan = isOtherSelected ? satuanController.text : selectedUnit;
                     int jumlah = int.parse(jumlahController.text);
                     int harga = int.parse(hargacontroller.text);
-                    String tipe = tipeController.text; // Ambil tipe dari input
-
+                    String tipe = tipeController.text;
+                    String tanggal = tanggalController.text;
                     String Id = randomAlphaNumeric(10);
 
                     Map<String, dynamic> barangInfoMap = {
                       "Name": namaBarang,
-                      "Tipe": tipe, // Tambahkan tipe ke map
+                      "Tipe": tipe,
                       "Satuan": satuan,
                       "Jumlah": jumlah,
                       "Price": harga,
                       "Id": Id,
+                      "Tanggal": tanggal,
                     };
 
                     await DatabaseMethods().addBarang(barangInfoMap, Id).then((value) {
@@ -180,6 +216,7 @@ class _InputPersAwalState extends State<InputPersAwal> {
                       satuanController.clear();
                       jumlahController.clear();
                       tipeController.clear();
+                      tanggalController.clear();
                     });
                   },
                   child: Text(

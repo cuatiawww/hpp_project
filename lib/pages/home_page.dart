@@ -32,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   // Daftar halaman yang akan ditampilkan berdasarkan indeks
   static List<Widget> _widgetOptions = <Widget>[
     _PersAwalContent(), // Halaman Beranda
-    // ReportPembelian(),
+    ProfilePage(),
     ProfilePage()   // Halaman Laporan
   ];
 
@@ -76,6 +76,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: primary1,
         elevation: 0,
       ),
+      
       body: _widgetOptions[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[

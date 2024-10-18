@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/service/database.dart';
+import 'package:intl/intl.dart';
 
 class PersAkhirPage extends StatefulWidget {
   @override
@@ -10,16 +11,26 @@ class PersAkhirPage extends StatefulWidget {
 class _PersAkhirPageState extends State<PersAkhirPage> {
   Stream<QuerySnapshot>? barangStream;
   Stream<QuerySnapshot>? pembelianStream;
+  String selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
+  List<String> months = [];
 
   @override
   void initState() {
     super.initState();
     loadData();
+    generateMonths();
   }
 
   void loadData() {
     barangStream = DatabaseMethods().getBarangDetails();
     pembelianStream = DatabaseMethods().getPembelianDetails();
+  }
+  void generateMonths() {
+    DateTime now = DateTime.now();
+    for (int i = 0; i < 12; i++) {
+      DateTime month = DateTime(now.year, now.month - i, 1);
+      months.add(DateFormat('yyyy-MM').format(month));
+    }
   }
 
   Widget buildTable() {
@@ -263,9 +274,67 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: buildTable(),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DropdownButton<String>(
+              value: selectedMonth,
+              items: months.map((String month) {
+                return DropdownMenuItem<String>(
+                  value: month,
+                  child: Text(month),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedMonth = newValue!;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('Barang')
+                  .where('Tanggal', isGreaterThanOrEqualTo: '$selectedMonth-01')
+                  .where('Tanggal', isLessThan: '${DateFormat('yyyy-MM').format(DateTime.parse(selectedMonth + '-01').add(Duration(days: 32)))}')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                List<DataRow> rows = snapshot.data!.docs.map((doc) {
+                  Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(data['Name'] ?? '')),
+                      DataCell(Text(data['Tipe'] ?? '')),
+                      DataCell(Text(data['Jumlah'].toString())),
+                      DataCell(Text(data['Price'].toString())),
+                      DataCell(Text(data['Tanggal'] ?? '')),
+                    ],
+                  );
+                }).toList();
+
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: [
+                      DataColumn(label: Text('Nama')),
+                      DataColumn(label: Text('Tipe')),
+                      DataColumn(label: Text('Jumlah')),
+                      DataColumn(label: Text('Harga')),
+                      DataColumn(label: Text('Tanggal')),
+                    ],
+                    rows: rows,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
