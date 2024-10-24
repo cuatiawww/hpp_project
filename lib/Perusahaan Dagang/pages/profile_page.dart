@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/theme.dart';
-import 'package:hpp_project/user_auth/auth_controller.dart';
+import 'package:hpp_project/auth/controllers/auth_controller.dart';
 
 class ProfilePage extends StatefulWidget {
   @override

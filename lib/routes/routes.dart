@@ -14,6 +14,8 @@ class Routes {
   static const String persediaanAwal = '/persediaan_awal';
   static const String inputPersAwal = '/input_pers_awal';
   static const String persAwal = '/pers_awal';
+  static const String persAkhir = '/pers_akhir';
+  static const String infoScreen = '/info_screen';
   
 
   // Jika ingin pindah halaman tanpa mengirim data:

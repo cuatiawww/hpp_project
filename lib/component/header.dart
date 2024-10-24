@@ -34,7 +34,7 @@ class Header extends StatelessWidget {
             width: 30,
             height: 30,
             child: Image.asset(
-              "../assets/icons/notification.png",
+              "../assets/images/notification.png",
               fit: BoxFit.contain,
             ),
           ),

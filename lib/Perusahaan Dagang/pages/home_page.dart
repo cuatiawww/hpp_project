@@ -1,16 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:hpp_project/pages/pembelian.dart';
-import 'package:hpp_project/pages/profile_page.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pembelian.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_akhir_page.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/profile_page.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:hpp_project/pages/pers_awal.dart'; // Add this import for the Pers Awal page
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_awal.dart'; // Add this import for the Pers Awal page
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:get/get.dart';
-import 'package:hpp_project/user_auth/auth_controller.dart';
+import 'package:hpp_project/auth/controllers/auth_controller.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -67,7 +68,7 @@ class _HomePageState extends State<HomePage> {
               width: 30,
               height: 30,
               child: Image.asset(
-                "assets/icons/notification.png",
+                "assets/images/notification.png",
                 fit: BoxFit.contain,
               ),
             ),
@@ -164,7 +165,7 @@ class _PersAwalContent extends StatelessWidget {
                         Row(
                           children: [
                             Image.asset(
-                              "assets/icons/shop.png",
+                              "assets/images/shop.png",
                               height: 24, // Atur tinggi ikon sesuai kebutuhan
                               width: 24, // Atur lebar ikon sesuai kebutuhan
                             ),
@@ -209,7 +210,7 @@ class _PersAwalContent extends StatelessWidget {
                         Row(
                           children: [
                             Image.asset(
-                              "assets/icons/location.png",
+                              "assets/images/location.png",
                               height: 24,
                               width: 24,
                             ),
@@ -281,24 +282,18 @@ class _PersAwalContent extends StatelessWidget {
               // _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
               //   Get.toNamed('/persediaan_awal');
               // }),
-              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
-  // Use Get.to() to navigate to the PersAwal page
-  Get.to(() => PersAwal());
-}),
-_buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth, onPressed: () {
-  // Use Get.to() to navigate to the PersAwal page
-  // Get.to(() => ReportPembelian());
-}),
-              _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth, onPressed: () {
-                
+              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, 
+              onPressed: () {
+                Get.to(() => PersAwal());
               }),
               _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth,
-                  onPressed: () {
-                // Use Get.to() to navigate to the PersAwal page
+              onPressed: () {
                 Get.to(() => PembelianPage());
               }),
               _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth,
-                  onPressed: () {}),
+              onPressed: () {
+                Get.to(() => PersAkhirPage()); 
+              }),
             ],
           );
         },

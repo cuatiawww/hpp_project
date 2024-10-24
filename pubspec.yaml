@@ -57,6 +57,7 @@ dependencies:
   firebase_storage: ^12.3.0
   universal_html: ^2.2.4
   smooth_page_indicator: ^1.2.0+3
+  flutter_launcher_icons: ^0.14.1
   
   
 
@@ -70,6 +71,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   # flutter_lints: ^4.0.0
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo-apps.png"
+  remove_alpha_ios: true # Untuk menghapus alpha chanel di IOS App Store
+  min_sdk_android: 21 # android min sdk min:16, default 21
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -87,10 +95,11 @@ flutter:
     - assets/images/logo-taxcenter.png
     - assets/images/splash.png
     - assets/images/profile.jpg
-    # Icons:
-    - assets/icons/notification.png
-    - assets/icons/shop.png
-    - assets/icons/location.png
+    - assets/images/logo-apps.png
+    - assets/images/notification.png
+    - assets/images/shop.png
+    - assets/images/location.png
+  # Icons:
     - assets/icons/edit.svg
     - assets/icons/shop.svg
     - assets/icons/Profile.svg

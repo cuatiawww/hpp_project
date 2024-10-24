@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:hpp_project/pages/hpp_calculation_page.dart';
-import 'package:hpp_project/pages/input_pers_awal.dart';
-import 'package:hpp_project/pages/pembelian.dart';
-import 'package:hpp_project/pages/pers_akhir_page.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/hpp_calculation_page.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/input_pers_awal.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pembelian.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_akhir_page.dart';
 import 'package:hpp_project/service/database.dart';
 
 class PersAwal extends StatefulWidget {

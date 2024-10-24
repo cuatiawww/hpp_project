@@ -2,23 +2,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hpp_project/auth/view/info_screen.dart';
 
-import 'package:hpp_project/pages/home_page.dart';
-import 'package:hpp_project/pages/input_pers_awal.dart';
-import 'package:hpp_project/pages/pers_awal.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/home_page.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/input_pers_awal.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_akhir_page.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_awal.dart';
 import 'package:hpp_project/Onboarding/onboarding_view.dart';
-import 'package:hpp_project/pages/hpp_calculation_page.dart';
+import 'package:hpp_project/Perusahaan%20Dagang/pages/hpp_calculation_page.dart';
 
 import 'package:hpp_project/routes/routes.dart';
-import 'package:hpp_project/user_auth/auth_controller.dart';
+import 'package:hpp_project/auth/controllers/auth_controller.dart';
 import 'package:hpp_project/utils/loading.dart';
 
-import 'package:hpp_project/auth/login.dart';
-import 'package:hpp_project/auth/forgot.dart';
-import 'package:hpp_project/auth/otp.dart';
-import 'package:hpp_project/auth/reset.dart';
-import 'package:hpp_project/auth/regist_page.dart';
-import 'package:hpp_project/auth/otp_success.dart';
+import 'package:hpp_project/auth/view/login.dart';
+import 'package:hpp_project/auth/view/forgot.dart';
+import 'package:hpp_project/auth/view/otp.dart';
+import 'package:hpp_project/auth/view/reset.dart';
+import 'package:hpp_project/auth/view/regist_page.dart';
+import 'package:hpp_project/auth/view/otp_success.dart';
 // import 'dart:io';
 
 // import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -62,8 +64,10 @@ class MyApp extends StatelessWidget {
               GetPage(name: Routes.home, page: () => HomePage()),
               GetPage(name: Routes.inputPersAwal, page: () => InputPersAwal()),
               GetPage(name: Routes.persAwal, page: () => PersAwal()),
+              GetPage(name: Routes.persAkhir, page: () => PersAkhirPage()),
+              GetPage(name: Routes.infoScreen, page: () => InfoScreen()),
             ],
-            // home: snapshot.data != null ? HomePage() : onboardingView(),
+            // home: snapshot.data != null ? HomePage====() : onboardingView(),
           );
         }
         return LoadingView();

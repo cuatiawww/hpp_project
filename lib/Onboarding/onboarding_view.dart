@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/Onboarding/onboarding_items.dart';
-import 'package:hpp_project/auth/regist_page.dart';
-import 'package:hpp_project/auth/login.dart';
-import 'package:path/path.dart';
+import 'package:hpp_project/routes/routes.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class OnboardingView extends StatefulWidget {
@@ -89,8 +87,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                   Container(
                     width: 163,
                     height: 50,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xff080C67),
                         shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
@@ -113,8 +111,8 @@ class _OnboardingViewState extends State<OnboardingView> {
                   Container(
                     width: 163,
                     height: 50,
-                    child: TextButton(
-                      style: TextButton.styleFrom(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xffffffff),
                         shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(6),
@@ -122,7 +120,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                         ),
                       ),
                       onPressed: () {
-                        pageController.nextPage(duration: Duration(milliseconds: 500), curve: Curves.easeIn);
+                        pageController.nextPage(duration: Duration(milliseconds: 700), curve: Curves.easeIn);
                       },
                       child: Text(
                         "Next",
@@ -152,16 +150,14 @@ class _OnboardingViewState extends State<OnboardingView> {
         Container(
           width: 163,
           height: 50,
-          child: TextButton(
-            style: TextButton.styleFrom(
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xff080C67),
               shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
               ),
             ),
-            onPressed: () {
-              Get.toNamed('/login');
-            },
+            onPressed: () => Get.toNamed(Routes.login),
             child: Text(
               "Masuk",
               style: TextStyle(
@@ -176,17 +172,15 @@ class _OnboardingViewState extends State<OnboardingView> {
         Container(
           width: 163,
           height: 50,
-          child: TextButton(
-            style: TextButton.styleFrom(
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xffffffff),
               shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(6),
               side: BorderSide(color: Color(0xffF29100)),
               ),
             ),
-            onPressed: () {
-              Get.toNamed('/regist');
-            },
+            onPressed: () => Get.toNamed(Routes.regist),
             child: Text(
               "Daftar",
               style: TextStyle(

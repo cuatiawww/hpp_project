@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hpp_project/auth/otp_success.dart';
+import 'package:hpp_project/auth/view/otp_success.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hpp_project/auth/login.dart';
+import 'package:hpp_project/auth/view/login.dart';
 
 class OtpSuccess extends StatelessWidget {
   const OtpSuccess({super.key});

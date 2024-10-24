@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
-import 'package:hpp_project/user_auth/auth_controller.dart';
+import 'package:hpp_project/auth/controllers/auth_controller.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
 
@@ -79,6 +79,8 @@ class _RegistPageState extends State<RegistPage> {
                       SizedBox(height: 5),
                       TextFormField(
                         controller: emailC,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
                         validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Email tidak boleh kosong';

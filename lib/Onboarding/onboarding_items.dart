@@ -3,14 +3,14 @@ import 'package:hpp_project/Onboarding/onboarding_info.dart';
 class OnboardingItems {
   List<OnboardingInfo> items = [
     OnboardingInfo(
-      title: "Optimalkan Keuangan Perusahaan Mu",
+      title: "Optimalkan Keuangan\nUsaha Anda",
       description: "Nikmati pengalaman kelola uang Perusahaan anda untuk lebih mudah dengan fitur-fitur unggulan kami.",
       image: "assets/images/splash.png"
       ),
 
     OnboardingInfo(
-      title: "Pantau Laporan HPP\nPerusahaan Anda",
-      description: "Anda dapat melihat perkembangan dari perhitungan HPP anda di aplikasi untuk Perusahaan Dagang atau Perusahaan Manufaktur.",
+      title: "Pantau Laporan HPP\nUsaha Anda",
+      description: "Anda dapat melihat perkembangan dari perhitungan HPP anda di aplikasi untuk Perusahaan Dagang Manufaktur.",
       image: "assets/images/splash.png"),
 
     OnboardingInfo(
