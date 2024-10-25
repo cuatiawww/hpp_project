@@ -21,9 +21,7 @@ import 'package:hpp_project/auth/view/otp.dart';
 import 'package:hpp_project/auth/view/reset.dart';
 import 'package:hpp_project/auth/view/regist_page.dart';
 import 'package:hpp_project/auth/view/otp_success.dart';
-// import 'dart:io';
-
-// import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:hpp_project/test_firestore_connection.dart'; // Import file TestFirestoreConnection
 import 'firebase_options.dart';
 
 void main() async {
@@ -41,9 +39,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: authC.streamAuthStatus,
-      builder: (context, snapshot){
+      builder: (context, snapshot) {
         print(snapshot.data);
-        if(snapshot.connectionState == ConnectionState.active){
+        if (snapshot.connectionState == ConnectionState.active) {
           return GetMaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'HPP Tax Center',
@@ -66,8 +64,8 @@ class MyApp extends StatelessWidget {
               GetPage(name: Routes.persAwal, page: () => PersAwal()),
               GetPage(name: Routes.persAkhir, page: () => PersAkhirPage()),
               GetPage(name: Routes.infoScreen, page: () => InfoScreen()),
+              GetPage(name: Routes.testFirestore, page: () => TestFirestoreConnection()), // Rute yang benar
             ],
-            // home: snapshot.data != null ? HomePage====() : onboardingView(),
           );
         }
         return LoadingView();

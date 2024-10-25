@@ -15,6 +15,15 @@ class DatabaseMethods {
     return FirebaseFirestore.instance.collection("Pembelian").snapshots();
   }
 
+  // New method to get Pembelian details by month and year
+  Stream<QuerySnapshot> getPembelianDetailsByMonth(int month, int year) {
+    return FirebaseFirestore.instance
+        .collection("Pembelian")
+        .where("Month", isEqualTo: month)
+        .where("Year", isEqualTo: year)
+        .snapshots();
+  }
+
   // UPDATE
   Future<void> updateBarangDetail(String id, Map<String, dynamic> updateInfo) async {
     try {

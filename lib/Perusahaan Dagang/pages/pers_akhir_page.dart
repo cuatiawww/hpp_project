@@ -4,163 +4,215 @@ import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
 
 class PersAkhirPage extends StatefulWidget {
+  const PersAkhirPage({super.key});
+
   @override
   _PersAkhirPageState createState() => _PersAkhirPageState();
 }
 
 class _PersAkhirPageState extends State<PersAkhirPage> {
-  Stream<QuerySnapshot>? barangStream;
-  Stream<QuerySnapshot>? pembelianStream;
-  String selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
-  List<String> months = [];
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  Stream<QuerySnapshot>? _barangStream;
+  Stream<QuerySnapshot>? _pembelianStream;
+  String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
+  final List<String> _months = [];
 
   @override
   void initState() {
     super.initState();
-    loadData();
-    generateMonths();
+    _generateMonths();
+    _loadInitialData();
   }
 
-  void loadData() {
-    barangStream = DatabaseMethods().getBarangDetails();
-    pembelianStream = DatabaseMethods().getPembelianDetails();
-  }
-
-  void generateMonths() {
-    DateTime now = DateTime.now();
+  void _generateMonths() {
+    final now = DateTime.now();
     for (int i = 0; i < 12; i++) {
-      DateTime month = DateTime(now.year, now.month - i, 1);
-      months.add(DateFormat('yyyy-MM').format(month));
+      final month = DateTime(now.year, now.month - i, 1);
+      _months.add(DateFormat('yyyy-MM').format(month));
     }
   }
 
-  Widget buildTable() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: barangStream,
-      builder: (context, barangSnapshot) {
-        if (!barangSnapshot.hasData) {
-          return Center(child: CircularProgressIndicator());
-        }
+  void _loadInitialData() {
+    _barangStream = DatabaseMethods().getBarangDetails();
+    _pembelianStream = DatabaseMethods().getPembelianDetails();
+  }
 
-        Map<String, Map<String, dynamic>> barangReference = {};
-        for (var barang in barangSnapshot.data!.docs) {
-          var barangData = barang.data() as Map<String, dynamic>;
-          barangReference[barang.id] = {
-            "Name": barangData["Name"] ?? "N/A",
-            "Satuan": barangData["Satuan"] ?? "N/A",
-            "docId": barang.id,
-          };
-        }
-
-        return StreamBuilder<QuerySnapshot>(
-          stream: pembelianStream,
-          builder: (context, pembelianSnapshot) {
-            if (!pembelianSnapshot.hasData) {
-              return Center(child: CircularProgressIndicator());
-            }
-
-            Map<String, Map<String, dynamic>> combinedData = {};
-
-            // Proses data persediaan awal
-            for (var barang in barangSnapshot.data!.docs) {
-              var barangData = barang.data() as Map<String, dynamic>;
-              var barangId = barang.id;
-              var tipe = barangData["Tipe"] ?? "Default";
-              var key = '${barangId}_$tipe';
-
-              combinedData[key] = {
-                "id": barangId,
-                "Name": barangData["Name"] ?? "N/A",
-                "Satuan": barangData["Satuan"] ?? "N/A",
-                "Jumlah": barangData["Jumlah"] ?? 0,
-                "Price": barangData["Price"] ?? 0,
-                "Tipe": tipe,
-                "isOriginal": true,
-                "docId": barangId,
-              };
-            }
-
-            // Menyimpan ID dokumen pembelian berdasarkan kombinasi BarangId dan Type
-            Map<String, List<String>> pembelianDocs = {};
-
-            // Proses data pembelian
-            for (var pembelian in pembelianSnapshot.data!.docs) {
-              var pembelianData = pembelian.data() as Map<String, dynamic>;
-              var barangId = pembelianData["BarangId"];
-              var tipe = pembelianData["Type"];
-              var key = '${barangId}_$tipe';
-
-              // Menyimpan ID dokumen pembelian
-              if (!pembelianDocs.containsKey(key)) {
-                pembelianDocs[key] = [];
-              }
-              pembelianDocs[key]!.add(pembelian.id);
-
-              var barangRef = barangReference[barangId];
-
-              if (combinedData.containsKey(key)) {
-                combinedData[key]!["Jumlah"] =
-                    (combinedData[key]!["Jumlah"] as int) +
-                    (pembelianData["Jumlah"] as int);
-
-                if (pembelianData["Price"] != null) {
-                  combinedData[key]!["Price"] = pembelianData["Price"];
-                }
-              } else {
-                combinedData[key] = {
-                  "id": barangId,
-                  "Name": barangRef?["Name"] ?? "N/A",
-                  "Satuan": barangRef?["Satuan"] ?? "N/A",
-                  "Jumlah": pembelianData["Jumlah"] ?? 0,
-                  "Price": pembelianData["Price"] ?? 0,
-                  "Tipe": tipe,
-                  "isOriginal": false,
-                  "docId": pembelian.id,
-                  "pembelianIds": pembelianDocs[key],
-                };
-              }
-            }
-
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: [
-                  DataColumn(label: Text("Nama Barang")),
-                  DataColumn(label: Text("Tipe")),
-                  DataColumn(label: Text("Jumlah")),
-                  DataColumn(label: Text("Satuan")),
-                  DataColumn(label: Text("Harga")),
-                  DataColumn(label: Text("Total")),
-                  DataColumn(label: Text("Actions")),
-                ],
-                rows: combinedData.entries.map((entry) {
-                  final data = entry.value;
-                  final total = (data["Jumlah"] as int) * (data["Price"] as int);
-
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(data["Name"])),
-                      DataCell(Text(data["Tipe"].toString())),
-                      DataCell(Text(data["Jumlah"].toString())),
-                      DataCell(Text(data["Satuan"])),
-                      DataCell(Text('Rp ${data["Price"]}')),
-                      DataCell(Text('Rp $total')),
-                      DataCell(Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit),
-                            onPressed: () => _editBarang(data, entry.key),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () => _deleteBarang(data, entry.key),
-                          ),
-                        ],
-                      )),
-                    ],
+  Widget _buildMonthFilter() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today),
+            const SizedBox(width: 16),
+            const Text(
+              "Filter Bulan:",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedMonth,
+                items: _months.map((month) {
+                  return DropdownMenuItem<String>(
+                    value: month,
+                    child: Text(
+                      DateFormat('MMMM yyyy').format(DateTime.parse('$month-01')),
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   );
                 }).toList(),
+                onChanged: (newValue) {
+                  if (newValue != null) {
+                    setState(() => _selectedMonth = newValue);
+                  }
+                },
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDataTable(Map<String, Map<String, dynamic>> combinedData) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      elevation: 2,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: MediaQuery.of(context).size.width - 64,
+          ),
+          child: DataTable(
+            columnSpacing: 20,
+            headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+            columns: const [
+              DataColumn(
+                label: Text("Nama Barang", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              DataColumn(
+                label: Text("Tipe", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              DataColumn(
+                label: Text("Jumlah", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              DataColumn(
+                label: Text("Satuan", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              DataColumn(
+                label: Text("Harga", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              DataColumn(
+                label: Text("Total", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              DataColumn(
+                label: Text("Actions", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+            rows: _buildTableRows(combinedData),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<DataRow> _buildTableRows(Map<String, Map<String, dynamic>> combinedData) {
+    return combinedData.entries.map((entry) {
+      final data = entry.value;
+      final total = (data["Jumlah"] as int) * (data["Price"] as int);
+
+      return DataRow(
+        cells: [
+          DataCell(Text(data["Name"])),
+          DataCell(Text(data["Tipe"].toString())),
+          DataCell(Text(data["Jumlah"].toString())),
+          DataCell(Text(data["Satuan"])),
+          DataCell(Text(NumberFormat.currency(
+            locale: 'id',
+            symbol: 'Rp ',
+            decimalDigits: 0,
+          ).format(data["Price"]))),
+          DataCell(Text(NumberFormat.currency(
+            locale: 'id',
+            symbol: 'Rp ',
+            decimalDigits: 0,
+          ).format(total))),
+          DataCell(_buildActionButtons(data, entry.key)),
+        ],
+      );
+    }).toList();
+  }
+
+  Widget _buildActionButtons(Map<String, dynamic> data, String key) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.edit, color: Colors.blue),
+          tooltip: 'Edit',
+          onPressed: () => _editBarang(data, key),
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete, color: Colors.red),
+          tooltip: 'Hapus',
+          onPressed: () => _deleteBarang(data, key),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainContent() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _barangStream,
+      builder: (context, barangSnapshot) {
+        if (!barangSnapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final barangReference = _processBarangReference(barangSnapshot.data!.docs);
+
+        return StreamBuilder<QuerySnapshot>(
+          stream: _pembelianStream,
+          builder: (context, pembelianSnapshot) {
+            if (!pembelianSnapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final combinedData = _processCombinedData(
+              barangSnapshot.data!.docs,
+              pembelianSnapshot.data!.docs,
+              barangReference,
+            );
+
+            if (combinedData.isEmpty) {
+              return Column(
+                children: [
+                  _buildMonthFilter(),
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        "Tidak ada data untuk bulan yang dipilih.",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return Column(
+              children: [
+                _buildMonthFilter(),
+                Expanded(child: _buildDataTable(combinedData)),
+              ],
             );
           },
         );
@@ -168,26 +220,144 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
     );
   }
 
-  Future<void> _editBarang(Map<String, dynamic> data, String key) async {
-    TextEditingController jumlahController =
-        TextEditingController(text: data["Jumlah"].toString());
+  Map<String, Map<String, dynamic>> _processBarangReference(
+    List<QueryDocumentSnapshot> docs,
+  ) {
+    final result = <String, Map<String, dynamic>>{};
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      result[doc.id] = {
+        "Name": data["Name"] ?? "N/A",
+        "Satuan": data["Satuan"] ?? "N/A",
+        "docId": doc.id,
+      };
+    }
+    return result;
+  }
 
-    await showDialog(
+  Map<String, Map<String, dynamic>> _processCombinedData(
+    List<QueryDocumentSnapshot> barangDocs,
+    List<QueryDocumentSnapshot> pembelianDocs,
+    Map<String, Map<String, dynamic>> barangReference,
+  ) {
+    final combinedData = <String, Map<String, dynamic>>{};
+    final pembelianDocsMap = <String, List<String>>{};
+
+    // Process barang data
+    for (var doc in barangDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+      if (_isDocInSelectedMonth(data)) {
+        final key = '${doc.id}_${data["Tipe"] ?? "Default"}';
+        combinedData[key] = _createBarangEntry(doc.id, data);
+      }
+    }
+
+    // Process pembelian data
+    for (var doc in pembelianDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+      if (_isDocInSelectedMonth(data)) {
+        final key = '${data["BarangId"]}_${data["Type"]}';
+        _updateCombinedData(
+          combinedData,
+          pembelianDocsMap,
+          key,
+          doc,
+          data,
+          barangReference,
+        );
+      }
+    }
+
+    return combinedData;
+  }
+
+  bool _isDocInSelectedMonth(Map<String, dynamic> data) {
+    if (data.containsKey("Tanggal")) {
+      final docMonth = data["Tanggal"].substring(0, 7);
+      return docMonth == _selectedMonth;
+    }
+    return false;
+  }
+
+  Map<String, dynamic> _createBarangEntry(String id, Map<String, dynamic> data) {
+    return {
+      "id": id,
+      "Name": data["Name"] ?? "N/A",
+      "Satuan": data["Satuan"] ?? "N/A",
+      "Jumlah": data["Jumlah"] ?? 0,
+      "Price": data["Price"] ?? 0,
+      "Tipe": data["Tipe"] ?? "Default",
+      "isOriginal": true,
+      "docId": id,
+    };
+  }
+
+  void _updateCombinedData(
+    Map<String, Map<String, dynamic>> combinedData,
+    Map<String, List<String>> pembelianDocsMap,
+    String key,
+    QueryDocumentSnapshot doc,
+    Map<String, dynamic> data,
+    Map<String, Map<String, dynamic>> barangReference,
+  ) {
+    // Update pembelian docs list
+    pembelianDocsMap.putIfAbsent(key, () => []).add(doc.id);
+
+    if (combinedData.containsKey(key)) {
+      // Update existing entry
+      combinedData[key]!["Jumlah"] = (combinedData[key]!["Jumlah"] as int) + (data["Jumlah"] as int);
+      if (data["Price"] != null) {
+        combinedData[key]!["Price"] = data["Price"];
+      }
+    } else {
+      // Create new entry
+      final barangRef = barangReference[data["BarangId"]];
+      combinedData[key] = {
+        "id": data["BarangId"],
+        "Name": barangRef?["Name"] ?? "N/A",
+        "Satuan": barangRef?["Satuan"] ?? "N/A",
+        "Jumlah": data["Jumlah"] ?? 0,
+        "Price": data["Price"] ?? 0,
+        "Tipe": data["Type"],
+        "isOriginal": false,
+        "docId": doc.id,
+        "pembelianIds": pembelianDocsMap[key],
+      };
+    }
+  }
+
+  void _showMessage(String message, bool isError) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  Future<void> _editBarang(Map<String, dynamic> data, String key) async {
+    final jumlahController = TextEditingController(text: data["Jumlah"].toString());
+
+    final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Edit Jumlah Barang"),
+        title: const Text("Edit Jumlah Barang"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Nama: ${data['Name']}"),
-            Text("Tipe: ${data['Tipe']}"),
-            SizedBox(height: 16),
+            Text("Nama: ${data['Name']}", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 8),
+            Text("Tipe: ${data['Tipe']}", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 16),
             TextField(
               controller: jumlahController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: "Jumlah",
                 border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               keyboardType: TextInputType.number,
             ),
@@ -195,105 +365,99 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Batal"),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Batal"),
           ),
-          TextButton(
-            onPressed: () async {
-              if (data["isOriginal"] == true) {
-                await DatabaseMethods().updateBarangDetail(
-                  data["docId"],
-                  {"Jumlah": int.parse(jumlahController.text)},
-                );
-              } else {
-                List<String>? pembelianIds = data["pembelianIds"] as List<String>?;
-                if (pembelianIds != null) {
-                  int newJumlahPerDoc = int.parse(jumlahController.text) ~/ pembelianIds.length;
-                  for (String pembelianId in pembelianIds) {
-                    await FirebaseFirestore.instance
-                        .collection("Pembelian")
-                        .doc(pembelianId)
-                        .update({"Jumlah": newJumlahPerDoc});
-                  }
-                }
-              }
-              Navigator.pop(context);
-              setState(() {
-                loadData();
-              });
-            },
-            child: Text("Simpan"),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Simpan"),
           ),
         ],
       ),
     );
+
+    if (result == true) {
+      try {
+        await _updateJumlah(data, int.parse(jumlahController.text));
+        _showMessage("Data berhasil diupdate", false);
+        _loadInitialData();
+      } catch (e) {
+        _showMessage("Gagal mengupdate data: $e", true);
+      }
+    }
+  }
+
+  Future<void> _updateJumlah(Map<String, dynamic> data, int newJumlah) async {
+    if (data["isOriginal"] == true) {
+      await DatabaseMethods().updateBarangDetail(
+        data["docId"],
+        {"Jumlah": newJumlah},
+      );
+    } else {
+      final pembelianIds = data["pembelianIds"] as List<String>?;
+      if (pembelianIds != null) {
+        final newJumlahPerDoc = newJumlah ~/ pembelianIds.length;
+        await Future.wait(
+          pembelianIds.map((id) => _db
+              .collection("Pembelian")
+              .doc(id)
+              .update({"Jumlah": newJumlahPerDoc})),
+        );
+      }
+    }
   }
 
   Future<void> _deleteBarang(Map<String, dynamic> data, String key) async {
-    bool confirm = await showDialog(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Konfirmasi Hapus"),
-        content: Text("Anda yakin ingin menghapus barang ini?"),
+        title: const Text("Konfirmasi Hapus"),
+        content: const Text("Anda yakin ingin menghapus barang ini?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text("Batal"),
+            child: const Text("Batal"),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
-            child: Text("Hapus"),
+            child: const Text("Hapus"),
           ),
         ],
       ),
     ) ?? false;
 
     if (confirm) {
-      if (data["isOriginal"] == true) {
-        await DatabaseMethods().deleteBarangDetail(data["docId"]);
-      } else {
-        List<String>? pembelianIds = data["pembelianIds"] as List<String>?;
-        if (pembelianIds != null) {
-          for (String pembelianId in pembelianIds) {
-            await FirebaseFirestore.instance
-                .collection("Pembelian")
-                .doc(pembelianId)
-                .delete();
+      try {
+        if (data["isOriginal"] == true) {
+          await DatabaseMethods().deleteBarangDetail(data["docId"]);
+        } else {
+          final pembelianIds = data["pembelianIds"] as List<String>?;
+          if (pembelianIds != null) {
+            await Future.wait(
+              pembelianIds.map((id) => _db
+                  .collection("Pembelian")
+                  .doc(id)
+                  .delete()),
+            );
           }
         }
+        _showMessage("Data berhasil dihapus", false);
+        _loadInitialData();
+      } catch (e) {
+        _showMessage("Gagal menghapus data: $e", true);
       }
-      setState(() {
-        loadData();
-      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: DropdownButton<String>(
-              value: selectedMonth,
-              items: months.map((String month) {
-                return DropdownMenuItem<String>(
-                  value: month,
-                  child: Text(month),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedMonth = newValue!;
-                });
-              },
-            ),
-          ),
-          Expanded(
-            child: buildTable(),
-          ),
-        ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _loadInitialData();
+        },
+        child: _buildMainContent(),
       ),
     );
   }
