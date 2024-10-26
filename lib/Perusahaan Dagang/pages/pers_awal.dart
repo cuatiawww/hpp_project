@@ -5,6 +5,7 @@ import 'package:hpp_project/Perusahaan%20Dagang/pages/input_pers_awal.dart';
 import 'package:hpp_project/Perusahaan%20Dagang/pages/pembelian.dart';
 import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_akhir_page.dart';
 import 'package:hpp_project/service/database.dart';
+import 'package:intl/intl.dart';
 
 class PersAwal extends StatefulWidget {
   const PersAwal({super.key});
@@ -13,230 +14,537 @@ class PersAwal extends StatefulWidget {
   State<PersAwal> createState() => _PersAwalState();
 }
 
-class _PersAwalState extends State<PersAwal> {
-  List<Tab> myTab = [
-    Tab(text: 'P. Awal'),
-    Tab(text: 'Pembelian'),
-    Tab(text: 'P. Akhir'),
+class _PersAwalState extends State<PersAwal> with SingleTickerProviderStateMixin {
+  final List<Tab> _myTabs = [
+    const Tab(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inventory),
+          SizedBox(width: 8),
+          Text('P. Awal'),
+        ],
+      ),
+    ),
+    const Tab(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.shopping_cart),
+          SizedBox(width: 8),
+          Text('Pembelian'),
+        ],
+      ),
+    ),
+    const Tab(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inventory_2),
+          SizedBox(width: 8),
+          Text('P. Akhir'),
+        ],
+      ),
+    ),
   ];
 
-  Stream<QuerySnapshot>? persAwalStream;
+  late TabController _tabController;
+  Stream<QuerySnapshot>? _persAwalStream;
+  String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
+  final List<String> _months = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    getontheload();
+    _tabController = TabController(length: _myTabs.length, vsync: this);
+    _tabController.addListener(_handleTabSelection);
+    _initializeData();
   }
 
-  getontheload() {
-    persAwalStream = DatabaseMethods().getBarangDetails();
-    setState(() {});
+  Future<void> _initializeData() async {
+    setState(() => _isLoading = true);
+    _generateMonths();
+    await _loadData();
+    setState(() => _isLoading = false);
   }
 
- Widget allBarangDetails() {
-  return StreamBuilder<QuerySnapshot>(
-    stream: persAwalStream,
-    builder: (context, snapshot) {
-      if (!snapshot.hasData) {
-        return Center(child: CircularProgressIndicator());
-      }
+  void _generateMonths() {
+    final now = DateTime.now();
+    for (int i = 0; i < 12; i++) {
+      final month = DateTime(now.year, now.month - i, 1);
+      _months.add(DateFormat('yyyy-MM').format(month));
+    }
+  }
 
-      if (snapshot.data!.docs.isEmpty) {
-        return Center(child: Text("Tidak ada data barang yang ditemukan."));
-      }
+  Future<void> _loadData() async {
+    _persAwalStream = DatabaseMethods().getBarangDetails();
+  }
 
-      return ListView.builder(
-        itemCount: snapshot.data!.docs.length,
-        itemBuilder: (context, index) {
-          DocumentSnapshot ds = snapshot.data!.docs[index];
-          Map<String, dynamic>? data = ds.data() as Map<String, dynamic>?;
-
-          String name = data != null && data.containsKey("Name") ? data["Name"] : "Nama tidak ada";
-          String type = data != null && data.containsKey("Tipe") ? data["Tipe"] : "Tipe tidak ada"; // Retrieve Tipe
-          int jumlah = data != null && data.containsKey("Jumlah") ? data["Jumlah"] : 0;
-          int pricePerItem = data != null && data.containsKey("Price") ? data["Price"] : 0;
-          String satuan = data != null && data.containsKey("Satuan") ? data["Satuan"] : "Satuan tidak ada";
-          int totalPrice = jumlah * pricePerItem;
-
-          return Padding(
-            padding: const EdgeInsets.only(top: 20, left: 20, right: 20),
-            child: ListTile(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(22),
-                side: BorderSide(color: Colors.black),
-              ),
-              leading: GestureDetector(
-                onTap: () {
-                  EditBarangDetail(ds);
-                },
-                child: Icon(Icons.edit),
-              ),
-              title: Text(
-                '$name ($type)', // Display name with type
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 23),
-              ),
-              subtitle: Text(
-                '$jumlah $satuan - Rp ${pricePerItem}/$satuan',
-                style: TextStyle(fontWeight: FontWeight.w400, fontSize: 12),
-              ),
-              trailing: Text(
-                'Rp $totalPrice',
-                style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18),
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) {
+      setState(() {});
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      initialIndex: 0,
-      length: myTab.length,
-      child: Scaffold(
-        floatingActionButton: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            FloatingActionButton(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => InputPersAwal()));
-              },
-              child: Icon(Icons.add),
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildTable() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _persAwalStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text(
+              "Tidak ada data barang yang ditemukan.",
+              style: TextStyle(fontSize: 16),
             ),
-            SizedBox(height: 16),
-            FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => HPPCalculationPage()));
-              },
-              label: Text('Hitung HPP'),
-              icon: Icon(Icons.calculate),
+          );
+        }
+
+        List<DocumentSnapshot> filteredDocs = snapshot.data!.docs.where((doc) {
+          var data = doc.data() as Map<String, dynamic>;
+          if (data.containsKey("Tanggal")) {
+            String docDate = data["Tanggal"];
+            String docMonth = docDate.substring(0, 7);
+            return docMonth == _selectedMonth;
+          }
+          return false;
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
+          return Column(
+            children: [
+              _buildMonthDropdown(),
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    "Tidak ada data untuk bulan yang dipilih.",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            _buildMonthDropdown(),
+            Expanded(
+              child: Card(
+                margin: const EdgeInsets.all(16),
+                elevation: 2,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: MediaQuery.of(context).size.width - 64,
+                    ),
+                    child: DataTable(
+                      columnSpacing: 20,
+                      headingRowColor: MaterialStateProperty.all(
+                        Colors.grey[100],
+                      ),
+                      columns: const [
+                        DataColumn(
+                          label: Text(
+                            "Nama Barang",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "Tipe",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "Jumlah",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "Satuan",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "Harga",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "Total",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            "Actions",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                      rows: filteredDocs.map((doc) {
+                        var data = doc.data() as Map<String, dynamic>;
+                        String name = data["Name"] ?? "Nama tidak ada";
+                        String type = data["Tipe"] ?? "Tipe tidak ada";
+                        int jumlah = data["Jumlah"] ?? 0;
+                        int price = data["Price"] ?? 0;
+                        String satuan = data["Satuan"] ?? "Satuan tidak ada";
+                        int total = jumlah * price;
+
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(name)),
+                            DataCell(Text(type)),
+                            DataCell(Text(jumlah.toString())),
+                            DataCell(Text(satuan)),
+                            DataCell(Text(
+                              NumberFormat.currency(
+                                locale: 'id',
+                                symbol: 'Rp ',
+                                decimalDigits: 0,
+                              ).format(price),
+                            )),
+                            DataCell(Text(
+                              NumberFormat.currency(
+                                locale: 'id',
+                                symbol: 'Rp ',
+                                decimalDigits: 0,
+                              ).format(total),
+                            )),
+                            DataCell(Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () => _editBarangDetail(doc),
+                                  tooltip: 'Edit',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _deleteBarang(doc),
+                                  tooltip: 'Hapus',
+                                ),
+                              ],
+                            )),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
-        ),
-        appBar: AppBar(
-          centerTitle: true,
-          title: Text(
-            'Perusahaan Dagang',
-            style: TextStyle(
-              color: Color(0xFFFFFFFF),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(60),
-            child: TabBar(
-              indicatorColor: Color(0xFFFFFFFF),
-              indicatorPadding: EdgeInsets.all(5),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Color(0xFFFFFFFF),
-              labelStyle: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-              unselectedLabelStyle: TextStyle(
-                color: Color(0xFFFFFFFF),
-              ),
-              tabs: myTab,
-            ),
-          ),
-          backgroundColor: Color(0xFF080C67),
-        ),
-        body: TabBarView(
+        );
+      },
+    );
+  }
+
+  Widget _buildMonthDropdown() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
           children: [
-            allBarangDetails(),
-            PembelianPage(),
-            PersAkhirPage(),
+            const Icon(Icons.calendar_today),
+            const SizedBox(width: 16),
+            const Text(
+              "Filter Bulan:",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedMonth,
+                items: _months.map((String month) {
+                  return DropdownMenuItem<String>(
+                    value: month,
+                    child: Text(
+                      DateFormat('MMMM yyyy').format(DateTime.parse('$month-01')),
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() => _selectedMonth = newValue);
+                  }
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> EditBarangDetail(DocumentSnapshot ds) {
-    TextEditingController nameController = TextEditingController(text: ds["Name"]);
-    TextEditingController priceController = TextEditingController(text: ds["Price"].toString());
-    TextEditingController jumlahController = TextEditingController(text: ds["Jumlah"].toString());
-    TextEditingController tipeController = TextEditingController(text: ds["Tipe"] ?? ""); // Default to empty string if null
+  Future<void> _deleteBarang(DocumentSnapshot doc) async {
+    bool confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Konfirmasi Hapus"),
+        content: const Text("Anda yakin ingin menghapus barang ini?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Batal"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Hapus"),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirm) {
+      try {
+        await DatabaseMethods().deleteBarangDetail(doc.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Barang berhasil dihapus"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() => _loadData());
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Gagal menghapus barang: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _editBarangDetail(DocumentSnapshot ds) {
+    final nameController = TextEditingController(text: ds["Name"]);
+    final priceController = TextEditingController(text: ds["Price"].toString());
+    final jumlahController = TextEditingController(text: ds["Jumlah"].toString());
+    final tipeController = TextEditingController(text: ds["Tipe"] ?? "");
 
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Edit Barang"),
+        title: const Text("Edit Barang"),
         content: SingleChildScrollView(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Nama Barang", style: TextStyle(fontWeight: FontWeight.bold)),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(border: OutlineInputBorder()),
+              _buildEditField(
+                "Nama Barang",
+                nameController,
+                TextInputType.text,
               ),
-              SizedBox(height: 10),
-              Text("Harga per Pcs", style: TextStyle(fontWeight: FontWeight.bold)),
-              TextField(
-                controller: priceController,
-                decoration: InputDecoration(border: OutlineInputBorder()),
-                keyboardType: TextInputType.number,
+              const SizedBox(height: 16),
+              _buildEditField(
+                "Harga per Pcs",
+                priceController,
+                TextInputType.number,
               ),
-              SizedBox(height: 10),
-              Text("Jumlah", style: TextStyle(fontWeight: FontWeight.bold)),
-              TextField(
-                controller: jumlahController,
-                decoration: InputDecoration(border: OutlineInputBorder()),
-                keyboardType: TextInputType.number,
+              const SizedBox(height: 16),
+              _buildEditField(
+                "Jumlah",
+                jumlahController,
+                TextInputType.number,
               ),
-              SizedBox(height: 10),
-              Text("Tipe", style: TextStyle(fontWeight: FontWeight.bold)),
-              TextField(
-                controller: tipeController,
-                decoration: InputDecoration(border: OutlineInputBorder()),
+              const SizedBox(height: 16),
+              _buildEditField(
+                "Tipe",
+                tipeController,
+                TextInputType.text,
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text("Batal"),
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Batal"),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
-              Map<String, dynamic> updateInfo = {
-                "Name": nameController.text,
-                "Price": int.parse(priceController.text),
-                "Jumlah": int.parse(jumlahController.text),
-                "Tipe": tipeController.text, // Include Tipe in update
-              };
               try {
-                await DatabaseMethods().updateBarangDetail(ds.id, updateInfo);
+                await DatabaseMethods().updateBarangDetail(
+                  ds.id,
+                  {
+                    "Name": nameController.text,
+                    "Price": int.parse(priceController.text),
+                    "Jumlah": int.parse(jumlahController.text),
+                    "Tipe": tipeController.text,
+                  },
+                );
                 Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Barang berhasil diupdate"),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                setState(() => _loadData());
               } catch (e) {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text("Error"),
-                    content: Text("Failed to update data: ${e.toString()}"),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text("Ok"),
-                      ),
-                    ],
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Gagal mengupdate barang: ${e.toString()}"),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }
             },
-            child: Text("Update"),
+            child: const Text("Update"),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildEditField(
+    String label,
+    TextEditingController controller,
+    TextInputType keyboardType,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            hintText: 'Masukkan $label',
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      initialIndex: 0,
+      length: _myTabs.length,
+      child: Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          elevation: 0,
+          title: const Text(
+            'Perusahaan Dagang',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(60),
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              indicatorPadding: const EdgeInsets.all(5),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              tabs: _myTabs,
+            ),
+          ),
+          backgroundColor: const Color(0xFF080C67),
+        ),
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildTable(),
+            const PembelianPage(),
+            PersAkhirPage(),
+          ],
+        ),
+        floatingActionButton: _buildFloatingActionButton(),
+      ),
+    );
+  }
+
+  Widget? _buildFloatingActionButton() {
+    if (_tabController.index == 0) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            FloatingActionButton(
+              heroTag: 'add_button',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const InputPersAwal()),
+                );
+              },
+              backgroundColor: const Color(0xFF080C67),
+              child: const Icon(Icons.add),
+            ),
+            const SizedBox(height: 16),
+            FloatingActionButton.extended(
+              heroTag: 'calculate_button',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HPPCalculationPage()),
+                );
+              },
+              backgroundColor: const Color(0xFF080C67),
+              icon: const Icon(Icons.calculate),
+              label: const Text(
+                'Hitung HPP',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return null;
   }
 }
