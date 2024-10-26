@@ -65,7 +65,7 @@ class MyApp extends StatelessWidget {
               GetPage(name: Routes.inputPersAwal, page: () => InputPersAwal()),
               GetPage(name: Routes.persAwal, page: () => PersAwal()),
               GetPage(name: Routes.persAkhir, page: () => PersAkhirPage()),
-              GetPage(name: Routes.infoScreen, page: () => InfoScreen()),
+              GetPage(name: Routes.infoScreen, page: () => InfoScreen(uid: Get.arguments as String)),
             ],
             // home: snapshot.data != null ? HomePage====() : onboardingView(),
           );

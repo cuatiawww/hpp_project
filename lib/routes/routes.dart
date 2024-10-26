@@ -5,6 +5,7 @@ class Routes {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String regist = '/regist';
+  static const String infoScreen = '/info_screen';
   static const String forgot = '/forgot';
   static const String otp = '/otp';
   static const String otpSuccess = '/otp-success';
@@ -15,8 +16,6 @@ class Routes {
   static const String inputPersAwal = '/input_pers_awal';
   static const String persAwal = '/pers_awal';
   static const String persAkhir = '/pers_akhir';
-  static const String infoScreen = '/info_screen';
-  
 
   // Jika ingin pindah halaman tanpa mengirim data:
   // initialRoute: Routes.splash,

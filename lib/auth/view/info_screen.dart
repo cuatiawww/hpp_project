@@ -1,15 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:hpp_project/Perusahaan%20Dagang/pages/home_page.dart';
+import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
+import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InfoScreen extends StatefulWidget {
+  final String uid;
+
+  InfoScreen({Key? key, required this.uid}) : super(key: key);
+
   @override
   _InfoScreenState createState() => _InfoScreenState();
 }
 
 class _InfoScreenState extends State<InfoScreen> {
   // final _formKey = GlobalKey<FormState>();
+  final TextEditingController _personalInfoController = TextEditingController();
+  final TextEditingController _businessInfoController = TextEditingController();
 
   int currentStep = 0; // Step yang sedang aktif
   bool isCompleted = false; // Apakah semua step selesai
@@ -21,15 +31,24 @@ class _InfoScreenState extends State<InfoScreen> {
   ];
 
   // Controller Step 1
-  TextEditingController fullName = TextEditingController();
-  TextEditingController npwp = TextEditingController();
-  TextEditingController birthDate = TextEditingController();
-  String? selectedGender; // variabel untuk menyimpan nilai dropdown Gender
+  final TextEditingController namaLengkap = TextEditingController();
+  final TextEditingController npwp = TextEditingController();
+  final TextEditingController tanggalLahir = TextEditingController();
+  String? jenisKelamin; // variabel untuk menyimpan nilai dropdown Gender
 
   // Controller Step 2
-  TextEditingController companyName = TextEditingController();
-  String? selectedCompanyType; // variabel untuk menyimpan nilai dropdown CompanyType
-  TextEditingController companyPhone = TextEditingController();
+  final TextEditingController namaUsaha = TextEditingController();
+  String? tipeUsaha; // variabel untuk menyimpan nilai dropdown CompanyType
+  final TextEditingController nomorTelepon = TextEditingController();
+
+  void dispose() {
+    namaLengkap.dispose();
+    npwp.dispose();
+    tanggalLahir.dispose();
+    namaUsaha.dispose();
+    nomorTelepon.dispose();
+    super.dispose();
+  }
 
   // Format date untuk memastikan input tanggal valid
   final DateFormat dateFormatter = DateFormat('dd-MM-yyyy');
@@ -50,7 +69,7 @@ class _InfoScreenState extends State<InfoScreen> {
     );
     if (pickedDate != null) {
       setState(() {
-        birthDate.text = dateFormatter.format(pickedDate); // simpan tanggal terpilih
+        tanggalLahir.text = dateFormatter.format(pickedDate); // simpan tanggal terpilih
       });
     }
   }
@@ -62,6 +81,31 @@ class _InfoScreenState extends State<InfoScreen> {
       return 'INFORMASI USAHA';
     } else {
       return '';
+    }
+  }
+  
+  Future<void> saveData() async {
+    // Ambil UID pengguna dari Firebase Authentication
+    String? uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid != null) { // Cek jika UID ditemukan
+      // Simpan data pribadi
+      await FirebaseFirestore.instance.collection('Users').doc(uid).collection('PersonalData').doc('dataPribadi').set({
+        'Nama Lengkap': namaLengkap.text,
+        'NPWP': npwp.text,
+        'Tanggal Lahir': tanggalLahir.text,
+        'Jenis Kelamin': jenisKelamin,
+      });
+
+      // Simpan data usaha
+      await FirebaseFirestore.instance.collection('Users').doc(uid).collection('BusinessData').doc('dataUsaha').set({
+        'Nama Usaha': namaUsaha.text,
+        'Tipe Usaha': tipeUsaha,
+        'Nomor Telepon': nomorTelepon.text,
+      });
+      print('Data Berhasil Disimpan');
+    } else {
+      print('UID pengguna tidak ditemukan.');
     }
   }
 
@@ -89,18 +133,18 @@ class _InfoScreenState extends State<InfoScreen> {
           steps: getSteps(),
           currentStep: currentStep,
           onStepContinue: () {
+            // Jika form di step saat ini tidak valid, return
             if (!formKeys[currentStep].currentState!.validate()) {
               return;
-            } else {
-              // Jika tidak valid, tampilkan pesan error
-              print("Form tidak valid");
             }
             final isLastStep = currentStep == getSteps().length - 1;
             if (isLastStep) { // fungsi untuk mengecek apakah step terakhir
+              saveData(); // Simpan data
               setState(() => isCompleted = true);
               print('Data Berhasi Disimpan');
               // TODO: Implement save data logic
             } else {
+              // Lanjut ke step berikutnya
               setState(() => currentStep += 1);
             }
           },
@@ -199,7 +243,7 @@ class _InfoScreenState extends State<InfoScreen> {
                 }
                 return null;
               },
-              controller: fullName,
+              controller: namaLengkap,
               decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -241,7 +285,7 @@ class _InfoScreenState extends State<InfoScreen> {
             ),
             SizedBox(height: 5),
             TextFormField(
-              controller: birthDate,
+              controller: tanggalLahir,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Silakan isi tanggal lahir anda';
@@ -249,7 +293,7 @@ class _InfoScreenState extends State<InfoScreen> {
                 try {
                   DateFormat('dd-MM-yyyy').parseStrict(value); // Validasi format tanggal
                 } catch (e) {
-                  return 'Masukkan tanggal yang valid\n(contoh: DD-MM-YYYY)';
+                  return 'Masukkan format tanggal yang valid\n(contoh: DD-MM-YYYY)';
                 }
                 return null;
               },
@@ -277,9 +321,9 @@ class _InfoScreenState extends State<InfoScreen> {
               textAlign: TextAlign.start,
             ),
             SizedBox(height: 5),
-            DropdownButtonFormField(
+            DropdownButtonFormField<String>(
               validator: (value) {
-                if (value == null) {
+                if (value == null || value.isEmpty) {
                   return 'Silakan pilih jenis kelamin anda';
                 }
                 return null;
@@ -291,20 +335,16 @@ class _InfoScreenState extends State<InfoScreen> {
               ),
                 hintText: 'Pilih Jenis Kelamin',
                 ),
-              value: selectedGender,
-              items: [
-                DropdownMenuItem(
-                  value: 'Perempuan',
-                  child: Text('Perempuan'),
-                ),
-                DropdownMenuItem(
-                  value: 'Laki-laki',
-                  child: Text('Laki-laki'),
-                ),
-              ],
+              value: jenisKelamin,
+              items: <String>['Laki-laki', 'Perempuan'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
               onChanged: (value) {
                 setState(() {
-                  selectedGender = value.toString(); // simpan nilai dropdown
+                  jenisKelamin = value; // simpan nilai dropdown
                 });
               },
             ),
@@ -315,6 +355,7 @@ class _InfoScreenState extends State<InfoScreen> {
     
     // STEP KE 2
     Step(
+      state: currentStep > 1 ? StepState.complete : StepState.indexed,
       isActive: currentStep >= 1,
       title: Text(
         'Info Usaha',
@@ -337,7 +378,7 @@ class _InfoScreenState extends State<InfoScreen> {
             ),
             SizedBox(height: 5),
             TextFormField(
-              controller: companyName,
+              controller: namaUsaha,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Silakan masukkan nama usaha anda';
@@ -376,20 +417,16 @@ class _InfoScreenState extends State<InfoScreen> {
               ),
                 hintText: 'Pilih Jenis Perusahaan'
               ),
-              value: selectedCompanyType,
-              items: [
-                DropdownMenuItem(
-                  value: 'Perusahaan Dagang',
-                  child: Text('Perusahaan Dagang'),
-                ),
-                DropdownMenuItem(
-                  value: 'Perusahaan Jasa',
-                  child: Text('Perusahaan Jasa'),
-                ),
-              ],
+              value: tipeUsaha,
+              items: <String>['Perusahaan Dagang', 'Perusahaan Manufaktur'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
               onChanged: (value) {
                 setState(() {
-                  selectedCompanyType = value.toString(); // simpan nilai dropdown
+                  tipeUsaha = value; // simpan nilai dropdown
                 });
               },
             ),
@@ -404,15 +441,13 @@ class _InfoScreenState extends State<InfoScreen> {
             ),
             SizedBox(height: 5),
             TextFormField(
-              controller: companyPhone,
+              controller: nomorTelepon,
               keyboardType: TextInputType.phone,
               validator: (value) {
                 if (value == null || value.isEmpty) {
                   return 'Nomor telepon tidak boleh kosong';
                 }
-                try {
-                  NumberFormat().parse(value);
-                } catch (e) {
+                if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
                   return 'Masukkan nomor telepon yang valid\n(Contoh: 08123456789)';
                 }
                 return null;

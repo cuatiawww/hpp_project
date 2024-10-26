@@ -1,11 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
+import 'package:hpp_project/auth/view/info_screen.dart';
 import 'package:sms_autofill/sms_autofill.dart';
-
 
 
 class RegistPage extends StatefulWidget {
@@ -19,8 +20,8 @@ class _RegistPageState extends State<RegistPage> {
   final _formState = GlobalKey<FormState>(); // Key untuk validasi form
 
   // Email dan Password Controller
-  final emailC = TextEditingController(); //text: "testlogin@gmail.com"
-  final passC = TextEditingController(); //text: "123123"
+  final emailController = TextEditingController(); //text: "testlogin@gmail.com"
+  final passController = TextEditingController(); //text: "123123"
 
   // Obsecure Password
   var _isObscured;  
@@ -32,7 +33,7 @@ class _RegistPageState extends State<RegistPage> {
     _isObscured = true;
   }
 
-  final authC = Get.find<AuthController>();
+  final authController = Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +79,7 @@ class _RegistPageState extends State<RegistPage> {
                       ),
                       SizedBox(height: 5),
                       TextFormField(
-                        controller: emailC,
+                        controller: emailController,
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         validator: (value) {
@@ -195,7 +196,7 @@ class _RegistPageState extends State<RegistPage> {
                       SizedBox(height: 5),
                       TextFormField(
                         obscureText: _isObscured,
-                        controller: passC,
+                        controller: passController,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'Password tidak boleh kosong';
@@ -236,7 +237,10 @@ class _RegistPageState extends State<RegistPage> {
                           onPressed: () {
                               if (_formState.currentState!.validate()) {
                                 // Jika valid, panggil fungsi untuk Regist
-                                authC.signup(emailC.text, passC.text);
+                                authController.signup(
+                                  emailController.text.trim(), 
+                                  passController.text.trim()
+                                );
                               } else {
                                 // Jika tidak valid, tampilkan pesan error
                                 print("Form tidak valid");
