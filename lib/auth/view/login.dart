@@ -21,8 +21,8 @@ class _LoginPageState extends State<LoginPage> {
   bool isChecked = false; // State untuk Checkbox
 
   // Email dan Password Controller
-  final emailC = TextEditingController(); //text: "testlogin@gmail.com"
-  final passC = TextEditingController(); //text: "123123"
+  final TextEditingController emailController = TextEditingController(); //text: "testlogin@gmail.com"
+  final TextEditingController passController = TextEditingController(); //text: "123123"
 
   // Obsecure Password
   var _isObscured;
@@ -35,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // Login Function
-  final authC = Get.find<AuthController>();
+  final authController = Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +91,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     SizedBox(height: 5),
                     TextFormField(
-                      controller: emailC,
+                      controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       validator: (value) {
@@ -131,7 +131,7 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(height: 5),
                     TextFormField(
                       obscureText: _isObscured,
-                      controller: passC,
+                      controller: passController,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Password tidak boleh kosong';
@@ -205,7 +205,7 @@ class _LoginPageState extends State<LoginPage> {
                           onPressed: () {
                             if (_formState.currentState!.validate()) {
                               // Jika valid, panggil fungsi untuk login
-                              authC.login(emailC.text, passC.text);
+                              authController.login(emailController.text, passController.text);
                             } else {
                               // Jika tidak valid, tampilkan pesan error
                               print("Form tidak valid");
