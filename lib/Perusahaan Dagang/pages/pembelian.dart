@@ -84,7 +84,12 @@ class _PembelianPageState extends State<PembelianPage> {
       final snapshot = await _db.collection('Barang').get();
       _barangCache.clear();
       for (var doc in snapshot.docs) {
-        _barangCache[doc.id] = {...doc.data(), 'id': doc.id};
+        var data = doc.data();
+        _barangCache[doc.id] = {
+          ...data,
+          'id': doc.id,
+          'originalJumlah': data['Jumlah'], // Store original quantity
+        };
       }
       setState(() {
         _isLoadingBarang = false;
@@ -118,7 +123,7 @@ class _PembelianPageState extends State<PembelianPage> {
   void _processPembelianData() {
     _combinedData.clear();
     
-    // Process Barang data first
+    // Initialize with original P.Awal data
     for (var barangData in _barangCache.values) {
       final key = "${barangData['Name']}_${barangData['Tipe']}";
       if (barangData['Tanggal'] != null &&
@@ -126,15 +131,15 @@ class _PembelianPageState extends State<PembelianPage> {
         _combinedData[key] = {
           "name": barangData["Name"],
           "tipe": barangData["Tipe"] ?? "Default",
-          "persAwal": barangData["Jumlah"] ?? 0,
+          "persAwal": barangData["originalJumlah"] ?? 0, // Use original quantity
           "pembelian": 0,
-          "total": barangData["Jumlah"] ?? 0,
+          "total": barangData["originalJumlah"] ?? 0,
           "satuan": barangData["Satuan"] ?? "N/A",
         };
       }
     }
 
-    // Process Pembelian data
+    // Add Pembelian data
     for (var doc in _pembelianDocs) {
       final data = doc.data() as Map<String, dynamic>;
       final barangData = _barangCache[data["BarangId"]];
@@ -145,9 +150,9 @@ class _PembelianPageState extends State<PembelianPage> {
           _combinedData[key] = {
             "name": barangData["Name"],
             "tipe": data["Type"],
-            "persAwal": 0,
+            "persAwal": barangData["originalJumlah"] ?? 0,
             "pembelian": 0,
-            "total": 0,
+            "total": barangData["originalJumlah"] ?? 0,
             "satuan": barangData["Satuan"] ?? "N/A",
           };
         }
@@ -199,10 +204,21 @@ class _PembelianPageState extends State<PembelianPage> {
       final barangData = _barangCache[_selectedBarang];
       if (barangData == null) throw Exception("Barang tidak ditemukan");
 
-      await _updateBarang(barangData);
-      await _addPembelian(barangData);
+      // Only add to Pembelian collection
+      await _db.collection("Pembelian").add({
+        "BarangId": barangData['id'],
+        "Name": barangData['Name'], // Add name for easier reference
+        "Jumlah": int.parse(_unitController.text),
+        "Price": _isDifferentType 
+            ? int.parse(_priceController.text) 
+            : barangData["Price"],
+        "Type": _isDifferentType ? _typeController.text : barangData["Tipe"],
+        "Satuan": barangData["Satuan"],
+        "Timestamp": FieldValue.serverTimestamp(),
+        "Tanggal": _tanggalController.text,
+      });
 
-      _showSuccess("Barang berhasil ditambahkan!");
+      _showSuccess("Pembelian berhasil ditambahkan!");
       _resetForm();
       _refreshData();
     } catch (e) {
@@ -223,26 +239,6 @@ class _PembelianPageState extends State<PembelianPage> {
       return false;
     }
     return true;
-  }
-
-  Future<void> _updateBarang(Map<String, dynamic> barangData) async {
-    await _db.collection("Barang").doc(barangData['id']).update({
-      "Jumlah": FieldValue.increment(int.parse(_unitController.text)),
-      "Tanggal": _tanggalController.text,
-    });
-  }
-
-  Future<void> _addPembelian(Map<String, dynamic> barangData) async {
-    await _db.collection("Pembelian").add({
-      "BarangId": barangData['id'],
-      "Jumlah": int.parse(_unitController.text),
-      "Price": _isDifferentType 
-          ? int.parse(_priceController.text) 
-          : barangData["Price"],
-      "Type": _isDifferentType ? _typeController.text : barangData["Tipe"],
-      "Timestamp": FieldValue.serverTimestamp(),
-      "Tanggal": _tanggalController.text,
-    });
   }
 
   void _resetForm() {
@@ -454,7 +450,8 @@ class _PembelianPageState extends State<PembelianPage> {
                 });
                 _pembelianQuery = _db.collection('Pembelian')
                     .where('Tanggal', isGreaterThanOrEqualTo: '$newValue-01')
-                    .where('Tanggal', isLessThan: _getNextMonthDate()).orderBy('Tanggal', descending: true);
+                    .where('Tanggal', isLessThan: _getNextMonthDate())
+                    .orderBy('Tanggal', descending: true);
                 _loadPembelianData();
               }
             },
@@ -485,11 +482,14 @@ class _PembelianPageState extends State<PembelianPage> {
                 ],
                 rows: _pembelianDocs.map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  final barangData = _barangCache[data["BarangId"]];
                   return DataRow(cells: [
-                    DataCell(Text(barangData?["Name"] ?? "Loading...")),
+                    DataCell(Text(data['Name'] ?? "Loading...")),
                     DataCell(Text(data["Jumlah"]?.toString() ?? "0")),
-                    DataCell(Text('Rp ${data["Price"]?.toString() ?? "0"}')),
+                    DataCell(Text(NumberFormat.currency(
+                      locale: 'id',
+                      symbol: 'Rp ',
+                      decimalDigits: 0,
+                    ).format(data["Price"] ?? 0))),
                     DataCell(Text(data["Type"] ?? "")),
                     DataCell(Text(data["Tanggal"] ?? "")),
                   ]);

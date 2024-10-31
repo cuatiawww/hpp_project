@@ -94,169 +94,189 @@ class _PersAwalState extends State<PersAwal> with SingleTickerProviderStateMixin
   }
 
   Widget _buildTable() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _persAwalStream,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  return StreamBuilder<QuerySnapshot>(
+    stream: _persAwalStream,
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-        if (snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Text(
-              "Tidak ada data barang yang ditemukan.",
-              style: TextStyle(fontSize: 16),
-            ),
-          );
-        }
+      if (snapshot.data!.docs.isEmpty) {
+        return const Center(
+          child: Text(
+            "Tidak ada data barang yang ditemukan.",
+            style: TextStyle(fontSize: 16),
+          ),
+        );
+      }
 
-        List<DocumentSnapshot> filteredDocs = snapshot.data!.docs.where((doc) {
-          var data = doc.data() as Map<String, dynamic>;
-          if (data.containsKey("Tanggal")) {
-            String docDate = data["Tanggal"];
-            String docMonth = docDate.substring(0, 7);
-            return docMonth == _selectedMonth;
+      // Filter documents for selected month and get the earliest entry for each item
+      Map<String, DocumentSnapshot> earliestEntries = {};
+      
+      for (var doc in snapshot.data!.docs) {
+        var data = doc.data() as Map<String, dynamic>;
+        if (data.containsKey("Tanggal")) {
+          String docDate = data["Tanggal"];
+          String docMonth = docDate.substring(0, 7);
+          
+          if (docMonth == _selectedMonth) {
+            String itemKey = "${data['Name']}_${data['Tipe']}";
+            
+            if (!earliestEntries.containsKey(itemKey)) {
+              earliestEntries[itemKey] = doc;
+            } else {
+              // Compare dates and keep the earliest entry
+              DateTime currentDate = DateTime.parse(docDate);
+              DateTime existingDate = DateTime.parse(
+                (earliestEntries[itemKey]!.data() as Map<String, dynamic>)['Tanggal']
+              );
+              
+              if (currentDate.isBefore(existingDate)) {
+                earliestEntries[itemKey] = doc;
+              }
+            }
           }
-          return false;
-        }).toList();
-
-        if (filteredDocs.isEmpty) {
-          return Column(
-            children: [
-              _buildMonthDropdown(),
-              const Expanded(
-                child: Center(
-                  child: Text(
-                    "Tidak ada data untuk bulan yang dipilih.",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
-              ),
-            ],
-          );
         }
+      }
 
+      List<DocumentSnapshot> filteredDocs = earliestEntries.values.toList();
+
+      if (filteredDocs.isEmpty) {
         return Column(
           children: [
             _buildMonthDropdown(),
-            Expanded(
-              child: Card(
-                margin: const EdgeInsets.all(16),
-                elevation: 2,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: MediaQuery.of(context).size.width - 64,
-                    ),
-                    child: DataTable(
-                      columnSpacing: 20,
-                      headingRowColor: MaterialStateProperty.all(
-                        Colors.grey[100],
-                      ),
-                      columns: const [
-                        DataColumn(
-                          label: Text(
-                            "Nama Barang",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            "Tipe",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            "Jumlah",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            "Satuan",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            "Harga",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            "Total",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            "Actions",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                      rows: filteredDocs.map((doc) {
-                        var data = doc.data() as Map<String, dynamic>;
-                        String name = data["Name"] ?? "Nama tidak ada";
-                        String type = data["Tipe"] ?? "Tipe tidak ada";
-                        int jumlah = data["Jumlah"] ?? 0;
-                        int price = data["Price"] ?? 0;
-                        String satuan = data["Satuan"] ?? "Satuan tidak ada";
-                        int total = jumlah * price;
-
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(name)),
-                            DataCell(Text(type)),
-                            DataCell(Text(jumlah.toString())),
-                            DataCell(Text(satuan)),
-                            DataCell(Text(
-                              NumberFormat.currency(
-                                locale: 'id',
-                                symbol: 'Rp ',
-                                decimalDigits: 0,
-                              ).format(price),
-                            )),
-                            DataCell(Text(
-                              NumberFormat.currency(
-                                locale: 'id',
-                                symbol: 'Rp ',
-                                decimalDigits: 0,
-                              ).format(total),
-                            )),
-                            DataCell(Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () => _editBarangDetail(doc),
-                                  tooltip: 'Edit',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _deleteBarang(doc),
-                                  tooltip: 'Hapus',
-                                ),
-                              ],
-                            )),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
+            const Expanded(
+              child: Center(
+                child: Text(
+                  "Tidak ada data untuk bulan yang dipilih.",
+                  style: TextStyle(fontSize: 16),
                 ),
               ),
             ),
           ],
         );
-      },
-    );
-  }
+      }
 
+      return Column(
+        children: [
+          _buildMonthDropdown(),
+          Expanded(
+            child: Card(
+              margin: const EdgeInsets.all(16),
+              elevation: 2,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minWidth: MediaQuery.of(context).size.width - 64,
+                  ),
+                  child: DataTable(
+                    columnSpacing: 20,
+                    headingRowColor: MaterialStateProperty.all(
+                      Colors.grey[100],
+                    ),
+                    columns: const [
+                      DataColumn(
+                        label: Text(
+                          "Nama Barang",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          "Tipe",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          "Jumlah Awal",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          "Satuan",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          "Harga",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          "Total",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          "Actions",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                    rows: filteredDocs.map((doc) {
+                      var data = doc.data() as Map<String, dynamic>;
+                      String name = data["Name"] ?? "Nama tidak ada";
+                      String type = data["Tipe"] ?? "Tipe tidak ada";
+                      int jumlah = data["Jumlah"] ?? 0;
+                      int price = data["Price"] ?? 0;
+                      String satuan = data["Satuan"] ?? "Satuan tidak ada";
+                      int total = jumlah * price;
+
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(name)),
+                          DataCell(Text(type)),
+                          DataCell(Text(jumlah.toString())),
+                          DataCell(Text(satuan)),
+                          DataCell(Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(price),
+                          )),
+                          DataCell(Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(total),
+                          )),
+                          DataCell(Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _editBarangDetail(doc),
+                                tooltip: 'Edit',
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteBarang(doc),
+                                tooltip: 'Hapus',
+                              ),
+                            ],
+                          )),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
   Widget _buildMonthDropdown() {
     return Card(
       margin: const EdgeInsets.all(16),
