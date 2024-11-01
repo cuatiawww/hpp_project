@@ -6,7 +6,8 @@ import 'package:hpp_project/Perusahaan%20Dagang/pages/profile_page.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_awal.dart'; // Add this import for the Pers Awal page
+import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_awal.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -21,20 +22,19 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0; // Default index untuk Beranda
+  int _selectedIndex = 0;
   final authC = Get.find<AuthController>();
 
   void _onItemTapped(int index) {
     setState(() {
-      _selectedIndex = index; // Set indeks yang dipilih
+      _selectedIndex = index;
     });
   }
 
-  // Daftar halaman yang akan ditampilkan berdasarkan indeks
   static List<Widget> _widgetOptions = <Widget>[
-    _PersAwalContent(), // Halaman Beranda
+    _PersAwalContent(),
     ProfilePage(),
-    ProfilePage()   // Halaman Laporan
+    ProfilePage()
   ];
 
   @override
@@ -77,13 +77,12 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: primary1,
         elevation: 0,
       ),
-      
       body: _widgetOptions[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: SizedBox(
-              height: 24, // Sesuaikan ukuran ikon SVG
+              height: 24,
               width: 24,
               child: SvgPicture.asset(
                 'assets/icons/home-2.svg',
@@ -94,7 +93,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: SizedBox(
-              height: 24, // Sesuaikan ukuran ikon SVG
+              height: 24,
               width: 24,
               child: SvgPicture.asset(
                 'assets/icons/note.svg',
@@ -105,7 +104,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: SizedBox(
-              height: 24, // Sesuaikan ukuran ikon SVG
+              height: 24,
               width: 24,
               child: SvgPicture.asset(
                 'assets/icons/Profile.svg',
@@ -124,7 +123,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// Konten Beranda
 class _PersAwalContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -143,107 +141,9 @@ class _PersAwalContent extends StatelessWidget {
             margin: EdgeInsets.only(top: 20),
             child: Column(
               children: [
-                ClipPath(
-                  child: Container(
-                    padding: EdgeInsets.all(15),
-                    margin: EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 2,
-                          blurRadius: 5,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Image.asset(
-                              "assets/images/shop.png",
-                              height: 24, // Atur tinggi ikon sesuai kebutuhan
-                              width: 24, // Atur lebar ikon sesuai kebutuhan
-                            ),
-                            SizedBox(width: 8), // Jarak antara ikon dan teks
-                            Expanded(
-                              child: Text(
-                                "Toko Kelontong Azkhal Surya",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow:
-                                    TextOverflow.ellipsis, // Untuk teks panjang
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 20),
-                        RichText(
-                          text: TextSpan(
-                            text: "Jenis Usaha: ",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: "Perusahaan Dagang",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        Divider(color: Colors.black),
-                        SizedBox(height: 15),
-                        Row(
-                          children: [
-                            Image.asset(
-                              "assets/images/location.png",
-                              height: 24,
-                              width: 24,
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  text: "Alamat Toko: ",
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: "Jl. Rusak Surya Zavier No. 69",
-                                      style: TextStyle(
-                                        color: Colors.black,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildProfileCard(),
                 SizedBox(height: 24),
-                _buildMenu(context), // Pass context to _buildMenu
+                _buildMenu(context),
                 SizedBox(height: 24),
                 _buildLaporan(),
                 SizedBox(height: 24),
@@ -253,6 +153,107 @@ class _PersAwalContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProfileCard() {
+    return ClipPath(
+      child: Container(
+        padding: EdgeInsets.all(15),
+        margin: EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.5),
+              spreadRadius: 2,
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Image.asset(
+                  "assets/images/shop.png",
+                  height: 24,
+                  width: 24,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Toko Kelontong Azkhal Surya",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            RichText(
+              text: TextSpan(
+                text: "Jenis Usaha: ",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                ),
+                children: [
+                  TextSpan(
+                    text: "Perusahaan Dagang",
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                ],
+              ),
+            ),
+            SizedBox(height: 10),
+            Divider(color: Colors.black),
+            SizedBox(height: 15),
+            Row(
+              children: [
+                Image.asset(
+                  "assets/images/location.png",
+                  height: 24,
+                  width: 24,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      text: "Alamat Toko: ",
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: "Jl. Rusak Surya Zavier No. 69",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -279,20 +280,17 @@ class _PersAwalContent extends StatelessWidget {
             spacing: 2,
             runSpacing: 2,
             children: [
-              // _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, onPressed: () {
-              //   Get.toNamed('/persediaan_awal');
-              // }),
-              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth, 
-              onPressed: () {
+              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth,
+                  onPressed: () {
                 Get.to(() => PersAwal());
               }),
               _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth,
-              onPressed: () {
+                  onPressed: () {
                 Get.to(() => PembelianPage());
               }),
               _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth,
-              onPressed: () {
-                Get.to(() => PersAkhirPage()); 
+                  onPressed: () {
+                Get.to(() => PersAkhirPage());
               }),
             ],
           );
@@ -357,72 +355,76 @@ class _PersAwalContent extends StatelessWidget {
       child: Column(
         children: [
           Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Menjaga jarak antara teks dan tombol
-    children: [
-      Text(
-        'Laporan',
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      
-ElevatedButton(
-  onPressed: () async {
-    final pdf = pw.Document();
-    
-    // Fetch data from Firestore
-    final snapshot = await FirebaseFirestore.instance
-        .collection("Pembelian")
-        .orderBy("Timestamp", descending: true)
-        .get();
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Laporan',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final pdf = pw.Document();
 
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.ListView.builder(
-            itemCount: snapshot.docs.length,
-            itemBuilder: (context, index) {
-              var pembelian = snapshot.docs[index];
-              String barangName = pembelian["BarangName"] ?? "Unknown";
-              int jumlah = pembelian["Jumlah"] ?? 0;
-              int price = pembelian["Price"] ?? 0;
-              int totalCost = jumlah * price;
+                  final snapshot = await FirebaseFirestore.instance
+                      .collection("Pembelian")
+                      .orderBy("Timestamp", descending: true)
+                      .get();
 
-              return pw.Container(
-                margin: pw.EdgeInsets.symmetric(vertical: 8),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  pdf.addPage(
+                    pw.Page(
+                      build: (pw.Context context) {
+                        return pw.ListView.builder(
+                          itemCount: snapshot.docs.length,
+                          itemBuilder: (context, index) {
+                            var pembelian = snapshot.docs[index];
+                            String barangName =
+                                pembelian["BarangName"] ?? "Unknown";
+                            int jumlah = pembelian["Jumlah"] ?? 0;
+                            int price = pembelian["Price"] ?? 0;
+                            int totalCost = jumlah * price;
+
+                            return pw.Container(
+                              margin: pw.EdgeInsets.symmetric(vertical: 8),
+                              child: pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text(barangName,
+                                      style: pw.TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: pw.FontWeight.bold)),
+                                  pw.Text("$jumlah pcs - Rp $price/pcs"),
+                                  pw.Text("Total: Rp $totalCost",
+                                      style: pw.TextStyle(
+                                          fontWeight: pw.FontWeight.bold)),
+                                  pw.Divider(),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  );
+
+                  await Printing.layoutPdf(
+                    onLayout: (PdfPageFormat format) async => pdf.save(),
+                  );
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    pw.Text(barangName, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                    pw.Text("$jumlah pcs - Rp $price/pcs"),
-                    pw.Text("Total: Rp $totalCost", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    pw.Divider(),
+                    Icon(Icons.document_scanner, size: 16),
+                    SizedBox(width: 8),
+                    Text('Print PDF'),
                   ],
                 ),
-              );
-            },
-          );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
-  },
-  child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(Icons.document_scanner, size: 16),
-      SizedBox(width: 8),
-      Text('Print PDF'),
-    ],
-  ),
-),
-    ],
-  ),
-  SizedBox(height: 16),
+              ),
+            ],
+          ),
+          SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -458,84 +460,139 @@ ElevatedButton(
     );
   }
 
- Widget _buildRiwayat() {
-  return Container(
-    margin: EdgeInsets.symmetric(horizontal: 25),
-    padding: EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(15),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.5),
-          spreadRadius: 2,
-          blurRadius: 5,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        Text(
-          'Riwayat',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+  Widget _buildRiwayat() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 25),
+      padding: EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.5),
+            spreadRadius: 2,
+            blurRadius: 5,
+            offset: Offset(0, 3),
           ),
-        ),
-        SizedBox(height: 16),
-        StreamBuilder<QuerySnapshot>(
-          stream: DatabaseMethods().getPembelianDetails(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return CircularProgressIndicator();
-            }
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Riwayat',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 16),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection("Pembelian")
+                .orderBy('Tanggal', descending: true)
+                .snapshots(),
+            builder: (context, pembelianSnapshot) {
+              if (pembelianSnapshot.hasError) {
+                return Text('Error: ${pembelianSnapshot.error}');
+              }
 
-            List<RiwayatItem> riwayatItems = [];
-            snapshot.data!.docs.forEach((doc) {
-              riwayatItems.add(
-                RiwayatItem(
-                  title: doc["BarangId"],
-                  description: "${doc["Jumlah"]} unit - Rp ${doc["Price"]}",
-                  price: "Rp ${doc["Jumlah"] * doc["Price"]}",
-                ),
-              );
-            });
+              return StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection("Barang")
+                    .orderBy('Tanggal', descending: true)
+                    .snapshots(),
+                builder: (context, barangSnapshot) {
+                  if (pembelianSnapshot.connectionState == ConnectionState.waiting ||
+                      barangSnapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
 
-            return Container(
-              height: 300, // Set a fixed height for the list
-              child: ListView.builder(
-                itemCount: riwayatItems.length,
-                shrinkWrap: true, // Allow the list to shrink to fit its content
-                itemBuilder: (context, index) {
-                  return riwayatItems[index];
+                  if (barangSnapshot.hasError) {
+                    return Text('Error: ${barangSnapshot.error}');
+                  }
+
+                  List<RiwayatItem> riwayatItems = [];
+                  
+                  // Add Persediaan Awal items
+                  if (barangSnapshot.hasData) {
+                    for (var doc in barangSnapshot.data!.docs) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      riwayatItems.add(
+                        RiwayatItem(
+                          title: data["Name"] ?? "Unknown",
+                          description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])} (Persediaan Awal)",
+                          price: "Rp ${NumberFormat('#,###').format((data["Jumlah"] as int) * (data["Price"] as int))}",
+                        ),
+                      );
+                    }
+                  }
+
+                  // Add Pembelian items
+                  if (pembelianSnapshot.hasData) {
+                    for (var doc in pembelianSnapshot.data!.docs) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      riwayatItems.add(
+                        RiwayatItem(
+                          title: data["Name"] ?? "Unknown",
+                          description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])} (Pembelian)",
+                          price: "Rp ${NumberFormat('#,###').format((data["Jumlah"] as int) * (data["Price"] as int))}",
+                        ),
+                      );
+                    }
+                  }
+
+                  if (riwayatItems.isEmpty) {
+                    return Center(child: Text('Tidak ada riwayat'));
+                  }
+
+                  return Column(
+                    children: [
+                      Container(
+                        height: 300,
+                        child: ListView.builder(
+                          itemCount: riwayatItems.length,
+                          shrinkWrap: true,
+                          itemBuilder: (context, index) {
+                            return riwayatItems[index];
+                          },
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Total Biaya: Rp ${NumberFormat('#,###').format(_calculateTotalBiaya(pembelianSnapshot.data?.docs ?? [], barangSnapshot.data?.docs ?? []))}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  );
                 },
-              ),
-            );
-          },
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Total Biaya: Rp ${_calculateTotalBiaya()}',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+              );
+            },
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
-int _calculateTotalBiaya() {
-  int totalBiaya = 0;
-  DatabaseMethods().getPembelianDetails().listen((event) {
-    event.docs.forEach((doc) {
-      totalBiaya += (doc["Jumlah"] * doc["Price"]) as int;
-    });
-  });
-  return totalBiaya;
-}
+  int _calculateTotalBiaya(List<QueryDocumentSnapshot> pembelianDocs, List<QueryDocumentSnapshot> barangDocs) {
+    int total = 0;
+    
+    // Calculate total from Pembelian
+    for (var doc in pembelianDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+      total += (data["Jumlah"] as int) * (data["Price"] as int);
+    }
+    
+    // Calculate total from Persediaan Awal
+    for (var doc in barangDocs) {
+      final data = doc.data() as Map<String, dynamic>;
+      total += (data["Jumlah"] as int) * (data["Price"] as int);
+    }
+    
+    return total;
+  }
 }
 
 class RiwayatItem extends StatelessWidget {
@@ -593,7 +650,6 @@ class RiwayatItem extends StatelessWidget {
   }
 }
 
-// Custom ClipPath
 class ClipPathClass extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {

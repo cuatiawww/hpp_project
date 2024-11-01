@@ -7,7 +7,7 @@ class DatabaseMethods {
   Future<void> addBarang(Map<String, dynamic> barangInfoMap, String id) async {
     await _db.collection("Barang").doc(id).set(barangInfoMap);
     
-    // Also add initial total to PersediaanTotal
+    // Add to PersediaanTotal
     await _db.collection("PersediaanTotal").doc(id).set({
       'Name': barangInfoMap['Name'],
       'Tipe': barangInfoMap['Tipe'],
@@ -17,14 +17,37 @@ class DatabaseMethods {
       'Tanggal': barangInfoMap['Tanggal'],
       'LastUpdated': FieldValue.serverTimestamp(),
     });
-  }
 
+    // Add to Riwayat collection
+    await _db.collection("Riwayat").add({
+      'type': 'Persediaan Awal',
+      'name': barangInfoMap['Name'],
+      'tipe': barangInfoMap['Tipe'],
+      'jumlah': barangInfoMap['Jumlah'],
+      'price': barangInfoMap['Price'],
+      'satuan': barangInfoMap['Satuan'],
+      'tanggal': barangInfoMap['Tanggal'],
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
   // Add Pembelian and update PersediaanTotal
-  Future<void> addPembelian(Map<String, dynamic> pembelianData) async {
+ Future<void> addPembelian(Map<String, dynamic> pembelianData) async {
     // First add to Pembelian collection
     DocumentReference pembelianRef = await _db.collection("Pembelian").add(pembelianData);
 
-    // Update PersediaanTotal
+    // Add to Riwayat collection
+    await _db.collection("Riwayat").add({
+      'type': 'Pembelian',
+      'name': pembelianData['Name'],
+      'tipe': pembelianData['Type'],
+      'jumlah': pembelianData['Jumlah'],
+      'price': pembelianData['Price'],
+      'satuan': pembelianData['Satuan'],
+      'tanggal': pembelianData['Tanggal'],
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    // Update PersediaanTotal as before...
     try {
       final QuerySnapshot totalSnapshot = await _db
           .collection("PersediaanTotal")
@@ -33,13 +56,11 @@ class DatabaseMethods {
           .get();
 
       if (totalSnapshot.docs.isNotEmpty) {
-        // Update existing total
         await _db.collection("PersediaanTotal").doc(totalSnapshot.docs.first.id).update({
           'Jumlah': FieldValue.increment(pembelianData['Jumlah'] as int),
           'LastUpdated': FieldValue.serverTimestamp(),
         });
       } else {
-        // Create new total entry
         await _db.collection("PersediaanTotal").add({
           'Name': pembelianData['Name'],
           'Tipe': pembelianData['Type'],
@@ -51,12 +72,10 @@ class DatabaseMethods {
         });
       }
     } catch (e) {
-      // If updating PersediaanTotal fails, delete the Pembelian record
       await pembelianRef.delete();
       throw Exception('Failed to update total persediaan: $e');
     }
   }
-
   // READ
   Stream<QuerySnapshot> getBarangDetails() {
     return _db.collection("Barang").snapshots();
@@ -211,4 +230,6 @@ class DatabaseMethods {
       throw e;
     }
   }
+
+  getRiwayat() {}
 }
