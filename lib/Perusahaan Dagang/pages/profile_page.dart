@@ -1,5 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
+import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
 
@@ -10,15 +13,103 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool isEditing = false; // Untuk melacak mode edit
+  bool isSaving = false; // Untuk tracking proses penyimpanan
   final authC = Get.find<AuthController>(); // Inisialisasi AuthController untuk mengakses fungsi logout
+  final String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
+
+  // Inisialisasi controller DataPribadi dan DataUsaha
+  late final DataPribadiController dataPribadiC;
+  late final DataUsahaController dataUsahaC;
 
   // Controller untuk TextFormField
-  final _nameController = TextEditingController(text: 'Zendaya Coleman');
-  final _npwpController = TextEditingController(text: 'XXXXXXXXXXXXXXXXX');
-  final _dobController = TextEditingController(text: '27-06-1997');
-  final _genderController = TextEditingController(text: 'Perempuan');
-  final _storeNameController = TextEditingController(text: 'Toko Agung');
-  final _storeAddressController = TextEditingController(text: 'Azkhal Citayem Street');
+  final namaLengkapController = TextEditingController();
+  final npwpController = TextEditingController();
+  final tanggalLahirController = TextEditingController();
+  final jenisKelaminController = TextEditingController();
+  final namaUsahaController = TextEditingController();
+  final tipeUsahaController = TextEditingController();
+  final nomorTeleponController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Inisialisasi controller dengan UID yang benar
+    dataPribadiC = Get.put(DataPribadiController(uid: currentUserUid));
+    dataUsahaC = Get.put(DataUsahaController(uid: currentUserUid));
+
+    // Fetch data saat halaman dimuat
+    loadUserData();
+  }
+
+  Future<void> loadUserData() async {
+    await dataPribadiC.fetchDataPribadi(currentUserUid);
+    await dataUsahaC.fetchDataUsaha(currentUserUid);
+
+    setState(() {
+      namaLengkapController.text = dataPribadiC.namaLengkap.value;
+      npwpController.text = dataPribadiC.npwp.value;
+      tanggalLahirController.text = dataPribadiC.tanggalLahir.value;
+      jenisKelaminController.text = dataPribadiC.jenisKelamin.value;
+      
+      namaUsahaController.text = dataUsahaC.namaUsaha.value;
+      tipeUsahaController.text = dataUsahaC.tipeUsaha.value;
+      nomorTeleponController.text = dataUsahaC.nomorTelepon.value;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    try {
+      setState(() {
+        isSaving = true; // Set loading state
+      });
+
+      // Simpan data pribadi
+      await dataPribadiC.updateDataPribadi(
+        namaLengkapController.text,
+        npwpController.text,
+        tanggalLahirController.text,
+        jenisKelaminController.text,
+      );
+
+      // Simpan data usaha
+      await dataUsahaC.updateDataUsaha(
+        namaUsahaController.text,
+        tipeUsahaController.text,
+        nomorTeleponController.text,
+      );
+
+      // Reload data setelah update
+      await loadUserData();
+
+      setState(() {
+        isEditing = false;
+        isSaving = false; // Reset loading state
+      });
+
+      // Tampilkan snackbar sukses
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Profil berhasil diperbarui'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        isSaving = false; // Reset loading state
+      });
+      
+      // Tampilkan snackbar error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal memperbarui profil: ${e.toString()}'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,18 +128,18 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               SizedBox(height: 16),
               Center(
-                child: Text(
-                  'Toko Agung',
+                child: Obx(() => Text(
+                  dataPribadiC.namaLengkap.value, // Menggunakan Obx untuk mendengarkan perubahan
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
-                ),
+                )),
               ),
               SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Agung@surya.co.id',
+                  FirebaseAuth.instance.currentUser?.email ?? '',
                   style: TextStyle(
                     fontSize: 16,
                   ),
@@ -57,11 +148,17 @@ class _ProfilePageState extends State<ProfilePage> {
               SizedBox(height: 16),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      isEditing = !isEditing; // Toggle antara mode edit dan tidak
-                    });
-                  },
+                  onPressed: isSaving 
+                    ? null  // Disable button while saving
+                    : () {
+                      setState(() {
+                        if (isEditing) {
+                          _saveProfile();
+                        } else {
+                          isEditing = true;
+                        }
+                      });
+                    },
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
                     backgroundColor: secondary, 
@@ -70,12 +167,22 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 36, vertical: 8), 
                   ),
-                  child: Text(
-                    isEditing ? 'Simpan' : 'Edit Akun', 
-                    style: TextStyle(
-                      fontSize: 16, 
-                      fontWeight: FontWeight.w600),
-                  ),
+                  child: isSaving
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      isEditing ? 'Simpan' : 'Edit Akun',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600
+                      ),
+                    ),
                 ),
               ),
               SizedBox(height: 24),
@@ -87,13 +194,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               SizedBox(height: 16),
-              _buildEditableTextField('Nama Lengkap', _nameController),
+              _buildEditableTextField('Nama Lengkap', namaLengkapController),
               SizedBox(height: 16),
-              _buildEditableTextField('NPWP', _npwpController),
+              _buildEditableTextField('NPWP', npwpController),
               SizedBox(height: 16),
-              _buildEditableTextField('Tanggal Lahir', _dobController),
+              _buildEditableTextField('Tanggal Lahir', tanggalLahirController),
               SizedBox(height: 16),
-              _buildEditableTextField('Jenis Kelamin', _genderController),
+              _buildEditableTextField('Jenis Kelamin', jenisKelaminController),
               SizedBox(height: 24),
               Text(
                 'Informasi Usaha',
@@ -103,9 +210,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               SizedBox(height: 16),
-              _buildEditableTextField('Nama Usaha', _storeNameController),
+              _buildEditableTextField('Nama Usaha', namaUsahaController),
               SizedBox(height: 16),
-              _buildEditableTextField('Alamat Usaha', _storeAddressController),
+              _buildEditableTextField('Tipe Usaha', tipeUsahaController),
+              SizedBox(height: 16),
+              _buildEditableTextField('Nomor Telepon', nomorTeleponController),
               SizedBox(height: 40),
               Center(
                 child: ElevatedButton(
@@ -138,7 +247,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: TextFormField(
         controller: controller,
-        enabled: isEditing, // jika aktif maka bisa edit
+        enabled: isEditing,
         decoration: InputDecoration(
           labelText: label,
           border: InputBorder.none,
@@ -149,12 +258,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _npwpController.dispose();
-    _dobController.dispose();
-    _genderController.dispose();
-    _storeNameController.dispose();
-    _storeAddressController.dispose();
+    namaLengkapController.dispose();
+    npwpController.dispose();
+    tanggalLahirController.dispose();
+    jenisKelaminController.dispose();
+    namaUsahaController.dispose();
+    tipeUsahaController.dispose();
+    nomorTeleponController.dispose();
     super.dispose();
   }
 }

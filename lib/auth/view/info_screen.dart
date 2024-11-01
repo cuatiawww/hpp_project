@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hpp_project/Perusahaan%20Dagang/pages/home_page.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
@@ -8,9 +9,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class InfoScreen extends StatefulWidget {
-  final String uid;
-
-  InfoScreen({Key? key, required this.uid}) : super(key: key);
 
   @override
   _InfoScreenState createState() => _InfoScreenState();
@@ -18,8 +16,13 @@ class InfoScreen extends StatefulWidget {
 
 class _InfoScreenState extends State<InfoScreen> {
   // final _formKey = GlobalKey<FormState>();
-  final TextEditingController _personalInfoController = TextEditingController();
-  final TextEditingController _businessInfoController = TextEditingController();
+  String? uid;
+
+  @override
+  void initState() {
+    super.initState();
+    uid = Get.arguments;  // Mengambil UID dari argument yang dikirim oleh AuthController
+  }
 
   int currentStep = 0; // Step yang sedang aktif
   bool isCompleted = false; // Apakah semua step selesai

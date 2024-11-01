@@ -8,7 +8,6 @@ import 'package:hpp_project/auth/controllers/auth_controller.dart';
 import 'package:hpp_project/auth/view/info_screen.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
-
 class RegistPage extends StatefulWidget {
   const RegistPage({Key? key}) : super(key: key);
 
