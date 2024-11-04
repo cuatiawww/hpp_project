@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hpp_project/Perusahaan%20Dagang/pages/home_page.dart';
+import 'package:hpp_project/Perusahaan_Dagang/pages/home_page.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/theme.dart';

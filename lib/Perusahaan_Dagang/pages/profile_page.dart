@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
+import 'package:intl/intl.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -30,32 +32,87 @@ class _ProfilePageState extends State<ProfilePage> {
   final tipeUsahaController = TextEditingController();
   final nomorTeleponController = TextEditingController();
 
+  // List untuk dropdown jenis kelamin
+  final List<String> jenisKelaminOptions = ['Laki-laki', 'Perempuan'];
+
+  // Formatter untuk NPWP (XX.XXX.XXX.X-XXX.XXX)
+  final npwpFormatter = FilteringTextInputFormatter.allow(RegExp(r'[0-9]'));
+  
+  String formatNPWP(String text) {
+    if (text.isEmpty) return '';
+    text = text.replaceAll(RegExp(r'[^\d]'), '');
+    if (text.length > 15) text = text.substring(0, 15);
+    
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      if (i == 1 || i == 4 || i == 7 || i == 8 || i == 11) {
+        if (i == 8) {
+          buffer.write('-');
+        } else {
+          buffer.write('.');
+        }
+      }
+    }
+    return buffer.toString();
+  }
+
   @override
   void initState() {
     super.initState();
     
-    // Inisialisasi controller dengan UID yang benar
+    // Inisialisasi controller
     dataPribadiC = Get.put(DataPribadiController(uid: currentUserUid));
     dataUsahaC = Get.put(DataUsahaController(uid: currentUserUid));
 
-    // Fetch data saat halaman dimuat
+    // Menambahkan listener untuk format NPWP
+    npwpController.addListener(() {
+      final text = npwpController.text;
+      if (text.isNotEmpty) {
+        final formatted = formatNPWP(text);
+        if (formatted != text) {
+          npwpController.value = TextEditingValue(
+            text: formatted,
+            selection: TextSelection.collapsed(offset: formatted.length),
+          );
+        }
+      }
+    });
+
+    // Load data
     loadUserData();
   }
 
   Future<void> loadUserData() async {
-    await dataPribadiC.fetchDataPribadi(currentUserUid);
-    await dataUsahaC.fetchDataUsaha(currentUserUid);
+  await dataPribadiC.fetchDataPribadi(currentUserUid);
+  await dataUsahaC.fetchDataUsaha(currentUserUid);
 
-    setState(() {
-      namaLengkapController.text = dataPribadiC.namaLengkap.value;
-      npwpController.text = dataPribadiC.npwp.value;
-      tanggalLahirController.text = dataPribadiC.tanggalLahir.value;
-      jenisKelaminController.text = dataPribadiC.jenisKelamin.value;
-      
-      namaUsahaController.text = dataUsahaC.namaUsaha.value;
-      tipeUsahaController.text = dataUsahaC.tipeUsaha.value;
-      nomorTeleponController.text = dataUsahaC.nomorTelepon.value;
-    });
+  setState(() {
+    namaLengkapController.text = dataPribadiC.namaLengkap.value;
+    npwpController.text = formatNPWP(dataPribadiC.npwp.value);
+    tanggalLahirController.text = dataPribadiC.tanggalLahir.value;
+    jenisKelaminController.text = dataPribadiC.jenisKelamin.value;
+    namaUsahaController.text = dataUsahaC.namaUsaha.value;
+    tipeUsahaController.text = dataUsahaC.tipeUsaha.value;
+    nomorTeleponController.text = dataUsahaC.nomorTelepon.value;
+  });
+}
+
+  // Function untuk menampilkan date picker
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: tanggalLahirController.text.isNotEmpty
+          ? DateFormat('dd-MM-yyyy').parse(tanggalLahirController.text)
+          : DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        tanggalLahirController.text = DateFormat('dd-MM-yyyy').format(picked);
+      });
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -109,6 +166,63 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       );
     }
+  }
+
+  Widget _buildEditableTextField(String label, TextEditingController controller, {
+    bool isDatePicker = false,
+    bool isDropdown = false,
+    bool isReadOnly = false,
+    bool isNumeric = false,
+    bool isNPWP = false,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey[200],
+      ),
+      child: isDropdown ? 
+        DropdownButtonFormField<String>(
+          value: controller.text.isNotEmpty ? controller.text : null,
+          decoration: InputDecoration(
+            labelText: label,
+            border: InputBorder.none,
+          ),
+          items: jenisKelaminOptions.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: isEditing ? (String? newValue) {
+            setState(() {
+              controller.text = newValue!;
+            });
+          } : null,
+        )
+        : TextFormField(
+          controller: controller,
+          enabled: isEditing && !isReadOnly,
+          readOnly: isDatePicker || isReadOnly,
+          keyboardType: (isNumeric || isNPWP) ? TextInputType.number : TextInputType.text,
+          inputFormatters: [
+            if (isNumeric) FilteringTextInputFormatter.digitsOnly,
+            if (isNPWP) npwpFormatter,
+          ],
+          decoration: InputDecoration(
+            labelText: label,
+            border: InputBorder.none,
+            suffixIcon: isDatePicker && isEditing ? 
+              IconButton(
+                icon: Icon(Icons.calendar_today),
+                onPressed: () => _selectDate(context),
+              ) : null,
+            hintText: isNPWP ? 'XX.XXX.XXX.X-XXX.XXX' : null,
+          ),
+          onTap: isDatePicker && isEditing ? 
+            () => _selectDate(context) : null,
+        ),
+    );
   }
 
   @override
@@ -196,11 +310,13 @@ class _ProfilePageState extends State<ProfilePage> {
               SizedBox(height: 16),
               _buildEditableTextField('Nama Lengkap', namaLengkapController),
               SizedBox(height: 16),
-              _buildEditableTextField('NPWP', npwpController),
+              _buildEditableTextField('NPWP', npwpController, isNPWP: true),
               SizedBox(height: 16),
-              _buildEditableTextField('Tanggal Lahir', tanggalLahirController),
+              _buildEditableTextField('Tanggal Lahir', tanggalLahirController, 
+                isDatePicker: true,),
               SizedBox(height: 16),
-              _buildEditableTextField('Jenis Kelamin', jenisKelaminController),
+              _buildEditableTextField('Jenis Kelamin', jenisKelaminController, 
+                isDropdown: true,),
               SizedBox(height: 24),
               Text(
                 'Informasi Usaha',
@@ -212,9 +328,9 @@ class _ProfilePageState extends State<ProfilePage> {
               SizedBox(height: 16),
               _buildEditableTextField('Nama Usaha', namaUsahaController),
               SizedBox(height: 16),
-              _buildEditableTextField('Tipe Usaha', tipeUsahaController),
+              _buildEditableTextField('Tipe Usaha', tipeUsahaController, isReadOnly: true),
               SizedBox(height: 16),
-              _buildEditableTextField('Nomor Telepon', nomorTeleponController),
+              _buildEditableTextField('Nomor Telepon', nomorTeleponController, isNumeric: true),
               SizedBox(height: 40),
               Center(
                 child: ElevatedButton(
@@ -232,25 +348,6 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  // Fungsi untuk membuat TextField yang dapat diedit
-  Widget _buildEditableTextField(String label, TextEditingController controller) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey[200],
-      ),
-      child: TextFormField(
-        controller: controller,
-        enabled: isEditing,
-        decoration: InputDecoration(
-          labelText: label,
-          border: InputBorder.none,
         ),
       ),
     );

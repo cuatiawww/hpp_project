@@ -23,12 +23,14 @@ class DataUsahaController extends GetxController {
           .collection('BusinessData')
           .doc('dataUsaha')
           .get();
-          
       if (doc.exists) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         namaUsaha.value = data['Nama Usaha'] ?? '';
         tipeUsaha.value = data['Tipe Usaha'] ?? '';
         nomorTelepon.value = data['Nomor Telepon'] ?? '';
+        print('Data usaha berhasil diambil: ${data.toString()}');
+      } else {
+        print('Document tidak ditemukan');
       }
     } catch (e) {
       print('Error fetching business data: $e');
@@ -38,7 +40,6 @@ class DataUsahaController extends GetxController {
   // Add data usaha
   Future<void> addDataUsaha(String newNamaUsaha, String newTipeUsaha, String newNomorTelepon) async {
     try {
-      String uid = _auth.currentUser!.uid;
       await _firestore
           .collection('Users')
           .doc(uid)

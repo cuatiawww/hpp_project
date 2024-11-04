@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:hpp_project/Perusahaan%20Dagang/pages/pembelian.dart';
-import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_akhir_page.dart';
-import 'package:hpp_project/Perusahaan%20Dagang/pages/profile_page.dart';
-import 'package:hpp_project/service/database.dart';
+import 'package:hpp_project/Perusahaan_Dagang/pages/pembelian.dart';
+import 'package:hpp_project/Perusahaan_Dagang/pages/pers_akhir_page.dart';
+import 'package:hpp_project/Perusahaan_Dagang/pages/profile_page.dart';
+import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
+import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:hpp_project/Perusahaan%20Dagang/pages/pers_awal.dart';
+import 'package:hpp_project/Perusahaan_Dagang/pages/pers_awal.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -24,6 +28,31 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   final authC = Get.find<AuthController>();
+  StreamSubscription<User?>? _authStateSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen to auth state changes
+    _authStateSubscription = FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      if (user != null) {
+        // Re-initialize controllers with new user
+        Get.delete<DataPribadiController>();
+        Get.delete<DataUsahaController>();
+        final dataPribadiC = Get.put(DataPribadiController(uid: user.uid), tag: user.uid);
+        final dataUsahaC = Get.put(DataUsahaController(uid: user.uid), tag: user.uid);
+        // Load data for new user
+        dataPribadiC.fetchDataPribadi(user.uid);
+        dataUsahaC.fetchDataUsaha(user.uid);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription?.cancel();
+    super.dispose();
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -39,27 +68,34 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: RichText(
-          text: TextSpan(
-            text: "Hai, ",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
+        title: currentUser != null ? GetX<DataPribadiController>(
+          tag: currentUser.uid,
+          builder: (controller) => RichText(
+            text: TextSpan(
+              text: "Hai, ",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+              ),
+              children: [
+                TextSpan(
+                  text: controller.namaLengkap.value.isEmpty 
+                      ? 'Memuat...' 
+                      : controller.namaLengkap.value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              ],
             ),
-            children: [
-              TextSpan(
-                text: "Username",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              )
-            ],
           ),
-        ),
+        ) : Text("Hai, Tamu"),
         actions: [
           GestureDetector(
             onTap: () {},
@@ -123,7 +159,44 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _PersAwalContent extends StatelessWidget {
+class _PersAwalContent extends StatefulWidget {
+  @override
+  State<_PersAwalContent> createState() => _PersAwalContentState();
+}
+
+class _PersAwalContentState extends State<_PersAwalContent> {
+  late DataPribadiController dataPribadiC;
+  late DataUsahaController dataUsahaC;
+  final auth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeControllers();
+  }
+
+  void initializeControllers() {
+    // Pastikan ada user yang login
+    final currentUser = auth.currentUser;
+    if (currentUser != null) {
+      dataPribadiC = Get.put(DataPribadiController(uid: currentUser.uid), tag: currentUser.uid);
+      dataUsahaC = Get.put(DataUsahaController(uid: currentUser.uid), tag: currentUser.uid);
+      loadUserData();
+    }
+  }
+
+  Future<void> loadUserData() async {
+    final currentUser = auth.currentUser;
+    if (currentUser != null) {
+      try {
+        await dataPribadiC.fetchDataPribadi(currentUser.uid);
+        await dataUsahaC.fetchDataUsaha(currentUser.uid);
+      } catch (e) {
+        print('Error loading user data: $e');
+      }
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -157,10 +230,16 @@ class _PersAwalContent extends StatelessWidget {
   }
 
   Widget _buildProfileCard() {
+    final currentUser = auth.currentUser;
+    
+    if (currentUser == null) {
+      return Center(child: Text('Silakan login terlebih dahulu'));
+    }
+
     return ClipPath(
       child: Container(
+        margin: EdgeInsets.symmetric(horizontal: 15),
         padding: EdgeInsets.all(15),
-        margin: EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
@@ -185,29 +264,33 @@ class _PersAwalContent extends StatelessWidget {
                 ),
                 SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    "Toko Kelontong Azkhal Surya",
+                  child: Obx(() => Text(
+                    dataUsahaC.namaUsaha.value.isEmpty 
+                        ? 'Memuat...' 
+                        : dataUsahaC.namaUsaha.value,
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
-                  ),
+                  )),
                 ),
               ],
             ),
             SizedBox(height: 20),
-            RichText(
+            Obx(() => RichText(
               text: TextSpan(
-                text: "Jenis Usaha: ",
+                text: "Tipe Usaha: ",
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: 18,
                 ),
                 children: [
                   TextSpan(
-                    text: "Perusahaan Dagang",
+                    text: dataUsahaC.tipeUsaha.value.isEmpty 
+                        ? 'Memuat...' 
+                        : dataUsahaC.tipeUsaha.value,
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 18,
@@ -216,29 +299,25 @@ class _PersAwalContent extends StatelessWidget {
                   )
                 ],
               ),
-            ),
+            )),
             SizedBox(height: 10),
             Divider(color: Colors.black),
-            SizedBox(height: 15),
+            SizedBox(height: 10),
             Row(
               children: [
-                Image.asset(
-                  "assets/images/location.png",
-                  height: 24,
-                  width: 24,
-                ),
-                SizedBox(width: 8),
                 Expanded(
-                  child: RichText(
+                  child: Obx(() => RichText(
                     text: TextSpan(
-                      text: "Alamat Toko: ",
+                      text: "Nomor Telepon: ",
                       style: TextStyle(
                         color: Colors.black,
                         fontSize: 16,
                       ),
                       children: [
                         TextSpan(
-                          text: "Jl. Rusak Surya Zavier No. 69",
+                          text: dataUsahaC.nomorTelepon.value.isEmpty 
+                              ? 'Memuat...' 
+                              : dataUsahaC.nomorTelepon.value,
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 16,
@@ -247,7 +326,7 @@ class _PersAwalContent extends StatelessWidget {
                         )
                       ],
                     ),
-                  ),
+                  )),
                 ),
               ],
             ),
@@ -338,7 +417,7 @@ class _PersAwalContent extends StatelessWidget {
 
   Widget _buildLaporan() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 25),
+      margin: EdgeInsets.symmetric(horizontal: 20),
       padding: EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -369,9 +448,9 @@ class _PersAwalContent extends StatelessWidget {
                   final pdf = pw.Document();
 
                   final snapshot = await FirebaseFirestore.instance
-                      .collection("Pembelian")
-                      .orderBy("Timestamp", descending: true)
-                      .get();
+                    .collection("Pembelian")
+                    .orderBy("Timestamp", descending: true)
+                    .get();
 
                   pdf.addPage(
                     pw.Page(
@@ -380,8 +459,7 @@ class _PersAwalContent extends StatelessWidget {
                           itemCount: snapshot.docs.length,
                           itemBuilder: (context, index) {
                             var pembelian = snapshot.docs[index];
-                            String barangName =
-                                pembelian["BarangName"] ?? "Unknown";
+                            String barangName = pembelian["BarangName"] ?? "Unknown";
                             int jumlah = pembelian["Jumlah"] ?? 0;
                             int price = pembelian["Price"] ?? 0;
                             int totalCost = jumlah * price;
@@ -392,13 +470,13 @@ class _PersAwalContent extends StatelessWidget {
                                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                                 children: [
                                   pw.Text(barangName,
-                                      style: pw.TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: pw.FontWeight.bold)),
+                                    style: pw.TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: pw.FontWeight.bold)),
                                   pw.Text("$jumlah pcs - Rp $price/pcs"),
                                   pw.Text("Total: Rp $totalCost",
-                                      style: pw.TextStyle(
-                                          fontWeight: pw.FontWeight.bold)),
+                                    style: pw.TextStyle(
+                                      fontWeight: pw.FontWeight.bold)),
                                   pw.Divider(),
                                 ],
                               ),
@@ -436,7 +514,7 @@ class _PersAwalContent extends StatelessWidget {
                     Text('Pemasukan'),
                     SizedBox(height: 4),
                     Text('Rp 500.000',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -449,7 +527,7 @@ class _PersAwalContent extends StatelessWidget {
                     Text('Pengeluaran'),
                     SizedBox(height: 4),
                     Text('Rp 10.000.000',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -462,7 +540,7 @@ class _PersAwalContent extends StatelessWidget {
 
   Widget _buildRiwayat() {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 25),
+      margin: EdgeInsets.only(left: 20, right: 20, bottom: 30),
       padding: EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
