@@ -93,7 +93,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
           ),
           child: DataTable(
             columnSpacing: 20,
-            headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
+            headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
             columns: const [
               DataColumn(
                 label: Text("Nama Barang", style: TextStyle(fontWeight: FontWeight.bold)),

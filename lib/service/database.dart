@@ -172,13 +172,7 @@ class DatabaseMethods {
 
 
   // Modifikasi method untuk mendapatkan pembelian
-  Stream<QuerySnapshot> getPembelianDetails() {
-    String userId = currentUserId;
-    return _db.collection("Users")
-        .doc(userId)
-        .collection("Pembelian")
-        .snapshots();
-  }
+
 
   Stream<QuerySnapshot> getPersediaanTotal() {
     String userId = currentUserId;
@@ -187,20 +181,52 @@ class DatabaseMethods {
         .collection("PersediaanTotal")
         .snapshots();
   }
-
-// PENJUALAN METHODS
-  Stream<QuerySnapshot> getPenjualanStream() {
+Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPenjualanStream(
+      String startDate, String endDate) {
     String userId = currentUserId;
-    print("Getting penjualan stream for userId: $userId"); // Debug print
-    
     return _db
         .collection("Users")
         .doc(userId)
         .collection("Penjualan")
-        .orderBy('timestamp', descending: true)
+        .where('tanggal', isGreaterThanOrEqualTo: startDate)
+        .where('tanggal', isLessThanOrEqualTo: endDate)
+        .orderBy('tanggal', descending: true)
         .snapshots();
   }
 
+  Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPembelianStream(
+      String startDate, String endDate) {
+    String userId = currentUserId;
+    return _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
+        .where('Tanggal', isGreaterThanOrEqualTo: startDate)
+        .where('Tanggal', isLessThanOrEqualTo: endDate)
+        .orderBy('Tanggal', descending: true)
+        .snapshots();
+  }
+// PENJUALAN METHODS
+ Stream<QuerySnapshot<Map<String, dynamic>>> getPenjualanStream() {
+    String userId = currentUserId;
+    return _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Penjualan")
+        .orderBy('tanggal')
+        .snapshots();
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getPembelianDetails() {
+    String userId = currentUserId;
+    return _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
+        .orderBy('Tanggal')
+        .snapshots();
+  }
+  
   Future<void> addPenjualan(Map<String, dynamic> penjualanData) async {
     String userId = currentUserId;
     print("Adding penjualan for userId: $userId"); // Debug print

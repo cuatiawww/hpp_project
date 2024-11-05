@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/home_page.dart';
-import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
-import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
-import 'package:hpp_project/theme.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -168,7 +165,7 @@ class _InfoScreenState extends State<InfoScreen> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: secondary,
+                        backgroundColor: Color(0xFF080C67),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
@@ -187,7 +184,7 @@ class _InfoScreenState extends State<InfoScreen> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: dark2,
+                        backgroundColor: Color(0xFF4A4A4A),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
-import 'package:hpp_project/theme.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
 import 'package:intl/intl.dart';
 
@@ -275,7 +274,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     },
                   style: ElevatedButton.styleFrom(
                     foregroundColor: Colors.white,
-                    backgroundColor: secondary, 
+                    backgroundColor: Color(0xFF080C67), 
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12), 
                     ),

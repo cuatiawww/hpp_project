@@ -1,12 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
-import 'package:hpp_project/auth/view/info_screen.dart';
-import 'package:sms_autofill/sms_autofill.dart';
 
 class RegistPage extends StatefulWidget {
   const RegistPage({Key? key}) : super(key: key);

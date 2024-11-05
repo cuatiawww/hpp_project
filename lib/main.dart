@@ -9,7 +9,6 @@ import 'package:hpp_project/perusahaan_dagang/pages/input_pers_awal.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pers_akhir_page.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pers_awal_page.dart';
 import 'package:hpp_project/onboarding/onboarding_view.dart';
-import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_calculation_page.dart';
 
 import 'package:hpp_project/routes/routes.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
@@ -21,7 +20,7 @@ import 'package:hpp_project/auth/view/otp.dart';
 import 'package:hpp_project/auth/view/reset.dart';
 import 'package:hpp_project/auth/view/regist_page.dart';
 import 'package:hpp_project/auth/view/otp_success.dart';
-import 'package:hpp_project/test_firestore_connection.dart'; // Import file TestFirestoreConnection
+// Import file TestFirestoreConnection
 import 'firebase_options.dart';
 
 void main() async {

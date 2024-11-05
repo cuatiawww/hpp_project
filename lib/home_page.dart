@@ -4,15 +4,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/Perusahaan_Dagang/pages/penjualan_page.dart';
+import 'package:hpp_project/laporan_page.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_calculation_page.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pembelian_page.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pers_akhir_page.dart';
 import 'package:hpp_project/profile_page.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
-import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pers_awal_page.dart';
+import 'package:hpp_project/report_persediaan_page.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -62,11 +63,11 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  static List<Widget> _widgetOptions = <Widget>[
-    _PersAwalContent(),
-    ProfilePage(),
-    ProfilePage()
-  ];
+  static final List<Widget> _widgetOptions = <Widget>[
+  _PersAwalContent(),
+  LaporanPage(),
+  ProfilePage()
+];
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +113,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
-        backgroundColor: primary1,
+        backgroundColor: Color(0xFFF29100),
         elevation: 0,
       ),
       body: _widgetOptions[_selectedIndex],
@@ -124,7 +125,7 @@ class _HomePageState extends State<HomePage> {
               width: 24,
               child: SvgPicture.asset(
                 'assets/icons/home-2.svg',
-                color: secondary,
+                color: Color(0xFF080C67),
               ),
             ),
             label: 'Beranda',
@@ -135,7 +136,7 @@ class _HomePageState extends State<HomePage> {
               width: 24,
               child: SvgPicture.asset(
                 'assets/icons/note.svg',
-                color: secondary,
+                color: Color(0xFF080C67),
               ),
             ),
             label: 'Laporan',
@@ -146,14 +147,14 @@ class _HomePageState extends State<HomePage> {
               width: 24,
               child: SvgPicture.asset(
                 'assets/icons/Profile.svg',
-                color: secondary,
+                color: Color(0xFF080C67),
               ),
             ),
             label: 'Akun',
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: secondary,
+        selectedItemColor: Color(0xFF080C67),
         selectedFontSize: 14,
         onTap: _onItemTapped,
       ),
@@ -208,7 +209,7 @@ class _PersAwalContentState extends State<_PersAwalContent> {
           child: Container(
             height: 200,
             width: MediaQuery.of(context).size.width,
-            color: primary1,
+            color: Color(0xFFF29100),
           ),
         ),
         SingleChildScrollView(
@@ -455,134 +456,147 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
   );
 }
   
-  Widget _buildLaporan() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20),
-      padding: EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Laporan',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+ Widget _buildLaporan() {
+  final userId = auth.currentUser?.uid;
+  if (userId == null) return Container();
+
+  // Get current month date range
+  final now = DateTime.now();
+  final startDate = DateTime(now.year, now.month, 1);
+  final endDate = DateTime(now.year, now.month + 1, 0);
+  final startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
+  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 20),
+    padding: EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.5),
+          spreadRadius: 2,
+          blurRadius: 5,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Laporan',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-              ElevatedButton(
-  onPressed: () async {
-    final pdf = pw.Document();
-    
-    final userId = auth.currentUser?.uid;
-    if (userId == null) return;
-
-    final snapshot = await FirebaseFirestore.instance
-        .collection("Users")
-        .doc(userId)
-        .collection("Pembelian")
-        .orderBy("Timestamp", descending: true)
-        .get();
-
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.ListView.builder(
-            itemCount: snapshot.docs.length,
-            itemBuilder: (context, index) {
-              var pembelian = snapshot.docs[index];
-              String barangName = pembelian["Name"] ?? "Unknown";
-              int jumlah = pembelian["Jumlah"] ?? 0;
-              int price = pembelian["Price"] ?? 0;
-              int totalCost = jumlah * price;
-
-              return pw.Container(
-                margin: pw.EdgeInsets.symmetric(vertical: 8),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(barangName,
-                      style: pw.TextStyle(
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold)),
-                    pw.Text("$jumlah pcs - Rp $price/pcs"),
-                    pw.Text("Total: Rp $totalCost",
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold)),
-                    pw.Divider(),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-
-                  await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
-  },
+            ),
+            ElevatedButton(
+  onPressed: () => Get.to(() => ReportPersediaanPage()),
   child: Row(
     mainAxisSize: MainAxisSize.min,
     children: [
       Icon(Icons.document_scanner, size: 16),
       SizedBox(width: 8),
-      Text('Print PDF'),
+      Text('Report Persediaan'),
     ],
   ),
 ),
-            ],
-          ),
-          SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.arrow_downward, color: Colors.green),
-                    SizedBox(height: 8),
-                    Text('Pemasukan'),
-                    SizedBox(height: 4),
-                    Text('Rp 500.000',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Icon(Icons.arrow_upward, color: Colors.red),
-                    SizedBox(height: 8),
-                    Text('Pengeluaran'),
-                    SizedBox(height: 4),
-                    Text('Rp 10.000.000',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+        SizedBox(height: 16),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection("Users")
+              .doc(userId)
+              .collection("Penjualan")
+              .where('tanggal', isGreaterThanOrEqualTo: startDateStr)
+              .where('tanggal', isLessThanOrEqualTo: endDateStr)
+              .snapshots(),
+          builder: (context, penjualanSnapshot) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection("Users")
+                  .doc(userId)
+                  .collection("Pembelian")
+                  .where('Tanggal', isGreaterThanOrEqualTo: startDateStr)
+                  .where('Tanggal', isLessThanOrEqualTo: endDateStr)
+                  .snapshots(),
+              builder: (context, pembelianSnapshot) {
+                // Calculate totals
+                double totalPenjualan = 0;
+                double totalPembelian = 0;
 
+                // Calculate Penjualan
+                if (penjualanSnapshot.hasData) {
+                  for (var doc in penjualanSnapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    totalPenjualan += (data['total'] ?? 0).toDouble();
+                  }
+                }
+
+                // Calculate Pembelian
+                if (pembelianSnapshot.hasData) {
+                  for (var doc in pembelianSnapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    totalPembelian += ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0)).toDouble();
+                  }
+                }
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.arrow_downward, color: Colors.green),
+                          SizedBox(height: 8),
+                          Text('Total Penjualan'),
+                          SizedBox(height: 4),
+                          Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(totalPenjualan),
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Icon(Icons.arrow_upward, color: Colors.red),
+                          SizedBox(height: 8),
+                          Text('Total Pembelian'),
+                          SizedBox(height: 4),
+                          Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(totalPembelian),
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
+  
   Widget _buildRiwayat() {
     return Container(
       margin: EdgeInsets.only(left: 20, right: 20, bottom: 30),

@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
-import 'package:hpp_project/auth/view/regist_page.dart';
-import 'package:hpp_project/auth/view/forgot.dart';
-import 'package:hpp_project/home_page.dart';
 import 'package:hpp_project/routes/routes.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
 

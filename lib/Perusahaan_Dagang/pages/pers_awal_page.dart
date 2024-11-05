@@ -124,7 +124,7 @@ class _PersAwalState extends State<PersAwal> {
                   ),
                   child: DataTable(
                     columnSpacing: 20,
-                    headingRowColor: MaterialStateProperty.all(
+                    headingRowColor: WidgetStateProperty.all(
                       Colors.grey[100],
                     ),
                     columns: const [

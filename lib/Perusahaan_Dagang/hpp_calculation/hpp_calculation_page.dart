@@ -58,96 +58,185 @@ class _HPPCalculationPageState extends State<HPPCalculationPage> {
   }
 
 Future<double> _fetchPersediaanAwal(String startDate) async {
-  double total = 0;
-  final endDateTemp = DateTime.parse(startDate).add(const Duration(days: 32));
-  final endDate = DateFormat('yyyy-MM-dd').format(DateTime(endDateTemp.year, endDateTemp.month, 0));
-
-  // Get all items for the selected month
-  final snapshot = await _db.collection("Barang")
-      .where('Tanggal', isGreaterThanOrEqualTo: startDate)
-      .where('Tanggal', isLessThanOrEqualTo: endDate)
-      .get();
-
-  // Create a map to store unique items with their total values
-  Map<String, Map<String, dynamic>> uniqueItems = {};
-
-  // Process each document
-  for (var doc in snapshot.docs) {
-    var data = doc.data();
-    String key = '${data['Name']}_${data['Tipe']}';
-    
-    // Only store the first occurrence of each unique item
-    if (!uniqueItems.containsKey(key)) {
-      uniqueItems[key] = {
-        'Jumlah': data['Jumlah'] ?? 0,
-        'Price': data['Price'] ?? 0,
-      };
-    }
-  }
-
-  // Calculate total for all unique items
-  uniqueItems.forEach((key, value) {
-    total += (value['Jumlah'] as int) * (value['Price'] as int);
-  });
-
-  print('Persediaan Awal: $total'); // For debugging
-  return total;
-}
-  Future<double> _fetchPembelian(String startDate, String endDate) async {
+  try {
+    final userId = DatabaseMethods().currentUserId;
     double total = 0;
-    final snapshot = await _db.collection("Pembelian")
+    final startMonth = DateFormat('yyyy-MM').format(DateTime.parse(startDate));
+    
+    // Get data barang for the selected month
+    final snapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Barang")
+        .where('Tanggal', isGreaterThanOrEqualTo: '$startMonth-01')
+        .where('Tanggal', isLessThanOrEqualTo: '$startMonth-31')
+        .orderBy('Tanggal')  // Order by date to get earliest entries
+        .get();
+
+    // Create a map to store unique items (only earliest entry per item)
+    Map<String, Map<String, dynamic>> uniqueItems = {};
+
+    // Process each document
+    for (var doc in snapshot.docs) {
+      var data = doc.data();
+      String key = '${data['Name']}_${data['Tipe']}';
+      
+      // Only store the first (earliest) occurrence of each unique item
+      if (!uniqueItems.containsKey(key)) {
+        uniqueItems[key] = {
+          'Jumlah': data['Jumlah'] ?? 0,
+          'Price': data['Price'] ?? 0,
+          'Tanggal': data['Tanggal'],
+        };
+      } else {
+        // If item exists, check if current entry is earlier
+        DateTime existingDate = DateTime.parse(uniqueItems[key]!['Tanggal']);
+        DateTime currentDate = DateTime.parse(data['Tanggal']);
+        if (currentDate.isBefore(existingDate)) {
+          uniqueItems[key] = {
+            'Jumlah': data['Jumlah'] ?? 0,
+            'Price': data['Price'] ?? 0,
+            'Tanggal': data['Tanggal'],
+          };
+        }
+      }
+    }
+
+    // Calculate total for earliest entries only
+    uniqueItems.forEach((key, value) {
+      total += (value['Jumlah'] as int) * (value['Price'] as int);
+    });
+
+    print('Persediaan Awal: $total');
+    return total;
+  } catch (e) {
+    print('Error in _fetchPersediaanAwal: $e');
+    return 0;
+  }
+}
+  
+Future<double> _fetchPembelian(String startDate, String endDate) async {
+  try {
+    final userId = DatabaseMethods().currentUserId;
+    double total = 0;
+    
+    // Get all pembelian within date range
+    final snapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
         .where('Tanggal', isGreaterThanOrEqualTo: startDate)
         .where('Tanggal', isLessThanOrEqualTo: endDate)
         .get();
 
+    // Calculate total pembelian
     for (var doc in snapshot.docs) {
       var data = doc.data();
       int jumlah = data['Jumlah'] ?? 0;
       int price = data['Price'] ?? 0;
       total += jumlah * price;
     }
+
+    print('Total Pembelian: $total');
     return total;
+  } catch (e) {
+    print('Error in _fetchPembelian: $e');
+    return 0;
   }
+}
 
 Future<double> _fetchPersediaanAkhir(String endDate) async {
   try {
-    // Get the current month's data
+    final userId = DatabaseMethods().currentUserId;
     final startMonth = DateFormat('yyyy-MM').format(DateTime.parse(endDate));
     final startDate = '$startMonth-01';
+    
+    // 1. Ambil Persediaan Awal per barang
+    final barangSnapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Barang")
+        .where('Tanggal', isGreaterThanOrEqualTo: startDate)
+        .where('Tanggal', isLessThanOrEqualTo: endDate)
+        .orderBy('Tanggal')  // Ambil dari yang paling awal
+        .get();
 
-    final snapshot = await _db.collection("Barang")
+    // Map untuk menyimpan stok per barang
+    Map<String, Map<String, dynamic>> stockMap = {};
+
+    // Proses persediaan awal
+    for (var doc in barangSnapshot.docs) {
+      var data = doc.data();
+      String key = '${data['Name']}_${data['Tipe']}';
+      
+      if (!stockMap.containsKey(key)) {
+        stockMap[key] = {
+          'jumlah': data['Jumlah'] ?? 0,
+          'price': data['Price'] ?? 0,
+          'name': data['Name'],
+          'tipe': data['Tipe']
+        };
+      }
+    }
+
+    // 2. Tambahkan Pembelian
+    final pembelianSnapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
         .where('Tanggal', isGreaterThanOrEqualTo: startDate)
         .where('Tanggal', isLessThanOrEqualTo: endDate)
         .get();
 
-    double total = 0;
-
-    // Group items by name and type to get latest entry for each
-    Map<String, Map<String, dynamic>> latestItems = {};
-    
-    for (var doc in snapshot.docs) {
+    for (var doc in pembelianSnapshot.docs) {
       var data = doc.data();
-      String key = '${data['Name']}_${data['Tipe']}';
+      String key = '${data['Name']}_${data['Type']}';
       
-      // Always take the data as it's already for the current month
-      latestItems[key] = {
-        'Name': data['Name'],
-        'Tipe': data['Tipe'],
-        'Jumlah': data['Jumlah'] ?? 0,
-        'Price': data['Price'] ?? 0,
-        'Tanggal': data['Tanggal'],
-      };
+      if (stockMap.containsKey(key)) {
+        stockMap[key]!['jumlah'] = (stockMap[key]!['jumlah'] as int) + (data['Jumlah'] as int);
+      } else {
+        stockMap[key] = {
+          'jumlah': data['Jumlah'] ?? 0,
+          'price': data['Price'] ?? 0,
+          'name': data['Name'],
+          'tipe': data['Type']
+        };
+      }
     }
 
-    // Calculate total from the latest entries
-    latestItems.forEach((key, item) {
-      int jumlah = item['Jumlah'] as int;
-      int price = item['Price'] as int;
-      double itemTotal = jumlah * price.toDouble();
-      total += itemTotal;
+    // 3. Kurangi Penjualan
+    final penjualanSnapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Penjualan")
+        .where('tanggal', isGreaterThanOrEqualTo: startDate)
+        .where('tanggal', isLessThanOrEqualTo: endDate)
+        .get();
+
+    for (var doc in penjualanSnapshot.docs) {
+      var data = doc.data();
+      String key = '${data['namaBarang']}_${data['tipe']}';
       
-      // Debug print
-      print('Persediaan Akhir Item: ${item['Name']}, Jumlah: $jumlah, Price: $price, Total: $itemTotal');
+      if (stockMap.containsKey(key)) {
+        stockMap[key]!['jumlah'] = (stockMap[key]!['jumlah'] as int) - (data['jumlah'] as int);
+      }
+    }
+
+    // Hitung total nilai persediaan akhir
+    double total = 0;
+    stockMap.forEach((key, value) {
+      int remainingStock = value['jumlah'] as int;
+      double price = (value['price'] as int).toDouble();
+      
+      if (remainingStock > 0) {  // Hanya hitung jika stok positif
+        total += remainingStock * price;
+        
+        // Debug print untuk setiap item
+        print('Item: ${value['name']} (${value['tipe']})');
+        print('Remaining Stock: $remainingStock');
+        print('Price: $price');
+        print('Subtotal: ${remainingStock * price}');
+      }
     });
 
     print('Total Persediaan Akhir: $total');
@@ -157,13 +246,16 @@ Future<double> _fetchPersediaanAkhir(String endDate) async {
     return 0;
   }
 }
-
 Future<void> _calculateHPP() async {
   setState(() => _isLoading = true);
 
   try {
     final startDate = '$_selectedMonth-01';
-    final endDate = DateTime(DateTime.parse(startDate).year, DateTime.parse(startDate).month + 1, 0);
+    final endDate = DateTime(
+      DateTime.parse(startDate).year, 
+      DateTime.parse(startDate).month + 1, 
+      0
+    );
     final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
     // Debug prints
@@ -178,9 +270,15 @@ Future<void> _calculateHPP() async {
     print('Pembelian: $pembelian');
 
     // 3. Get additional costs
-    final bebanAngkut = double.tryParse(_bebanAngkutController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-    final returPembelian = double.tryParse(_returPembelianController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
-    final potonganPembelian = double.tryParse(_potonganPembelianController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    final bebanAngkut = double.tryParse(
+      _bebanAngkutController.text.replaceAll(RegExp(r'[^0-9]'), '')
+    ) ?? 0;
+    final returPembelian = double.tryParse(
+      _returPembelianController.text.replaceAll(RegExp(r'[^0-9]'), '')
+    ) ?? 0;
+    final potonganPembelian = double.tryParse(
+      _potonganPembelianController.text.replaceAll(RegExp(r'[^0-9]'), '')
+    ) ?? 0;
 
     // 4. Calculate Pembelian Bersih
     final pembelianBersih = pembelian + bebanAngkut - returPembelian - potonganPembelian;
@@ -190,7 +288,7 @@ Future<void> _calculateHPP() async {
     final barangTersedia = persediaanAwal + pembelianBersih;
     print('Barang Tersedia: $barangTersedia');
 
-    // 6. Get Persediaan Akhir (current month's total)
+    // 6. Get Persediaan Akhir
     final persediaanAkhir = await _fetchPersediaanAkhir(endDateStr);
     print('Persediaan Akhir: $persediaanAkhir');
 
@@ -221,7 +319,6 @@ Future<void> _calculateHPP() async {
     _showError('Error menghitung HPP: $e');
   }
 }
-  
   Widget _buildPeriodSelection() {
     return Card(
       child: Padding(
