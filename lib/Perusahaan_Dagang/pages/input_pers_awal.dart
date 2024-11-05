@@ -154,7 +154,7 @@ class _InputPersAwalState extends State<InputPersAwal> {
           ),
         ),
         const SizedBox(height: 16),
-        if (_isOtherSelected) 
+        if (_isOtherSelected)
           _buildInputField(
             label: 'Satuan Lainnya',
             controller: _satuanController,
@@ -164,6 +164,7 @@ class _InputPersAwalState extends State<InputPersAwal> {
     );
   }
 
+  //DATABASES
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -190,8 +191,7 @@ class _InputPersAwalState extends State<InputPersAwal> {
     } finally {
       setState(() => _isLoading = false);
     }
-  }
-
+}
   void _showSuccessMessage(String message) {
     Fluttertoast.showToast(
       msg: message,

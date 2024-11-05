@@ -1,8 +1,8 @@
 // hpp_calculation_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/hpp_model.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/hpp_widgets.dart';
+import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_model.dart';
+import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_widgets.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;

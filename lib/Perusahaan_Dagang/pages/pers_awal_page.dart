@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/hpp_calculation_page.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/input_pers_awal.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/pembelian.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/pers_akhir_page.dart';
+import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_calculation_page.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/input_pers_awal.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/pembelian_page.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/pers_akhir_page.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
 
@@ -14,41 +14,7 @@ class PersAwal extends StatefulWidget {
   State<PersAwal> createState() => _PersAwalState();
 }
 
-class _PersAwalState extends State<PersAwal> with SingleTickerProviderStateMixin {
-  final List<Tab> _myTabs = [
-    const Tab(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory),
-          SizedBox(width: 8),
-          Text('P. Awal'),
-        ],
-      ),
-    ),
-    const Tab(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.shopping_cart),
-          SizedBox(width: 8),
-          Text('Pembelian'),
-        ],
-      ),
-    ),
-    const Tab(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2),
-          SizedBox(width: 8),
-          Text('P. Akhir'),
-        ],
-      ),
-    ),
-  ];
-
-  late TabController _tabController;
+class _PersAwalState extends State<PersAwal> {
   Stream<QuerySnapshot>? _persAwalStream;
   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
   final List<String> _months = [];
@@ -57,8 +23,6 @@ class _PersAwalState extends State<PersAwal> with SingleTickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _myTabs.length, vsync: this);
-    _tabController.addListener(_handleTabSelection);
     _initializeData();
   }
 
@@ -81,63 +45,50 @@ class _PersAwalState extends State<PersAwal> with SingleTickerProviderStateMixin
     _persAwalStream = DatabaseMethods().getBarangDetails();
   }
 
-  void _handleTabSelection() {
-    if (_tabController.indexIsChanging) {
-      setState(() {});
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
   Widget _buildTable() {
-  return StreamBuilder<QuerySnapshot>(
-    stream: _persAwalStream,
-    builder: (context, snapshot) {
-      if (!snapshot.hasData) {
-        return const Center(child: CircularProgressIndicator());
-      }
+    return StreamBuilder<QuerySnapshot>(
+      stream: DatabaseMethods().getBarangDetails(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      if (snapshot.data!.docs.isEmpty) {
-        return const Center(
-          child: Text(
-            "Tidak ada data barang yang ditemukan.",
-            style: TextStyle(fontSize: 16),
-          ),
-        );
-      }
+        if (snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text(
+              "Tidak ada data barang yang ditemukan.",
+              style: TextStyle(fontSize: 16),
+            ),
+          );
+        }
 
-      // Filter documents for selected month and get the earliest entry for each item
-      Map<String, DocumentSnapshot> earliestEntries = {};
-      
-      for (var doc in snapshot.data!.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey("Tanggal")) {
-          String docDate = data["Tanggal"];
-          String docMonth = docDate.substring(0, 7);
-          
-          if (docMonth == _selectedMonth) {
-            String itemKey = "${data['Name']}_${data['Tipe']}";
+        // Filter documents berdasarkan bulan yang dipilih
+        Map<String, DocumentSnapshot> earliestEntries = {};
+        
+        for (var doc in snapshot.data!.docs) {
+          var data = doc.data() as Map<String, dynamic>;
+          if (data.containsKey("Tanggal")) {
+            String docDate = data["Tanggal"];
+            String docMonth = docDate.substring(0, 7);
             
-            if (!earliestEntries.containsKey(itemKey)) {
-              earliestEntries[itemKey] = doc;
-            } else {
-              // Compare dates and keep the earliest entry
-              DateTime currentDate = DateTime.parse(docDate);
-              DateTime existingDate = DateTime.parse(
-                (earliestEntries[itemKey]!.data() as Map<String, dynamic>)['Tanggal']
-              );
+            if (docMonth == _selectedMonth) {
+              String itemKey = "${data['Name']}_${data['Tipe']}";
               
-              if (currentDate.isBefore(existingDate)) {
+              if (!earliestEntries.containsKey(itemKey)) {
                 earliestEntries[itemKey] = doc;
+              } else {
+                DateTime currentDate = DateTime.parse(docDate);
+                DateTime existingDate = DateTime.parse(
+                  (earliestEntries[itemKey]!.data() as Map<String, dynamic>)['Tanggal']
+                );
+                
+                if (currentDate.isBefore(existingDate)) {
+                  earliestEntries[itemKey] = doc;
+                }
               }
             }
           }
         }
-      }
 
       List<DocumentSnapshot> filteredDocs = earliestEntries.values.toList();
 
@@ -478,93 +429,44 @@ class _PersAwalState extends State<PersAwal> with SingleTickerProviderStateMixin
   }
 
   @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      initialIndex: 0,
-      length: _myTabs.length,
-      child: Scaffold(
-        appBar: AppBar(
-          centerTitle: true,
-          elevation: 0,
-          title: const Text(
-            'Perusahaan Dagang',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-            ),
-          ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(60),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.white,
-              indicatorPadding: const EdgeInsets.all(5),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              labelStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-              tabs: _myTabs,
-            ),
-          ),
-          backgroundColor: const Color(0xFF080C67),
+  @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      centerTitle: true,
+      elevation: 0,
+      title: const Text(
+        'Persediaan Awal',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildTable(),
-            const PembelianPage(),
-            PersAkhirPage(),
-          ],
-        ),
-        floatingActionButton: _buildFloatingActionButton(),
       ),
-    );
-  }
-
-  Widget? _buildFloatingActionButton() {
-    if (_tabController.index == 0) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            FloatingActionButton(
-              heroTag: 'add_button',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const InputPersAwal()),
-                );
-              },
-              backgroundColor: const Color(0xFF080C67),
-              child: const Icon(Icons.add),
-            ),
-            const SizedBox(height: 16),
-            FloatingActionButton.extended(
-              heroTag: 'calculate_button',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => HPPCalculationPage()),
-                );
-              },
-              backgroundColor: const Color(0xFF080C67),
-              icon: const Icon(Icons.calculate),
-              label: const Text(
-                'Hitung HPP',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: Colors.white), // Ikon back putih
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      backgroundColor: const Color(0xFF080C67),
+    ),
+    body: _buildTable(),
+    floatingActionButton: Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        FloatingActionButton(
+          heroTag: 'add_button',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const InputPersAwal()),
+            );
+          },
+          backgroundColor: const Color(0xFF080C67),
+          child: const Icon(Icons.add, color: Colors.white), // Icon add putih
         ),
-      );
-    }
-    return null;
-  }
+        const SizedBox(height: 8),
+      ],
+    ),
+  );
+}
 }

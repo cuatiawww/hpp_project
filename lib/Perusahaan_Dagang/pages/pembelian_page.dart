@@ -55,13 +55,18 @@ class _PembelianPageState extends State<PembelianPage> {
     }
   }
 
+  //DATABASES
   Future<void> _initializeData() async {
     setState(() {
       _isLoadingBarang = true;
       _isLoadingPembelian = true;
     });
 
-    _pembelianQuery = _db.collection('Pembelian')
+    final userId = DatabaseMethods().currentUserId;
+    _pembelianQuery = _db
+        .collection('Users')
+        .doc(userId)
+        .collection('Pembelian')  // Path yang benar
         .where('Tanggal', isGreaterThanOrEqualTo: '$_selectedMonth-01')
         .where('Tanggal', isLessThan: _getNextMonthDate())
         .orderBy('Tanggal', descending: true);
@@ -70,8 +75,7 @@ class _PembelianPageState extends State<PembelianPage> {
       _loadBarangData(),
       _loadPembelianData(),
     ]);
-  }
-
+}
   String _getNextMonthDate() {
     final date = DateTime.parse('$_selectedMonth-01');
     return DateFormat('yyyy-MM').format(
@@ -81,14 +85,20 @@ class _PembelianPageState extends State<PembelianPage> {
 
   Future<void> _loadBarangData() async {
     try {
-      final snapshot = await _db.collection('Barang').get();
+      final userId = DatabaseMethods().currentUserId;
+      final snapshot = await _db
+          .collection('Users')
+          .doc(userId)
+          .collection('Barang')
+          .get();
+          
       _barangCache.clear();
       for (var doc in snapshot.docs) {
         var data = doc.data();
         _barangCache[doc.id] = {
           ...data,
           'id': doc.id,
-          'originalJumlah': data['Jumlah'], // Store original quantity
+          'originalJumlah': data['Jumlah'],
         };
       }
       setState(() {
@@ -101,10 +111,19 @@ class _PembelianPageState extends State<PembelianPage> {
       });
       _showError("Gagal memuat data barang");
     }
-  }
+}
 
-  Future<void> _loadPembelianData() async {
+Future<void> _loadPembelianData() async {
     try {
+      final userId = DatabaseMethods().currentUserId;
+      _pembelianQuery = _db
+          .collection('Users')
+          .doc(userId)
+          .collection('Pembelian')
+          .where('Tanggal', isGreaterThanOrEqualTo: '$_selectedMonth-01')
+          .where('Tanggal', isLessThan: _getNextMonthDate())
+          .orderBy('Tanggal', descending: true);
+
       final snapshot = await _pembelianQuery.get();
       setState(() {
         _pembelianDocs = snapshot.docs;
@@ -118,8 +137,7 @@ class _PembelianPageState extends State<PembelianPage> {
       });
       _showError("Gagal memuat data pembelian");
     }
-  }
-
+}
   void _processPembelianData() {
     _combinedData.clear();
     
@@ -191,7 +209,7 @@ class _PembelianPageState extends State<PembelianPage> {
     await _loadPembelianData();
   }
 
-  Future<void> _tambahBarang() async {
+ Future<void> _tambahBarang() async {
     if (_isSubmitting) return;
     
     if (!_validateInput()) return;
@@ -204,10 +222,15 @@ class _PembelianPageState extends State<PembelianPage> {
       final barangData = _barangCache[_selectedBarang];
       if (barangData == null) throw Exception("Barang tidak ditemukan");
 
-      // Only add to Pembelian collection
-      await _db.collection("Pembelian").add({
+      final userId = DatabaseMethods().currentUserId;
+
+      // Perbaiki collection path - tambahkan ke collection Pembelian di bawah Users/{userId}
+      await _db.collection("Users")
+          .doc(userId)
+          .collection("Pembelian") // Path yang benar
+          .add({
         "BarangId": barangData['id'],
-        "Name": barangData['Name'], // Add name for easier reference
+        "Name": barangData['Name'],
         "Jumlah": int.parse(_unitController.text),
         "Price": _isDifferentType 
             ? int.parse(_priceController.text) 
@@ -228,8 +251,7 @@ class _PembelianPageState extends State<PembelianPage> {
         _isSubmitting = false;
       });
     }
-  }
-
+}
   bool _validateInput() {
     if (_selectedBarang == null || 
         _unitController.text.isEmpty || 
@@ -268,81 +290,209 @@ class _PembelianPageState extends State<PembelianPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (_isLoadingBarang) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
+ @override
+Widget build(BuildContext context) {
+  if (_isLoadingBarang) {
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _refreshData,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInputForm(),
-                const SizedBox(height: 16),
-                _buildMonthFilter(),
-                if (_isLoadingPembelian)
-                  const Center(child: CircularProgressIndicator())
-                else 
-                  _buildDataTables(),
-              ],
-            ),
+      appBar: AppBar(
+        centerTitle: true,
+        elevation: 0,
+        title: const Text(
+          'Report Pembelian',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
           ),
         ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        backgroundColor: const Color(0xFF080C67),
+      ),
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }
 
-  Widget _buildInputForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildBarangDropdown(),
-        const SizedBox(height: 20),
-        TextField(
-          controller: _unitController,
-          decoration: const InputDecoration(
-            labelText: "Jumlah Unit",
-            border: OutlineInputBorder(),
-          ),
-          keyboardType: TextInputType.number,
+  return Scaffold(
+    appBar: AppBar(
+      centerTitle: true,
+      elevation: 0,
+      title: const Text(
+        'Report Pembelian',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
         ),
-        const SizedBox(height: 20),
-        _buildTypeSection(),
-        const SizedBox(height: 20),
-        GestureDetector(
-          onTap: () => _selectDate(context),
-          child: AbsorbPointer(
-            child: TextField(
-              controller: _tanggalController,
-              decoration: const InputDecoration(
-                labelText: "Tanggal",
-                border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.calendar_today),
-              ),
+      ),
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      backgroundColor: const Color(0xFF080C67),
+    ),
+    body: RefreshIndicator(
+      onRefresh: _refreshData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildInputForm(),
+              const SizedBox(height: 16),
+              _buildMonthFilter(),
+              if (_isLoadingPembelian)
+                const Center(child: CircularProgressIndicator())
+              else
+                _buildDataTables(),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+  Widget _buildInputForm() {
+  return Card(
+    child: Padding(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Input Pembelian',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-        const SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: _isSubmitting ? null : _tambahBarang,
-          child: _isSubmitting 
-              ? const CircularProgressIndicator()
-              : const Text("Tambahkan Barang"),
-        ),
-      ],
-    );
-  }
-
+          SizedBox(height: 16),
+          // Pilih Barang Dropdown
+          DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              labelText: 'Pilih Barang',
+              border: OutlineInputBorder(),
+            ),
+            value: _selectedBarang,
+            hint: Text('Pilih Barang'),
+            items: _barangCache.entries.map((entry) {
+              return DropdownMenuItem<String>(
+                value: entry.key,
+                child: Text(entry.value["Name"] ?? ""),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedBarang = value;
+                final data = _barangCache[value]!;
+                _priceController.text = data["Price"]?.toString() ?? "";
+                _typeController.text = data["Tipe"] ?? "";
+                _isDifferentType = false;
+              });
+            },
+          ),
+          SizedBox(height: 16),
+          // Jumlah Unit
+          TextFormField(
+            controller: _unitController,
+            decoration: InputDecoration(
+              labelText: 'Jumlah Unit',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          SizedBox(height: 16),
+          // Type berbeda checkbox
+          Row(
+            children: [
+              Checkbox(
+                value: _isDifferentType,
+                onChanged: (value) {
+                  setState(() {
+                    _isDifferentType = value ?? false;
+                    if (!_isDifferentType && _selectedBarang != null) {
+                      final data = _barangCache[_selectedBarang]!;
+                      _typeController.text = data["Tipe"] ?? "";
+                      _priceController.text = data["Price"]?.toString() ?? "";
+                    }
+                  });
+                },
+              ),
+              Text("Type berbeda"),
+            ],
+          ),
+          SizedBox(height: 16),
+          // Tipe dan Harga conditionally shown
+          if (_isDifferentType) ...[
+            TextFormField(
+              controller: _typeController,
+              decoration: InputDecoration(
+                labelText: 'Type Barang',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16),
+            TextFormField(
+              controller: _priceController,
+              decoration: InputDecoration(
+                labelText: 'Harga per Unit',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ] else
+            TextFormField(
+              controller: _priceController,
+              decoration: InputDecoration(
+                labelText: 'Harga per Unit (tidak bisa diubah)',
+                border: OutlineInputBorder(),
+              ),
+              readOnly: true,
+              keyboardType: TextInputType.number,
+            ),
+          SizedBox(height: 16),
+          // Tanggal
+          TextFormField(
+            controller: _tanggalController,
+            decoration: InputDecoration(
+              labelText: 'Tanggal',
+              border: OutlineInputBorder(),
+              suffixIcon: Icon(Icons.calendar_today),
+            ),
+            readOnly: true,
+            onTap: () => _selectDate(context),
+          ),
+          SizedBox(height: 24),
+          // Submit Button
+          ElevatedButton(
+            onPressed: _isSubmitting ? null : _tambahBarang,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF080C67),
+              padding: EdgeInsets.symmetric(vertical: 16),
+            ),
+            child: _isSubmitting
+                ? CircularProgressIndicator(color: Colors.white)
+                : Text(
+                    'Tambahkan Barang',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   Widget _buildBarangDropdown() {
     final items = _barangCache.entries.map((entry) {
       return DropdownMenuItem<String>(
@@ -443,18 +593,23 @@ class _PembelianPageState extends State<PembelianPage> {
               );
             }).toList(),
             onChanged: (newValue) {
-              if (newValue != null && newValue != _selectedMonth) {
-                setState(() {
-                  _selectedMonth = newValue;
-                  _isLoadingPembelian = true;
-                });
-                _pembelianQuery = _db.collection('Pembelian')
-                    .where('Tanggal', isGreaterThanOrEqualTo: '$newValue-01')
-                    .where('Tanggal', isLessThan: _getNextMonthDate())
-                    .orderBy('Tanggal', descending: true);
-                _loadPembelianData();
-              }
-            },
+  if (newValue != null && newValue != _selectedMonth) {
+    setState(() {
+      _selectedMonth = newValue;
+      _isLoadingPembelian = true;
+    });
+    
+    final userId = DatabaseMethods().currentUserId;
+    _pembelianQuery = _db
+        .collection('Users')
+        .doc(userId)
+        .collection('Pembelian')  // Path yang benar
+        .where('Tanggal', isGreaterThanOrEqualTo: '$newValue-01')
+        .where('Tanggal', isLessThan: _getNextMonthDate())
+        .orderBy('Tanggal', descending: true);
+    _loadPembelianData();
+  }
+}
           ),
         ],
       ),
@@ -563,4 +718,5 @@ class _PembelianPageState extends State<PembelianPage> {
     _tanggalController.dispose();
     super.dispose();
   }
+  
 }

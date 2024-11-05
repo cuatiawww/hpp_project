@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/view/info_screen.dart';
 
-import 'package:hpp_project/Perusahaan_Dagang/pages/home_page.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/input_pers_awal.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/pers_akhir_page.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/pers_awal.dart';
-import 'package:hpp_project/Onboarding/onboarding_view.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/hpp_calculation_page.dart';
+import 'package:hpp_project/home_page.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/input_pers_awal.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/pers_akhir_page.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/pers_awal_page.dart';
+import 'package:hpp_project/onboarding/onboarding_view.dart';
+import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_calculation_page.dart';
 
 import 'package:hpp_project/routes/routes.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
@@ -64,7 +64,6 @@ class MyApp extends StatelessWidget {
               GetPage(name: Routes.persAwal, page: () => PersAwal()),
               GetPage(name: Routes.persAkhir, page: () => PersAkhirPage()),
               GetPage(name: Routes.infoScreen, page: () => InfoScreen()),
-              GetPage(name: Routes.testFirestore, page: () => TestFirestoreConnection()), // Rute yang benar
             ],
           );
         }

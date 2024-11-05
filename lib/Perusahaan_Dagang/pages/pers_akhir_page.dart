@@ -171,7 +171,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
 
   Widget _buildMainContent() {
     return StreamBuilder<QuerySnapshot>(
-      stream: _barangStream,
+      stream: DatabaseMethods().getBarangDetails(),
       builder: (context, barangSnapshot) {
         if (!barangSnapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -180,7 +180,7 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
         final barangReference = _processBarangReference(barangSnapshot.data!.docs);
 
         return StreamBuilder<QuerySnapshot>(
-          stream: _pembelianStream,
+          stream: DatabaseMethods().getPembelianDetails(),
           builder: (context, pembelianSnapshot) {
             if (!pembelianSnapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -337,6 +337,8 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
     );
   }
 
+  //DATABASES
+
   Future<void> _editBarang(Map<String, dynamic> data, String key) async {
     final jumlahController = TextEditingController(text: data["Jumlah"].toString());
 
@@ -387,7 +389,9 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
     }
   }
 
-  Future<void> _updateJumlah(Map<String, dynamic> data, int newJumlah) async {
+ Future<void> _updateJumlah(Map<String, dynamic> data, int newJumlah) async {
+    final userId = DatabaseMethods().currentUserId;
+    
     if (data["isOriginal"] == true) {
       await DatabaseMethods().updateBarangDetail(
         data["docId"],
@@ -399,66 +403,87 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
         final newJumlahPerDoc = newJumlah ~/ pembelianIds.length;
         await Future.wait(
           pembelianIds.map((id) => _db
+              .collection("Users")
+              .doc(userId)
               .collection("Pembelian")
               .doc(id)
               .update({"Jumlah": newJumlahPerDoc})),
         );
       }
     }
-  }
-
+}
   Future<void> _deleteBarang(Map<String, dynamic> data, String key) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Konfirmasi Hapus"),
-        content: const Text("Anda yakin ingin menghapus barang ini?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Batal"),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Hapus"),
-          ),
-        ],
-      ),
-    ) ?? false;
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Konfirmasi Hapus"),
+      content: const Text("Anda yakin ingin menghapus barang ini?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("Batal"),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text("Hapus"),
+        ),
+      ],
+    ),
+  ) ?? false;
 
-    if (confirm) {
-      try {
-        if (data["isOriginal"] == true) {
-          await DatabaseMethods().deleteBarangDetail(data["docId"]);
-        } else {
-          final pembelianIds = data["pembelianIds"] as List<String>?;
-          if (pembelianIds != null) {
-            await Future.wait(
-              pembelianIds.map((id) => _db
-                  .collection("Pembelian")
-                  .doc(id)
-                  .delete()),
-            );
-          }
+  if (confirm) {
+    try {
+      final userId = DatabaseMethods().currentUserId;
+      if (data["isOriginal"] == true) {
+        await DatabaseMethods().deleteBarangDetail(data["docId"]);
+      } else {
+        final pembelianIds = data["pembelianIds"] as List<String>?;
+        if (pembelianIds != null) {
+          await Future.wait(
+            pembelianIds.map((id) => _db
+                .collection("Users")
+                .doc(userId)
+                .collection("Pembelian")
+                .doc(id)
+                .delete()),
+          );
         }
-        _showMessage("Data berhasil dihapus", false);
-        _loadInitialData();
-      } catch (e) {
-        _showMessage("Gagal menghapus data: $e", true);
       }
+      _showMessage("Data berhasil dihapus", false);
+      _loadInitialData();
+    } catch (e) {
+      _showMessage("Gagal menghapus data: $e", true);
     }
   }
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _loadInitialData();
-        },
-        child: _buildMainContent(),
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      centerTitle: true,
+      elevation: 0,
+      title: const Text(
+        'Persediaan Akhir',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+        ),
       ),
-    );
-  }
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      backgroundColor: const Color(0xFF080C67),
+    ),
+    body: RefreshIndicator(
+      onRefresh: () async {
+        _loadInitialData();
+      },
+      child: _buildMainContent(),
+    ),
+  );
+}
 }

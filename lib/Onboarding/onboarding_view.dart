@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hpp_project/Onboarding/onboarding_items.dart';
+import 'package:hpp_project/onboarding/onboarding_items.dart';
 import 'package:hpp_project/routes/routes.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 

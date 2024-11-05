@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/pembelian.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/pers_akhir_page.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/profile_page.dart';
+import 'package:hpp_project/Perusahaan_Dagang/pages/penjualan_page.dart';
+import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_calculation_page.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/pembelian_page.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/pers_akhir_page.dart';
+import 'package:hpp_project/profile_page.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/theme.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:hpp_project/Perusahaan_Dagang/pages/pers_awal.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/pers_awal_page.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -336,7 +338,7 @@ class _PersAwalContentState extends State<_PersAwalContent> {
     );
   }
 
-  Widget _buildMenu(BuildContext context) {
+Widget _buildMenu(BuildContext context) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 10),
       padding: EdgeInsets.all(15),
@@ -352,69 +354,107 @@ class _PersAwalContentState extends State<_PersAwalContent> {
           ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final itemWidth = (constraints.maxWidth - 20) / 3;
-          return Wrap(
-            spacing: 2,
-            runSpacing: 2,
-            children: [
-              _buildMenuItem(Icons.add_circle, "Persediaan Awal", itemWidth,
-                  onPressed: () {
-                Get.to(() => PersAwal());
-              }),
-              _buildMenuItem(Icons.add_circle, "Report Pembelian", itemWidth,
-                  onPressed: () {
-                Get.to(() => PembelianPage());
-              }),
-              _buildMenuItem(Icons.report, "Persediaan Akhir", itemWidth,
-                  onPressed: () {
-                Get.to(() => PersAkhirPage());
-              }),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(IconData icon, String label, double itemWidth,
-      {Function()? onPressed}) {
-    return Container(
-      width: itemWidth,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ElevatedButton(
-            onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              shape: CircleBorder(),
-              padding: EdgeInsets.all(15),
-              fixedSize: Size(60, 60),
-              backgroundColor: Color(0xFF080C67),
-            ),
-            child: Center(
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 30,
+          // Menu Items
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = (constraints.maxWidth - 25) / 4;
+              return Wrap(
+                spacing: 2,
+                runSpacing: 2,
+                children: [
+                  _buildMenuItem(Icons.add_circle, "Persediaan\nAwal", itemWidth,
+                      onPressed: () {
+                    Get.to(() => PersAwal());
+                  }),
+                  _buildMenuItem(Icons.shopping_cart, "Pembelian", itemWidth,
+                      onPressed: () {
+                    Get.to(() => PembelianPage());
+                  }),
+                  _buildMenuItem(Icons.point_of_sale, "Penjualan", itemWidth,
+                      onPressed: () {
+                    Get.to(() => PenjualanPage());
+                  }),
+                  _buildMenuItem(Icons.inventory_2, "Persediaan\nAkhir", itemWidth,
+                      onPressed: () {
+                    Get.to(() => PersAkhirPage());
+                  }),
+                ],
+              );
+            },
+          ),
+          // Spacing between menu items and HPP button
+          SizedBox(height: 20),
+          // HPP Button
+          Container(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Get.to(() => HPPCalculationPage());
+              },
+              icon: Icon(Icons.calculate, color: Colors.white),
+              label: Text(
+                'Hitung HPP',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF080C67),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
               ),
             ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
-  }
-
+}
+// Sesuaikan style menu item agar tetap rapi dengan 4 kolom
+Widget _buildMenuItem(IconData icon, String label, double itemWidth,
+    {Function()? onPressed}) {
+  return Container(
+    width: itemWidth,
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            shape: CircleBorder(),
+            padding: EdgeInsets.all(15),
+            fixedSize: Size(50, 50), // Sesuaikan ukuran button
+            backgroundColor: Color(0xFF080C67),
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 25, // Sesuaikan ukuran icon
+            ),
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 12, // Sesuaikan ukuran text
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
+}
+  
   Widget _buildLaporan() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 20),
@@ -444,62 +484,67 @@ class _PersAwalContentState extends State<_PersAwalContent> {
                 ),
               ),
               ElevatedButton(
-                onPressed: () async {
-                  final pdf = pw.Document();
+  onPressed: () async {
+    final pdf = pw.Document();
+    
+    final userId = auth.currentUser?.uid;
+    if (userId == null) return;
 
-                  final snapshot = await FirebaseFirestore.instance
-                    .collection("Pembelian")
-                    .orderBy("Timestamp", descending: true)
-                    .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
+        .orderBy("Timestamp", descending: true)
+        .get();
 
-                  pdf.addPage(
-                    pw.Page(
-                      build: (pw.Context context) {
-                        return pw.ListView.builder(
-                          itemCount: snapshot.docs.length,
-                          itemBuilder: (context, index) {
-                            var pembelian = snapshot.docs[index];
-                            String barangName = pembelian["BarangName"] ?? "Unknown";
-                            int jumlah = pembelian["Jumlah"] ?? 0;
-                            int price = pembelian["Price"] ?? 0;
-                            int totalCost = jumlah * price;
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.ListView.builder(
+            itemCount: snapshot.docs.length,
+            itemBuilder: (context, index) {
+              var pembelian = snapshot.docs[index];
+              String barangName = pembelian["Name"] ?? "Unknown";
+              int jumlah = pembelian["Jumlah"] ?? 0;
+              int price = pembelian["Price"] ?? 0;
+              int totalCost = jumlah * price;
 
-                            return pw.Container(
-                              margin: pw.EdgeInsets.symmetric(vertical: 8),
-                              child: pw.Column(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  pw.Text(barangName,
-                                    style: pw.TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: pw.FontWeight.bold)),
-                                  pw.Text("$jumlah pcs - Rp $price/pcs"),
-                                  pw.Text("Total: Rp $totalCost",
-                                    style: pw.TextStyle(
-                                      fontWeight: pw.FontWeight.bold)),
-                                  pw.Divider(),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  );
-
-                  await Printing.layoutPdf(
-                    onLayout: (PdfPageFormat format) async => pdf.save(),
-                  );
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+              return pw.Container(
+                margin: pw.EdgeInsets.symmetric(vertical: 8),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.document_scanner, size: 16),
-                    SizedBox(width: 8),
-                    Text('Print PDF'),
+                    pw.Text(barangName,
+                      style: pw.TextStyle(
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold)),
+                    pw.Text("$jumlah pcs - Rp $price/pcs"),
+                    pw.Text("Total: Rp $totalCost",
+                      style: pw.TextStyle(
+                        fontWeight: pw.FontWeight.bold)),
+                    pw.Divider(),
                   ],
                 ),
-              ),
+              );
+            },
+          );
+        },
+      ),
+    );
+
+                  await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  },
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(Icons.document_scanner, size: 16),
+      SizedBox(width: 8),
+      Text('Print PDF'),
+    ],
+  ),
+),
             ],
           ),
           SizedBox(height: 16),
@@ -565,21 +610,27 @@ class _PersAwalContentState extends State<_PersAwalContent> {
           ),
           SizedBox(height: 16),
           StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection("Pembelian")
-                .orderBy('Tanggal', descending: true)
-                .snapshots(),
-            builder: (context, pembelianSnapshot) {
-              if (pembelianSnapshot.hasError) {
-                return Text('Error: ${pembelianSnapshot.error}');
-              }
+  // Perbaiki path collection Pembelian
+  stream: FirebaseFirestore.instance
+      .collection("Users")
+      .doc(auth.currentUser?.uid) // Tambahkan userId
+      .collection("Pembelian")
+      .orderBy('Tanggal', descending: true)
+      .snapshots(),
+  builder: (context, pembelianSnapshot) {
+    if (pembelianSnapshot.hasError) {
+      return Text('Error: ${pembelianSnapshot.error}');
+    }
 
-              return StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection("Barang")
-                    .orderBy('Tanggal', descending: true)
-                    .snapshots(),
-                builder: (context, barangSnapshot) {
+    return StreamBuilder<QuerySnapshot>(
+      // Perbaiki path collection Barang
+      stream: FirebaseFirestore.instance
+          .collection("Users")
+          .doc(auth.currentUser?.uid) // Tambahkan userId
+          .collection("Barang")
+          .orderBy('Tanggal', descending: true)
+          .snapshots(),
+      builder: (context, barangSnapshot) {
                   if (pembelianSnapshot.connectionState == ConnectionState.waiting ||
                       barangSnapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
