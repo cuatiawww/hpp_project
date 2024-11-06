@@ -144,7 +144,14 @@ class _HomePageState extends State<HomePage> {
   margin: EdgeInsets.only(left: 16, right: 16, bottom: 16),
   height: 64,
   decoration: BoxDecoration(
-    color: Colors.white,
+    gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF080C67),  // Primary blue
+                Color(0xFF1E23A7),  // Lighter blue
+              ],
+            ),
     borderRadius: BorderRadius.circular(30),
     boxShadow: [
       BoxShadow(
@@ -191,9 +198,9 @@ class _HomePageState extends State<HomePage> {
   return GestureDetector(
     onTap: () => _onItemTapped(index),
     child: Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
       decoration: BoxDecoration(
-        color: isSelected ? Color(0xFF080C67).withOpacity(0.1) : Colors.transparent,
+        color: isSelected ? Color.fromARGB(255, 1, 0, 3).withOpacity(0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(50),
       ),
       child: Row(
@@ -204,7 +211,8 @@ class _HomePageState extends State<HomePage> {
             width: 24,
             child: SvgPicture.asset(
               icon,
-              color: isSelected ? Color(0xFF080C67) : Colors.grey,
+              color: isSelected ? Color.fromARGB(255, 255, 255, 255) : Colors.grey,
+              
             ),
           ),
           if (isSelected) ...[
@@ -212,7 +220,7 @@ class _HomePageState extends State<HomePage> {
             Text(
               label,
               style: TextStyle(
-                color: Color(0xFF080C67),
+                color: Color.fromARGB(255, 255, 255, 255),
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
