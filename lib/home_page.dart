@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -75,7 +77,7 @@ class _HomePageState extends State<HomePage> {
         toolbarHeight: 70,
         flexibleSpace: Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color:Color(0xFF080C67),
           ),
           child: SafeArea(
             child: Padding(
@@ -90,9 +92,9 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "Welcome home,",
+                          "Hello,",
                           style: TextStyle(
-                            color: Colors.grey[600],
+                            color: Colors.white,
                             fontSize: 14,
                           ),
                         ),
@@ -101,7 +103,7 @@ class _HomePageState extends State<HomePage> {
                               ? 'Loading...' 
                               : controller.namaLengkap.value + "!",
                           style: TextStyle(
-                            color: Colors.black,
+                            color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -134,7 +136,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFF080C67),
         elevation: 0,
       ),
       body: _widgetOptions[_selectedIndex],
