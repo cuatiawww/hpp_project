@@ -74,8 +74,6 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
     }
   }
 
-  //GENERATE TO EXCEL
-
   //GENERATE TO PDF
 
   Future<void> _generatePDF() async {
@@ -288,143 +286,260 @@ Widget _buildPreviewTable() {
     ...persAkhirData.keys,
   };
 
-  return Card(
-    child: Table(
-      border: TableBorder.all(),
-      columnWidths: const {
-        0: FixedColumnWidth(40),    // No
-        1: FixedColumnWidth(150),   // Nama Barang
-        2: FixedColumnWidth(270),   // P.Awal (merged)
-        3: FixedColumnWidth(270),   // Pembelian (merged)
-        4: FixedColumnWidth(270),   // Penjualan (merged)
-        5: FixedColumnWidth(270),   // Persediaan Akhir (merged)
-      },
-      children: [
-        // Header Row 1
-        TableRow(
-          decoration: BoxDecoration(color: Colors.grey[200]),
-          children: [
-            _buildPreviewHeaderCell('No'),
-            _buildPreviewHeaderCell('Nama\nBarang'),
-            _buildPreviewHeaderCell('P.Awal'),
-            _buildPreviewHeaderCell('Pembelian'),
-            _buildPreviewHeaderCell('Penjualan'),
-            _buildPreviewHeaderCell('Persediaan\nAkhir'),
-          ],
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 10,
+          offset: Offset(0, 2),
         ),
-        // Header Row 2
-        TableRow(
-          decoration: BoxDecoration(color: Colors.grey[200]),
-          children: [
-            Container(), // Empty for No
-            Container(), // Empty for Nama Barang
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(child: _buildPreviewHeaderCell('Unit')),
-                Expanded(child: _buildPreviewHeaderCell('Harga')),
-                Expanded(child: _buildPreviewHeaderCell('Total')),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(child: _buildPreviewHeaderCell('Unit')),
-                Expanded(child: _buildPreviewHeaderCell('Harga')),
-                Expanded(child: _buildPreviewHeaderCell('Total')),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(child: _buildPreviewHeaderCell('Unit')),
-                Expanded(child: _buildPreviewHeaderCell('Harga')),
-                Expanded(child: _buildPreviewHeaderCell('Total')),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(child: _buildPreviewHeaderCell('Unit')),
-                Expanded(child: _buildPreviewHeaderCell('Harga')),
-                Expanded(child: _buildPreviewHeaderCell('Total')),
-              ],
-            ),
-          ],
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Table(
+        border: TableBorder(
+          horizontalInside: BorderSide(
+            color: Colors.grey.withOpacity(0.1),
+            width: 1,
+          ),
         ),
-        // Data Rows
-        ...allItems.toList().asMap().entries.map((entry) {
-          final index = entry.key;
-          final itemKey = entry.value;
-          final persAwal = persAwalData[itemKey] ?? {};
-          final pembelian = pembelianData[itemKey] ?? {};
-          final penjualan = penjualanData[itemKey] ?? {};
-          final persAkhir = persAkhirData[itemKey] ?? {};
-
-          return TableRow(
+        columnWidths: const {
+          0: FixedColumnWidth(40),    // No
+          1: FixedColumnWidth(150),   // Nama Barang
+          2: FixedColumnWidth(270),   // P.Awal
+          3: FixedColumnWidth(270),   // Pembelian
+          4: FixedColumnWidth(270),   // Penjualan
+          5: FixedColumnWidth(270),   // Persediaan Akhir
+        },
+        children: [
+          // Header Row 1
+          TableRow(
+            decoration: BoxDecoration(
+              color: Color(0xFF080C67),
+            ),
             children: [
-              _buildPreviewCell('${index + 1}'),
-              _buildPreviewCell(persAwal['name'] ?? pembelian['name'] ?? ''),
+              _buildPreviewHeaderCell('No', isMainHeader: true),
+              _buildPreviewHeaderCell('Nama\nBarang', isMainHeader: true),
+              _buildPreviewHeaderCell('Persediaan Awal', isMainHeader: true),
+              _buildPreviewHeaderCell('Pembelian', isMainHeader: true),
+              _buildPreviewHeaderCell('Penjualan', isMainHeader: true),
+              _buildPreviewHeaderCell('Persediaan Akhir', isMainHeader: true),
+            ],
+          ),
+          // Header Row 2
+          TableRow(
+            decoration: BoxDecoration(
+              color: Color(0xFF080C67).withOpacity(0.9),
+            ),
+            children: [
+              Container(), // Empty for No
+              Container(), // Empty for Nama Barang
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: _buildPreviewCell(persAwal['jumlah']?.toString() ?? '0')),
-                  Expanded(child: _buildPreviewCell(_formatCurrency(persAwal['price'] ?? 0))),
-                  Expanded(child: _buildPreviewCell(_formatCurrency((persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0)))),
+                  Expanded(child: _buildPreviewHeaderCell('Unit')),
+                  Expanded(child: _buildPreviewHeaderCell('Harga')),
+                  Expanded(child: _buildPreviewHeaderCell('Total')),
                 ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: _buildPreviewCell(pembelian['jumlah']?.toString() ?? '0')),
-                  Expanded(child: _buildPreviewCell(_formatCurrency(pembelian['price'] ?? 0))),
-                  Expanded(child: _buildPreviewCell(_formatCurrency((pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0)))),
+                  Expanded(child: _buildPreviewHeaderCell('Unit')),
+                  Expanded(child: _buildPreviewHeaderCell('Harga')),
+                  Expanded(child: _buildPreviewHeaderCell('Total')),
                 ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: _buildPreviewCell(penjualan['jumlah']?.toString() ?? '0')),
-                  Expanded(child: _buildPreviewCell(_formatCurrency(penjualan['price'] ?? 0))),
-                  Expanded(child: _buildPreviewCell(_formatCurrency((penjualan['jumlah'] ?? 0) * (penjualan['price'] ?? 0)))),
+                  Expanded(child: _buildPreviewHeaderCell('Unit')),
+                  Expanded(child: _buildPreviewHeaderCell('Harga')),
+                  Expanded(child: _buildPreviewHeaderCell('Total')),
                 ],
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: _buildPreviewCell(persAkhir['jumlah']?.toString() ?? '0')),
-                  Expanded(child: _buildPreviewCell(_formatCurrency(persAkhir['price'] ?? 0))),
-                  Expanded(child: _buildPreviewCell(_formatCurrency((persAkhir['jumlah'] ?? 0) * (persAkhir['price'] ?? 0)))),
+                  Expanded(child: _buildPreviewHeaderCell('Unit')),
+                  Expanded(child: _buildPreviewHeaderCell('Harga')),
+                  Expanded(child: _buildPreviewHeaderCell('Total')),
                 ],
               ),
             ],
-          );
-        }).toList(),
-      ],
+          ),
+          // Data Rows
+          ...allItems.toList().asMap().entries.map((entry) {
+            final index = entry.key;
+            final itemKey = entry.value;
+            final persAwal = persAwalData[itemKey] ?? {};
+            final pembelian = pembelianData[itemKey] ?? {};
+            final penjualan = penjualanData[itemKey] ?? {};
+            final persAkhir = persAkhirData[itemKey] ?? {};
+            final isEvenRow = index % 2 == 0;
+
+            return TableRow(
+              decoration: BoxDecoration(
+                color: isEvenRow ? Colors.grey.withOpacity(0.05) : Colors.white,
+              ),
+              children: [
+                _buildPreviewCell('${index + 1}', isEvenRow: isEvenRow),
+                _buildPreviewCell(
+                  persAwal['name'] ?? pembelian['name'] ?? '',
+                  isEvenRow: isEvenRow,
+                  alignment: TextAlign.left,
+                ),
+                _buildPreviewDataGroup(
+                  unit: persAwal['jumlah']?.toString() ?? '0',
+                  price: _formatCurrency(persAwal['price'] ?? 0),
+                  total: _formatCurrency((persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0)),
+                  isEvenRow: isEvenRow,
+                ),
+                _buildPreviewDataGroup(
+                  unit: pembelian['jumlah']?.toString() ?? '0',
+                  price: _formatCurrency(pembelian['price'] ?? 0),
+                  total: _formatCurrency((pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0)),
+                  isEvenRow: isEvenRow,
+                ),
+                _buildPreviewDataGroup(
+                  unit: penjualan['jumlah']?.toString() ?? '0',
+                  price: _formatCurrency(penjualan['price'] ?? 0),
+                  total: _formatCurrency((penjualan['jumlah'] ?? 0) * (penjualan['price'] ?? 0)),
+                  isEvenRow: isEvenRow,
+                ),
+                _buildPreviewDataGroup(
+                  unit: persAkhir['jumlah']?.toString() ?? '0',
+                  price: _formatCurrency(persAkhir['price'] ?? 0),
+                  total: _formatCurrency((persAkhir['jumlah'] ?? 0) * (persAkhir['price'] ?? 0)),
+                  isEvenRow: isEvenRow,
+                ),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
     ),
   );
 }
 
-Widget _buildPreviewHeaderCell(String text) {
+Widget _buildPreviewHeaderCell(String text, {bool isMainHeader = false}) {
   return Container(
-    padding: const EdgeInsets.all(8.0),
+    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
     child: Text(
       text,
       textAlign: TextAlign.center,
-      style: const TextStyle(fontWeight: FontWeight.bold),
+      style: TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w600,
+        fontSize: isMainHeader ? 13 : 12,
+      ),
     ),
   );
 }
 
-Widget _buildPreviewCell(String text) {
+Widget _buildPreviewCell(
+  String text, {
+  bool isEvenRow = false,
+  TextAlign alignment = TextAlign.right,
+}) {
   return Container(
-    padding: const EdgeInsets.all(8.0),
+    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
     child: Text(
       text,
-      textAlign: TextAlign.right,
+      textAlign: alignment,
+      style: TextStyle(
+        fontSize: 12,
+        color: Colors.black87,
+        fontWeight: FontWeight.w500,
+      ),
     ),
   );
 }
+
+Widget _buildPreviewDataGroup({
+  required String unit,
+  required String price,
+  required String total,
+  required bool isEvenRow,
+}) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    children: [
+      Expanded(
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: Colors.grey.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+          ),
+          child: Text(
+            unit,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+      Expanded(
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: Colors.grey.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+          ),
+          child: Text(
+            price,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+      Expanded(
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: Colors.grey.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+          ),
+          child: Text(
+            total,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
   // Data fetching methods
   Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate) async {
     final userId = auth.currentUser?.uid;

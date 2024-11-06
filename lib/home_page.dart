@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -15,9 +14,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pers_awal_page.dart';
 import 'package:hpp_project/report_persediaan_page.dart';
 import 'package:intl/intl.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
 
@@ -75,93 +71,156 @@ class _HomePageState extends State<HomePage> {
     
     return Scaffold(
       appBar: AppBar(
-        centerTitle: false,
-        title: currentUser != null ? GetX<DataPribadiController>(
-          tag: currentUser.uid,
-          builder: (controller) => RichText(
-            text: TextSpan(
-              text: "Hai, ",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-              ),
-              children: [
-                TextSpan(
-                  text: controller.namaLengkap.value.isEmpty 
-                      ? 'Memuat...' 
-                      : controller.namaLengkap.value,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 70,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  currentUser != null ? GetX<DataPribadiController>(
+                    tag: currentUser.uid,
+                    builder: (controller) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Welcome home,",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          controller.namaLengkap.value.isEmpty 
+                              ? 'Loading...' 
+                              : controller.namaLengkap.value + "!",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ) : Text("Welcome, Guest"),
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.notifications_none_outlined,
+                      color: Colors.black,
+                      size: 24,
+                    ),
                   ),
-                )
-              ],
-            ),
-          ),
-        ) : Text("Hai, Tamu"),
-        actions: [
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              margin: EdgeInsets.only(right: 20),
-              width: 30,
-              height: 30,
-              child: Image.asset(
-                "assets/images/notification.png",
-                fit: BoxFit.contain,
+                ],
               ),
             ),
           ),
-        ],
-        backgroundColor:Color(0xFF080C67),
+        ),
+        backgroundColor: Colors.white,
         elevation: 0,
       ),
       body: _widgetOptions[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        items: <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: SizedBox(
-              height: 24,
-              width: 24,
-              child: SvgPicture.asset(
-                'assets/icons/home-2.svg',
-                color: Color(0xFF080C67),
-              ),
-            ),
-            label: 'Beranda',
-          ),
-          BottomNavigationBarItem(
-            icon: SizedBox(
-              height: 24,
-              width: 24,
-              child: SvgPicture.asset(
-                'assets/icons/note.svg',
-                color: Color(0xFF080C67),
-              ),
-            ),
-            label: 'Laporan',
-          ),
-          BottomNavigationBarItem(
-            icon: SizedBox(
-              height: 24,
-              width: 24,
-              child: SvgPicture.asset(
-                'assets/icons/Profile.svg',
-                color: Color(0xFF080C67),
-              ),
-            ),
-            label: 'Akun',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Color(0xFF080C67),
-        selectedFontSize: 14,
-        onTap: _onItemTapped,
+    bottomNavigationBar: Container(
+  margin: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+  height: 64,
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(30),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.1),
+        blurRadius: 10,
+        offset: Offset(0, 0),
       ),
+    ],
+  ),
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    children: [
+      _buildNavItem(
+        index: 0,
+        icon: 'assets/icons/home-2.svg',
+        label: 'Beranda',
+        isSelected: _selectedIndex == 0,
+      ),
+      _buildNavItem(
+        index: 1,
+        icon: 'assets/icons/note.svg',
+        label: 'Laporan',
+        isSelected: _selectedIndex == 1,
+      ),
+      _buildNavItem(
+        index: 2,
+        icon: 'assets/icons/Profile.svg',
+        label: 'Akun',
+        isSelected: _selectedIndex == 2,
+      ),
+    ],
+  ),
+),
     );
   }
-
-
+  
+  
+  Widget _buildNavItem({
+  required int index,
+  required String icon,
+  required String label,
+  required bool isSelected,
+}) {
+  return GestureDetector(
+    onTap: () => _onItemTapped(index),
+    child: Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? Color(0xFF080C67).withOpacity(0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(50),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 24,
+            width: 24,
+            child: SvgPicture.asset(
+              icon,
+              color: isSelected ? Color(0xFF080C67) : Colors.grey,
+            ),
+          ),
+          if (isSelected) ...[
+            SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: Color(0xFF080C67),
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ],
+      ),
+    ),
+  );
+}
 }
 
 class _PersAwalContent extends StatefulWidget {
