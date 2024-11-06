@@ -224,66 +224,160 @@ void _loadInitialData() async {
     );
   }
 
-  Widget _buildStatisticsCards() {
+Widget _buildStatisticsCards() {
     return LayoutBuilder(
       builder: (context, constraints) {
         return GridView.count(
           shrinkWrap: true,
-          crossAxisCount: constraints.maxWidth > 600 ? 4 : 2,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-          childAspectRatio: constraints.maxWidth > 600 ? 1.5 : 1.3,
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 1.5,
           children: [
+            // Total Penjualan Card
             ValueListenableBuilder<double>(
               valueListenable: _totalPenjualan,
               builder: (context, value, _) => _buildStatCard(
                 'Total Penjualan',
-                NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(value),
-                Icons.arrow_upward,
-                Colors.green,
+                value,
+                Icons.arrow_upward_rounded,
+                Color(0xFF4CAF50),
+                [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
               ),
             ),
+            // Total Pembelian Card
             ValueListenableBuilder<double>(
               valueListenable: _totalPembelian,
               builder: (context, value, _) => _buildStatCard(
                 'Total Pembelian',
-                NumberFormat.currency(locale: 'id', symbol: 'Rp ', decimalDigits: 0).format(value),
-                Icons.arrow_downward,
-                Colors.red,
+                value,
+                Icons.arrow_downward_rounded,
+                Color(0xFFE53935),
+                [Color(0xFFFFEBEE), Color(0xFFFFCDD2)],
               ),
             ),
+            // Total Barang Terjual Card
             ValueListenableBuilder<int>(
               valueListenable: _totalBarangTerjual,
               builder: (context, value, _) => _buildStatCard(
-                'Barang Terjual',
-                value.toString(),
-                Icons.inventory,
-                Colors.blue,
+                'Jumlah Terjual',
+                value.toDouble(),
+                Icons.inventory_2_rounded,
+                Color(0xFF1976D2),
+                [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+                isCount: true,
               ),
             ),
+            // Profit/Loss Card
             ValueListenableBuilder<double>(
-  valueListenable: _totalPenjualan,
-  builder: (context, penjualan, _) {
-    return ValueListenableBuilder<double>(
-      valueListenable: _totalPembelian,
-      builder: (context, pembelian, _) {
-        return _buildStatCard(
-          'Profit',
-          NumberFormat.currency(
-            locale: 'id',
-            symbol: 'Rp ',
-            decimalDigits: 0,
-          ).format(penjualan - pembelian),
-          Icons.trending_up,
-          Colors.purple,
-        );
-      },
-    );
-  },
-),
+              valueListenable: _totalPenjualan,
+              builder: (context, penjualan, _) {
+                return ValueListenableBuilder<double>(
+                  valueListenable: _totalPembelian,
+                  builder: (context, pembelian, _) {
+                    final profit = penjualan - pembelian;
+                    return _buildStatCard(
+                      'Profit',
+                      profit,
+                      profit >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                      profit >= 0 ? Color(0xFF9C27B0) : Color(0xFFFF7043),
+                      profit >= 0 
+                          ? [Color(0xFFF3E5F5), Color(0xFFE1BEE7)]
+                          : [Color(0xFFFBE9E7), Color(0xFFFFCCBC)],
+                    );
+                  },
+                );
+              },
+            ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildStatCard(
+    String title,
+    double value,
+    IconData icon,
+    Color iconColor,
+    List<Color> gradientColors,
+    {bool isCount = false}
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: gradientColors[0].withOpacity(0.5),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {},
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Icon and Title Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: iconColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: iconColor,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                // Value
+                Text(
+                  isCount
+                      ? value.toInt().toString()
+                      : NumberFormat.currency(
+                          locale: 'id',
+                          symbol: 'Rp ',
+                          decimalDigits: 0,
+                        ).format(value),
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -351,103 +445,140 @@ void _loadInitialData() async {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Icon(icon, color: color),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTransactionList(List<QueryDocumentSnapshot<Map<String, dynamic>>> documents, bool isPenjualan) {
+ Widget _buildTransactionList(List<QueryDocumentSnapshot<Map<String, dynamic>>> documents, bool isPenjualan) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: documents.length,
       itemBuilder: (context, index) {
         final data = documents[index].data();
-        return Card(
+        
+        // Determine type-specific values
+        final String title = isPenjualan ? data['namaBarang'] ?? '' : data['Name'] ?? '';
+        final int quantity = isPenjualan ? data['jumlah'] ?? 0 : data['Jumlah'] ?? 0;
+        final String unit = data['satuan'] ?? '';
+        final double price = isPenjualan 
+            ? (data['hargaJual']?.toDouble() ?? 0)
+            : (data['Price']?.toDouble() ?? 0);
+        final double total = isPenjualan 
+            ? (data['total']?.toDouble() ?? 0)
+            : ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0)).toDouble();
+        final String date = isPenjualan ? data['tanggal'] ?? '' : data['Tanggal'] ?? '';
+        
+        // Determine styling based on transaction type
+        final Color typeColor = isPenjualan ? Colors.green : Colors.red;
+        final IconData typeIcon = isPenjualan 
+            ? Icons.shopping_bag_outlined 
+            : Icons.shopping_cart_outlined;
+        final String typeText = isPenjualan ? 'Penjualan' : 'Pembelian';
+
+        return Container(
           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          child: ListTile(
-            title: Text(
-              isPenjualan ? data['namaBarang'] ?? '' : data['Name'] ?? '',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.grey[200]!,
+              width: 1,
             ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Tipe: ${isPenjualan ? data['tipe'] : data['Type']}'),
-                Text('Jumlah: ${isPenjualan ? data['jumlah'] : data['Jumlah']} ${data['satuan'] ?? ''}'),
-              ],
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  NumberFormat.currency(
-                    locale: 'id',
-                    symbol: 'Rp ',
-                    decimalDigits: 0,
-                  ).format(isPenjualan ? data['total'] : (data['Jumlah'] * data['Price'])),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: typeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      typeIcon,
+                      color: typeColor,
+                      size: 20,
+                    ),
                   ),
-                ),
-                Text(
-                  isPenjualan ? data['tanggal'] ?? '' : data['Tanggal'] ?? '',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          date,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: typeColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      typeText,
+                      style: TextStyle(
+                        color: typeColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$quantity $unit - ${NumberFormat.currency(
+                        locale: 'id',
+                        symbol: 'Rp ',
+                        decimalDigits: 0,
+                      ).format(price)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    NumberFormat.currency(
+                      locale: 'id',
+                      symbol: 'Rp ',
+                      decimalDigits: 0,
+                    ).format(total),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: typeColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
     );
-  }
-
+}
   @override
   void dispose() {
     _tabController.dispose();

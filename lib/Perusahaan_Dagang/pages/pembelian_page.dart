@@ -141,15 +141,15 @@ Future<void> _loadPembelianData() async {
   void _processPembelianData() {
     _combinedData.clear();
     
-    // Initialize with original P.Awal data
+    // Initialize hanya untuk data P.Awal yang benar-benar ada
     for (var barangData in _barangCache.values) {
-      final key = "${barangData['Name']}_${barangData['Tipe']}";
       if (barangData['Tanggal'] != null &&
           barangData['Tanggal'].startsWith(_selectedMonth)) {
+        final key = "${barangData['Name']}_${barangData['Tipe']}";
         _combinedData[key] = {
           "name": barangData["Name"],
           "tipe": barangData["Tipe"] ?? "Default",
-          "persAwal": barangData["originalJumlah"] ?? 0, // Use original quantity
+          "persAwal": barangData["originalJumlah"] ?? 0,
           "pembelian": 0,
           "total": barangData["originalJumlah"] ?? 0,
           "satuan": barangData["Satuan"] ?? "N/A",
@@ -157,20 +157,21 @@ Future<void> _loadPembelianData() async {
       }
     }
 
-    // Add Pembelian data
+    // Proses data pembelian
     for (var doc in _pembelianDocs) {
       final data = doc.data() as Map<String, dynamic>;
       final barangData = _barangCache[data["BarangId"]];
       if (barangData != null) {
-        final key = "${barangData["Name"]}_${data["Type"]}";
+        final key = "${barangData['Name']}_${data['Type']}";
         
+        // Jika ini adalah tipe baru yang tidak ada di P.Awal
         if (!_combinedData.containsKey(key)) {
           _combinedData[key] = {
             "name": barangData["Name"],
             "tipe": data["Type"],
-            "persAwal": barangData["originalJumlah"] ?? 0,
+            "persAwal": 0,  // Set P.Awal ke 0 untuk tipe baru
             "pembelian": 0,
-            "total": barangData["originalJumlah"] ?? 0,
+            "total": 0,
             "satuan": barangData["Satuan"] ?? "N/A",
           };
         }
@@ -180,8 +181,7 @@ Future<void> _loadPembelianData() async {
             _combinedData[key]!["persAwal"] + _combinedData[key]!["pembelian"];
       }
     }
-  }
-
+}
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -298,7 +298,7 @@ Widget build(BuildContext context) {
         centerTitle: true,
         elevation: 0,
         title: const Text(
-          'Report Pembelian',
+          'Pembelian',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
@@ -322,7 +322,7 @@ Widget build(BuildContext context) {
       centerTitle: true,
       elevation: 0,
       title: const Text(
-        'Report Pembelian',
+        'Pembelian',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,

@@ -225,22 +225,22 @@ class _InputPersAwalState extends State<InputPersAwal> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        title: RichText(
-          text: const TextSpan(
-            children: [
-              TextSpan(
-                text: "Input Pers. Awal",
-                style: TextStyle(
-                  fontSize: 24.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+      centerTitle: true,
+      elevation: 0,
+      title: const Text(
+        'Input Persedian Awal',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
         ),
       ),
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      backgroundColor: const Color(0xFF080C67),
+    ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hpp_project/perusahaan_dagang/pages/invoice_detail.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
 
@@ -347,41 +348,13 @@ StreamBuilder<QuerySnapshot>(
       ),
     );
   }
-  void _showInvoiceDetail(Map<String, dynamic> data) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Detail Invoice'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Nama Barang: ${data['namaBarang']}'),
-            Text('Tipe: ${data['tipe']}'),
-            Text('Jumlah: ${data['jumlah']} unit'),
-            Text('Harga per Unit: ${NumberFormat.currency(
-              locale: 'id',
-              symbol: 'Rp ',
-              decimalDigits: 0,
-            ).format(data['hargaJual'])}'),
-            Text('Total: ${NumberFormat.currency(
-              locale: 'id',
-              symbol: 'Rp ',
-              decimalDigits: 0,
-            ).format(data['hargaJual'] * data['jumlah'])}'),
-            Text('Tanggal: ${data['tanggal']}'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Tutup'),
-          ),
-        ],
-      ),
-    );
-  }
-  
+void _showInvoiceDetail(Map<String, dynamic> data) {
+  showDialog(
+    context: context,
+    builder: (context) => InvoiceDetailDialog(data: data),
+  );
+}
+
 Future<void> _submitPenjualan() async {
     if (_selectedBarang == null || 
         _unitController.text.isEmpty || 
@@ -454,3 +427,4 @@ Future<void> _submitPenjualan() async {
     super.dispose();
   }
 }
+

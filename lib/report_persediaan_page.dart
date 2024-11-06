@@ -40,6 +40,7 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
       _months.add(DateFormat('yyyy-MM').format(month));
     }
   }
+  
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
@@ -72,6 +73,10 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
       }
     }
   }
+
+  //GENERATE TO EXCEL
+
+  //GENERATE TO PDF
 
   Future<void> _generatePDF() async {
     setState(() => _isLoading = true);
@@ -126,46 +131,225 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
   }
 
   // PDF Table Building
-  pw.Widget _buildPDFTable() {
-    Set<String> allItems = {
-      ...persAwalData.keys,
-      ...pembelianData.keys,
-      ...penjualanData.keys,
-      ...persAkhirData.keys,
-    };
+pw.Widget _buildPDFTable() {
+  Set<String> allItems = {
+    ...persAwalData.keys,
+    ...pembelianData.keys,
+    ...penjualanData.keys,
+    ...persAkhirData.keys,
+  };
 
-    return pw.Table(
-      border: pw.TableBorder.all(),
-      tableWidth: pw.TableWidth.min,
+  return pw.Table(
+    border: pw.TableBorder.all(),
+    columnWidths: const {
+      0: pw.FixedColumnWidth(40),    // No
+      1: pw.FixedColumnWidth(150),   // Nama Barang
+      2: pw.FixedColumnWidth(270),   // P.Awal (merged)
+      3: pw.FixedColumnWidth(270),   // Pembelian (merged)
+      4: pw.FixedColumnWidth(270),   // Penjualan (merged)
+      5: pw.FixedColumnWidth(270),   // Persediaan Akhir (merged)
+    },
+    children: [
+      // Header Row 1
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: PdfColors.grey200),
+        children: [
+          _buildPDFHeaderCell('No'),
+          _buildPDFHeaderCell('Nama\nBarang'),
+          _buildPDFHeaderCell('P.Awal'),
+          _buildPDFHeaderCell('Pembelian'),
+          _buildPDFHeaderCell('Penjualan'),
+          _buildPDFHeaderCell('Persediaan\nAkhir'),
+        ],
+      ),
+      // Header Row 2
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: PdfColors.grey200),
+        children: [
+          pw.Container(), // Empty for No
+          pw.Container(), // Empty for Nama Barang
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+            children: [
+              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
+              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
+              pw.Expanded(child: _buildPDFHeaderCell('Total')),
+            ],
+          ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+            children: [
+              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
+              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
+              pw.Expanded(child: _buildPDFHeaderCell('Total')),
+            ],
+          ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+            children: [
+              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
+              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
+              pw.Expanded(child: _buildPDFHeaderCell('Total')),
+            ],
+          ),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+            children: [
+              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
+              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
+              pw.Expanded(child: _buildPDFHeaderCell('Total')),
+            ],
+          ),
+        ],
+      ),
+      // Data Rows
+      ...allItems.toList().asMap().entries.map((entry) {
+        final index = entry.key;
+        final itemKey = entry.value;
+        final persAwal = persAwalData[itemKey] ?? {};
+        final pembelian = pembelianData[itemKey] ?? {};
+        final penjualan = penjualanData[itemKey] ?? {};
+        final persAkhir = persAkhirData[itemKey] ?? {};
+
+        return pw.TableRow(
+          children: [
+            _buildPDFCell('${index + 1}'),
+            _buildPDFCell(persAwal['name'] ?? pembelian['name'] ?? ''),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+              children: [
+                pw.Expanded(child: _buildPDFCell(persAwal['jumlah']?.toString() ?? '0')),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency(persAwal['price'] ?? 0))),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency((persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0)))),
+              ],
+            ),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+              children: [
+                pw.Expanded(child: _buildPDFCell(pembelian['jumlah']?.toString() ?? '0')),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency(pembelian['price'] ?? 0))),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency((pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0)))),
+              ],
+            ),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+              children: [
+                pw.Expanded(child: _buildPDFCell(penjualan['jumlah']?.toString() ?? '0')),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency(penjualan['price'] ?? 0))),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency((penjualan['jumlah'] ?? 0) * (penjualan['price'] ?? 0)))),
+              ],
+            ),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+              children: [
+                pw.Expanded(child: _buildPDFCell(persAkhir['jumlah']?.toString() ?? '0')),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency(persAkhir['price'] ?? 0))),
+                pw.Expanded(child: _buildPDFCell(_formatCurrency((persAkhir['jumlah'] ?? 0) * (persAkhir['price'] ?? 0)))),
+              ],
+            ),
+          ],
+        );
+      }).toList(),
+    ],
+  );
+}
+
+pw.Widget _buildPDFHeaderCell(String text) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.all(5),
+    alignment: pw.Alignment.center,
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        fontSize: 10,
+        fontWeight: pw.FontWeight.bold,
+      ),
+      textAlign: pw.TextAlign.center,
+    ),
+  );
+}
+
+pw.Widget _buildPDFCell(String text) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.all(5),
+    alignment: pw.Alignment.centerRight,
+    child: pw.Text(
+      text,
+      style: const pw.TextStyle(fontSize: 10),
+    ),
+  );
+}
+  // Preview Table Building
+Widget _buildPreviewTable() {
+  Set<String> allItems = {
+    ...persAwalData.keys,
+    ...pembelianData.keys,
+    ...penjualanData.keys,
+    ...persAkhirData.keys,
+  };
+
+  return Card(
+    child: Table(
+      border: TableBorder.all(),
+      columnWidths: const {
+        0: FixedColumnWidth(40),    // No
+        1: FixedColumnWidth(150),   // Nama Barang
+        2: FixedColumnWidth(270),   // P.Awal (merged)
+        3: FixedColumnWidth(270),   // Pembelian (merged)
+        4: FixedColumnWidth(270),   // Penjualan (merged)
+        5: FixedColumnWidth(270),   // Persediaan Akhir (merged)
+      },
       children: [
         // Header Row 1
-        pw.TableRow(
+        TableRow(
+          decoration: BoxDecoration(color: Colors.grey[200]),
           children: [
-            _buildPDFHeaderCell('No', rowSpan: 2),
-            _buildPDFHeaderCell('Nama\nBarang', rowSpan: 2),
-            _buildPDFHeaderCell('P.Awal', colSpan: 3),
-            _buildPDFHeaderCell('Pembelian', colSpan: 3),
-            _buildPDFHeaderCell('Penjualan', colSpan: 3),
-            _buildPDFHeaderCell('Persediaan\nAkhir', colSpan: 3),
+            _buildPreviewHeaderCell('No'),
+            _buildPreviewHeaderCell('Nama\nBarang'),
+            _buildPreviewHeaderCell('P.Awal'),
+            _buildPreviewHeaderCell('Pembelian'),
+            _buildPreviewHeaderCell('Penjualan'),
+            _buildPreviewHeaderCell('Persediaan\nAkhir'),
           ],
         ),
         // Header Row 2
-        pw.TableRow(
+        TableRow(
+          decoration: BoxDecoration(color: Colors.grey[200]),
           children: [
-            pw.Container(), // No (handled by rowSpan)
-            pw.Container(), // Nama Barang (handled by rowSpan)
-            _buildPDFHeaderCell('Unit'),
-            _buildPDFHeaderCell('Harga'),
-            _buildPDFHeaderCell('Total'),
-            _buildPDFHeaderCell('Unit'),
-            _buildPDFHeaderCell('Harga'),
-            _buildPDFHeaderCell('Total'),
-            _buildPDFHeaderCell('Unit'),
-            _buildPDFHeaderCell('Harga'),
-            _buildPDFHeaderCell('Total'),
-            _buildPDFHeaderCell('Unit'),
-            _buildPDFHeaderCell('Harga'),
-            _buildPDFHeaderCell('Total'),
+            Container(), // Empty for No
+            Container(), // Empty for Nama Barang
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(child: _buildPreviewHeaderCell('Unit')),
+                Expanded(child: _buildPreviewHeaderCell('Harga')),
+                Expanded(child: _buildPreviewHeaderCell('Total')),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(child: _buildPreviewHeaderCell('Unit')),
+                Expanded(child: _buildPreviewHeaderCell('Harga')),
+                Expanded(child: _buildPreviewHeaderCell('Total')),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(child: _buildPreviewHeaderCell('Unit')),
+                Expanded(child: _buildPreviewHeaderCell('Harga')),
+                Expanded(child: _buildPreviewHeaderCell('Total')),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(child: _buildPreviewHeaderCell('Unit')),
+                Expanded(child: _buildPreviewHeaderCell('Harga')),
+                Expanded(child: _buildPreviewHeaderCell('Total')),
+              ],
+            ),
           ],
         ),
         // Data Rows
@@ -177,185 +361,70 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
           final penjualan = penjualanData[itemKey] ?? {};
           final persAkhir = persAkhirData[itemKey] ?? {};
 
-          return pw.TableRow(
+          return TableRow(
             children: [
-              _buildPDFCell('${index + 1}'),
-              _buildPDFCell(persAwal['name'] ?? pembelian['name'] ?? ''),
-              _buildPDFCell(persAwal['jumlah']?.toString() ?? '0'),
-              _buildPDFCell(_formatCurrency(persAwal['price'] ?? 0)),
-              _buildPDFCell(_formatCurrency((persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0))),
-              _buildPDFCell(pembelian['jumlah']?.toString() ?? '0'),
-              _buildPDFCell(_formatCurrency(pembelian['price'] ?? 0)),
-              _buildPDFCell(_formatCurrency((pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0))),
-              _buildPDFCell(penjualan['jumlah']?.toString() ?? '0'),
-              _buildPDFCell(_formatCurrency(penjualan['price'] ?? 0)),
-              _buildPDFCell(_formatCurrency((penjualan['jumlah'] ?? 0) * (penjualan['price'] ?? 0))),
-              _buildPDFCell(persAkhir['jumlah']?.toString() ?? '0'),
-              _buildPDFCell(_formatCurrency(persAkhir['price'] ?? 0)),
-              _buildPDFCell(_formatCurrency((persAkhir['jumlah'] ?? 0) * (persAkhir['price'] ?? 0))),
+              _buildPreviewCell('${index + 1}'),
+              _buildPreviewCell(persAwal['name'] ?? pembelian['name'] ?? ''),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(child: _buildPreviewCell(persAwal['jumlah']?.toString() ?? '0')),
+                  Expanded(child: _buildPreviewCell(_formatCurrency(persAwal['price'] ?? 0))),
+                  Expanded(child: _buildPreviewCell(_formatCurrency((persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0)))),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(child: _buildPreviewCell(pembelian['jumlah']?.toString() ?? '0')),
+                  Expanded(child: _buildPreviewCell(_formatCurrency(pembelian['price'] ?? 0))),
+                  Expanded(child: _buildPreviewCell(_formatCurrency((pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0)))),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(child: _buildPreviewCell(penjualan['jumlah']?.toString() ?? '0')),
+                  Expanded(child: _buildPreviewCell(_formatCurrency(penjualan['price'] ?? 0))),
+                  Expanded(child: _buildPreviewCell(_formatCurrency((penjualan['jumlah'] ?? 0) * (penjualan['price'] ?? 0)))),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(child: _buildPreviewCell(persAkhir['jumlah']?.toString() ?? '0')),
+                  Expanded(child: _buildPreviewCell(_formatCurrency(persAkhir['price'] ?? 0))),
+                  Expanded(child: _buildPreviewCell(_formatCurrency((persAkhir['jumlah'] ?? 0) * (persAkhir['price'] ?? 0)))),
+                ],
+              ),
             ],
           );
         }).toList(),
       ],
-    );
-  }
-
-  pw.Widget _buildPDFHeaderCell(String text, {int colSpan = 1, int rowSpan = 1}) {
-    return pw.Container(
-      padding: pw.EdgeInsets.all(5),
-      decoration: pw.BoxDecoration(
-        color: PdfColors.grey200,
-      ),
-      child: pw.Center(
-        child: pw.Text(
-          text,
-          style: pw.TextStyle(
-            fontSize: 10,
-            fontWeight: pw.FontWeight.bold,
-          ),
-          textAlign: pw.TextAlign.center,
-        ),
-      ),
-    );
-  }
-
-  pw.Widget _buildPDFCell(String text) {
-    return pw.Container(
-      padding: pw.EdgeInsets.all(5),
-      child: pw.Text(
-        text,
-        style: const pw.TextStyle(fontSize: 10),
-        textAlign: pw.TextAlign.right,
-      ),
-    );
-  }
-
-  // Preview Table Building
-  Widget _buildPreviewTable() {
-    Set<String> allItems = {
-      ...persAwalData.keys,
-      ...pembelianData.keys,
-      ...penjualanData.keys,
-      ...persAkhirData.keys,
-    };
-
-    return Card(
-      child: Table(
-        border: TableBorder.all(),
-        columnWidths: const {
-          0: FixedColumnWidth(40),    // No
-          1: FixedColumnWidth(150),   // Nama Barang
-          2: FixedColumnWidth(70),    // Unit
-          3: FixedColumnWidth(100),   // Harga
-          4: FixedColumnWidth(100),   // Total
-          5: FixedColumnWidth(70),    // Unit
-          6: FixedColumnWidth(100),   // Harga
-          7: FixedColumnWidth(100),   // Total
-          8: FixedColumnWidth(70),    // Unit
-          9: FixedColumnWidth(100),   // Harga
-          10: FixedColumnWidth(100),  // Total
-          11: FixedColumnWidth(70),   // Unit
-          12: FixedColumnWidth(100),  // Harga
-          13: FixedColumnWidth(100),  // Total
-        },
-        children: [
-          TableRow(
-  decoration: BoxDecoration(color: Colors.grey[200]),
-  children: [
-    _buildPreviewHeaderCell('No'),
-    _buildPreviewHeaderCell('Nama\nBarang'),
-    _buildPreviewHeaderCell('P.Awal'),
-    _buildPreviewHeaderCell(''),  // Empty cell for P.Awal span
-    _buildPreviewHeaderCell(''),  // Empty cell for P.Awal span
-    _buildPreviewHeaderCell('Pembelian'),
-    _buildPreviewHeaderCell(''),  // Empty cell for Pembelian span
-    _buildPreviewHeaderCell(''),  // Empty cell for Pembelian span
-    _buildPreviewHeaderCell('Penjualan'),
-    _buildPreviewHeaderCell(''),  // Empty cell for Penjualan span
-    _buildPreviewHeaderCell(''),  // Empty cell for Penjualan span
-    _buildPreviewHeaderCell('Persediaan\nAkhir'),
-    _buildPreviewHeaderCell(''),  // Empty cell for Persediaan Akhir span
-    _buildPreviewHeaderCell(''),  // Empty cell for Persediaan Akhir span
-  ],
-),
-          TableRow(
-  decoration: BoxDecoration(color: Colors.grey[200]),
-  children: [
-    _buildPreviewHeaderCell(''),  // Empty for No
-    _buildPreviewHeaderCell(''),  // Empty for Nama Barang
-    _buildPreviewHeaderCell('Unit'),
-    _buildPreviewHeaderCell('Harga'),
-    _buildPreviewHeaderCell('Total'),
-    _buildPreviewHeaderCell('Unit'),
-    _buildPreviewHeaderCell('Harga'),
-    _buildPreviewHeaderCell('Total'),
-    _buildPreviewHeaderCell('Unit'),
-    _buildPreviewHeaderCell('Harga'),
-    _buildPreviewHeaderCell('Total'),
-    _buildPreviewHeaderCell('Unit'),
-    _buildPreviewHeaderCell('Harga'),
-    _buildPreviewHeaderCell('Total'),
-  ],
-),
-          ...allItems.toList().asMap().entries.map((entry) {
-            final index = entry.key;
-            final itemKey = entry.value;
-            final persAwal = persAwalData[itemKey] ?? {};
-            final pembelian = pembelianData[itemKey] ?? {};
-            final penjualan = penjualanData[itemKey] ?? {};
-            final persAkhir = persAkhirData[itemKey] ?? {};
-
-            return TableRow(
-              children: [
-                _buildPreviewCell('${index + 1}'),
-                _buildPreviewCell(persAwal['name'] ?? pembelian['name'] ?? ''),
-                _buildPreviewCell(persAwal['jumlah']?.toString() ?? '0'),
-                _buildPreviewCell(_formatCurrency(persAwal['price'] ?? 0)),
-                _buildPreviewCell(_formatCurrency((persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0))),
-                _buildPreviewCell(pembelian['jumlah']?.toString() ?? '0'),
-                _buildPreviewCell(_formatCurrency(pembelian['price'] ?? 0)),
-                _buildPreviewCell(_formatCurrency((pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0))),
-                _buildPreviewCell(penjualan['jumlah']?.toString() ?? '0'),
-                _buildPreviewCell(_formatCurrency(penjualan['price'] ?? 0)),
-                _buildPreviewCell(_formatCurrency((penjualan['jumlah'] ?? 0) * (penjualan['price'] ?? 0))),
-                _buildPreviewCell(persAkhir['jumlah']?.toString() ?? '0'),
-                _buildPreviewCell(_formatCurrency(persAkhir['price'] ?? 0)),
-                _buildPreviewCell(_formatCurrency((persAkhir['jumlah'] ?? 0) * (persAkhir['price'] ?? 0))),
-              ],
-            );
-          }).toList(),
-        ],
-      ),
-    );
-  }
-
- Widget _buildPreviewHeaderCell(String text, {int colSpan = 1, int rowSpan = 1}) {
-  return TableCell(
-    verticalAlignment: TableCellVerticalAlignment.middle,
-    child: Container(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
     ),
   );
 }
 
-  Widget _buildPreviewCell(String text) {
-    return TableCell(
-      verticalAlignment: TableCellVerticalAlignment.middle,
-      child: Container(
-        padding: const EdgeInsets.all(8.0),
-        child: Text(
-          text,
-          textAlign: TextAlign.right,
-        ),
-      ),
-    );
-  }
+Widget _buildPreviewHeaderCell(String text) {
+  return Container(
+    padding: const EdgeInsets.all(8.0),
+    child: Text(
+      text,
+      textAlign: TextAlign.center,
+      style: const TextStyle(fontWeight: FontWeight.bold),
+    ),
+  );
+}
 
+Widget _buildPreviewCell(String text) {
+  return Container(
+    padding: const EdgeInsets.all(8.0),
+    child: Text(
+      text,
+      textAlign: TextAlign.right,
+    ),
+  );
+}
   // Data fetching methods
   Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate) async {
     final userId = auth.currentUser?.uid;
@@ -410,7 +479,7 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
     return result;
   }
 
-  Future<Map<String, Map<String, dynamic>>> _fetchPenjualan(String startDate, String endDate) async {
+Future<Map<String, Map<String, dynamic>>> _fetchPenjualan(String startDate, String endDate) async {
     final userId = auth.currentUser?.uid;
     final snapshot = await _db
         .collection("Users")
@@ -421,14 +490,21 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
         .get();
 
     Map<String, Map<String, dynamic>> result = {};
+    
+    // Temporary map untuk menyimpan total nilai penjualan
+    Map<String, double> totalNilaiPenjualan = {};
+    
     for (var doc in snapshot.docs) {
       var data = doc.data();
       String key = '${data['namaBarang']}_${data['tipe']}';
       
       if (result.containsKey(key)) {
+        // Update jumlah
         result[key]!['jumlah'] = (result[key]!['jumlah'] as int) + (data['jumlah'] ?? 0);
-        // Use the latest price
-        result[key]!['price'] = data['hargaJual'] ?? 0;
+        
+        // Update total nilai penjualan
+        totalNilaiPenjualan[key] = (totalNilaiPenjualan[key] ?? 0) + 
+            ((data['hargaJual'] ?? 0) * (data['jumlah'] ?? 0));
       } else {
         result[key] = {
           'name': data['namaBarang'],
@@ -436,16 +512,42 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
           'jumlah': data['jumlah'] ?? 0,
           'price': data['hargaJual'] ?? 0,
         };
+        
+        // Inisialisasi total nilai penjualan
+        totalNilaiPenjualan[key] = (data['hargaJual'] ?? 0) * (data['jumlah'] ?? 0);
       }
     }
-    return result;
-  }
+    
+    // Hitung harga rata-rata untuk setiap item
+    for (var key in result.keys) {
+      if (result[key]!['jumlah'] > 0) {
+        // Harga rata-rata = Total nilai penjualan / Total jumlah unit
+        double averagePrice = totalNilaiPenjualan[key]! / result[key]!['jumlah'];
+        result[key]!['price'] = averagePrice.round(); // Bulatkan ke integer
+      }
+    }
 
-  Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
+    return result;
+}
+
+// Kolom penjualan akan menampilkan:
+
+// Jumlah: Total semua unit yang terjual
+// Harga: Rata-rata dari semua harga penjualan
+// Total: Total nilai semua penjualan
+
+
+// Kolom persediaan akhir akan menampilkan:
+
+// Jumlah: Sisa stok setelah penjualan
+// Harga: Rata-rata tertimbang dari P.Awal dan Pembelian
+// Total: Harga × Jumlah akhir
+ 
+Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
     Map<String, Map<String, dynamic>> persAwalData,
     Map<String, Map<String, dynamic>> pembelianData,
     Map<String, Map<String, dynamic>> penjualanData,
-  ) async {
+) async {
     Map<String, Map<String, dynamic>> result = {};
     
     Set<String> allItems = {
@@ -462,23 +564,26 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
       int remainingStock = (persAwal['jumlah'] ?? 0) + 
                          (pembelian['jumlah'] ?? 0) - 
                          (penjualan['jumlah'] ?? 0);
-
-      double price = pembelian['price'] > 0 ? 
-                    pembelian['price'] : 
-                    persAwal['price'] ?? 0;
+      
+      // Hitung rata-rata tertimbang untuk harga akhir
+      double totalNilai = (persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0) +
+                         (pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0);
+      int totalUnit = (persAwal['jumlah'] ?? 0) + (pembelian['jumlah'] ?? 0);
+      
+      double weightedAvgPrice = totalUnit > 0 ? totalNilai / totalUnit : 0;
 
       if (remainingStock >= 0) {
         result[key] = {
           'name': persAwal['name'] ?? pembelian['name'] ?? penjualan['name'],
           'tipe': persAwal['tipe'] ?? pembelian['tipe'] ?? penjualan['tipe'],
           'jumlah': remainingStock,
-          'price': price,
+          'price': weightedAvgPrice.round(), // Bulatkan ke integer
         };
       }
     }
 
     return result;
-  }
+}
 
   String _formatCurrency(num value) {
     return NumberFormat.currency(

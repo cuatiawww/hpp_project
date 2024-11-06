@@ -113,7 +113,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
-        backgroundColor: Color(0xFFF29100),
+        backgroundColor:Color(0xFF080C67),
         elevation: 0,
       ),
       body: _widgetOptions[_selectedIndex],
@@ -160,6 +160,8 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
+
 }
 
 class _PersAwalContent extends StatefulWidget {
@@ -199,7 +201,7 @@ class _PersAwalContentState extends State<_PersAwalContent> {
       }
     }
   }
-  
+//SCROLLABLE  
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -209,7 +211,7 @@ class _PersAwalContentState extends State<_PersAwalContent> {
           child: Container(
             height: 200,
             width: MediaQuery.of(context).size.width,
-            color: Color(0xFFF29100),
+            color:Color(0xFF080C67),
           ),
         ),
         SingleChildScrollView(
@@ -232,112 +234,131 @@ class _PersAwalContentState extends State<_PersAwalContent> {
     );
   }
 
-  Widget _buildProfileCard() {
-    final currentUser = auth.currentUser;
-    
-    if (currentUser == null) {
-      return Center(child: Text('Silakan login terlebih dahulu'));
-    }
+Widget _buildProfileCard() {
+  final currentUser = auth.currentUser;
+  
+  if (currentUser == null) {
+    return Center(child: Text('Silakan login terlebih dahulu'));
+  }
 
-    return ClipPath(
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 15),
-        padding: EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.5),
-              spreadRadius: 2,
-              blurRadius: 5,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Image.asset(
-                  "assets/images/shop.png",
-                  height: 24,
-                  width: 24,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Obx(() => Text(
-                    dataUsahaC.namaUsaha.value.isEmpty 
-                        ? 'Memuat...' 
-                        : dataUsahaC.namaUsaha.value,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  )),
-                ),
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 15),
+    child: Stack(
+      children: [
+        Container(
+          padding: EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF080C67),  // Primary blue
+                Color(0xFF1E23A7),  // Lighter blue
               ],
             ),
-            SizedBox(height: 20),
-            Obx(() => RichText(
-              text: TextSpan(
-                text: "Tipe Usaha: ",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                ),
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 2,
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  TextSpan(
-                    text: dataUsahaC.tipeUsaha.value.isEmpty 
-                        ? 'Memuat...' 
-                        : dataUsahaC.tipeUsaha.value,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  )
+                    child: Image.asset(
+                      "assets/images/shop.png",
+                      height: 24,
+                      width: 24,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(() => Text(
+                      dataUsahaC.namaUsaha.value.isEmpty 
+                          ? 'Memuat...' 
+                          : dataUsahaC.namaUsaha.value,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    )),
+                  ),
                 ],
               ),
-            )),
-            SizedBox(height: 10),
-            Divider(color: Colors.black),
-            SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Obx(() => RichText(
-                    text: TextSpan(
-                      text: "Nomor Telepon: ",
+              SizedBox(height: 20),
+              Obx(() => RichText(
+                text: TextSpan(
+                  text: "Tipe Usaha: ",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 16,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: dataUsahaC.tipeUsaha.value.isEmpty 
+                          ? 'Memuat...' 
+                          : dataUsahaC.tipeUsaha.value,
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                      children: [
-                        TextSpan(
-                          text: dataUsahaC.nomorTelepon.value.isEmpty 
-                              ? 'Memuat...' 
-                              : dataUsahaC.nomorTelepon.value,
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      ],
-                    ),
-                  )),
+                    )
+                  ],
                 ),
-              ],
-            ),
-          ],
+              )),
+              SizedBox(height: 10),
+              Divider(color: Colors.white.withOpacity(0.2)),
+              SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Obx(() => RichText(
+                      text: TextSpan(
+                        text: "Nomor Telepon: ",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 14,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: dataUsahaC.nomorTelepon.value.isEmpty 
+                                ? 'Memuat...' 
+                                : dataUsahaC.nomorTelepon.value,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        ],
+                      ),
+                    )),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
 Widget _buildMenu(BuildContext context) {
     return Container(
@@ -455,8 +476,9 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
     ),
   );
 }
-  
- Widget _buildLaporan() {
+
+//LAPORAN UI
+Widget _buildLaporan() {
   final userId = auth.currentUser?.uid;
   if (userId == null) return Container();
 
@@ -467,9 +489,17 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
   final startDateStr = DateFormat('yyyy-MM-dd').format(startDate);
   final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
+  // Format bulan dalam Bahasa Indonesia
+  final List<String> monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 
+    'Mei', 'Juni', 'Juli', 'Agustus',
+    'September', 'Oktober', 'November', 'Desember'
+  ];
+  final String monthYear = '${monthNames[now.month - 1]} ${now.year}';
+
   return Container(
     margin: EdgeInsets.symmetric(horizontal: 20),
-    padding: EdgeInsets.all(15),
+    padding: EdgeInsets.all(20),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(15),
@@ -483,6 +513,7 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
       ],
     ),
     child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -494,20 +525,24 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            ElevatedButton(
-  onPressed: () => Get.to(() => ReportPersediaanPage()),
-  child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(Icons.document_scanner, size: 16),
-      SizedBox(width: 8),
-      Text('Report Persediaan'),
-    ],
-  ),
-),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Color(0xFF080C67).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                monthYear,
+                style: TextStyle(
+                  color: Color(0xFF080C67),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
           ],
         ),
-        SizedBox(height: 16),
+        SizedBox(height: 20),
         StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection("Users")
@@ -526,11 +561,9 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
                   .where('Tanggal', isLessThanOrEqualTo: endDateStr)
                   .snapshots(),
               builder: (context, pembelianSnapshot) {
-                // Calculate totals
                 double totalPenjualan = 0;
                 double totalPembelian = 0;
 
-                // Calculate Penjualan
                 if (penjualanSnapshot.hasData) {
                   for (var doc in penjualanSnapshot.data!.docs) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -538,7 +571,6 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
                   }
                 }
 
-                // Calculate Pembelian
                 if (pembelianSnapshot.hasData) {
                   for (var doc in pembelianSnapshot.data!.docs) {
                     final data = doc.data() as Map<String, dynamic>;
@@ -546,44 +578,46 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
                   }
                 }
 
-                return Row(
+                return Column(
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.arrow_downward, color: Colors.green),
-                          SizedBox(height: 8),
-                          Text('Total Penjualan'),
-                          SizedBox(height: 4),
-                          Text(
-                            NumberFormat.currency(
-                              locale: 'id',
-                              symbol: 'Rp ',
-                              decimalDigits: 0,
-                            ).format(totalPenjualan),
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
+                    _buildTransactionCard(
+                      "Penjualan",
+                      totalPenjualan,
+                      Icons.arrow_circle_down,
+                      Colors.green.shade100,
+                      Colors.green,
+                      true,
                     ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Icon(Icons.arrow_upward, color: Colors.red),
-                          SizedBox(height: 8),
-                          Text('Total Pembelian'),
-                          SizedBox(height: 4),
-                          Text(
-                            NumberFormat.currency(
-                              locale: 'id',
-                              symbol: 'Rp ',
-                              decimalDigits: 0,
-                            ).format(totalPembelian),
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                    SizedBox(height: 12),
+                    _buildTransactionCard(
+                      "Pembelian",
+                      totalPembelian,
+                      Icons.arrow_circle_up,
+                      Colors.red.shade100,
+                      Colors.red,
+                      false,
+                    ),
+                    SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: ElevatedButton.icon(
+                        onPressed: () => Get.to(() => ReportPersediaanPage()),
+                        icon: Icon(Icons.document_scanner, size: 18,),
+                        label: Text(
+                          'Report Persediaan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Color.fromARGB(255, 255, 255, 255)
                           ),
-                        ],
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF080C67),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -596,128 +630,337 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
     ),
   );
 }
-  
-  Widget _buildRiwayat() {
-    return Container(
-      margin: EdgeInsets.only(left: 20, right: 20, bottom: 30),
-      padding: EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
+
+Widget _buildTransactionCard(
+  String title,
+  double amount,
+  IconData icon,
+  Color backgroundColor,
+  Color iconColor,
+  bool isIncome,
+) {
+  return Container(
+    padding: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
           ),
-        ],
+          child: Icon(icon, color: iconColor, size: 24),
+        ),
+        SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600, // Made semi-bold
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                NumberFormat.currency(
+                  locale: 'id',
+                  symbol: 'Rp ',
+                  decimalDigits: 0,
+                ).format(amount),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: iconColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+//----------------------------------------------------------------
+Widget _buildMonthLabel() {
+  final now = DateTime.now();
+  // Format bulan dan tahun dalam Bahasa Indonesia
+  final List<String> monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 
+    'Mei', 'Juni', 'Juli', 'Agustus',
+    'September', 'Oktober', 'November', 'Desember'
+  ];
+  final String monthYear = '${monthNames[now.month - 1]} ${now.year}';
+
+  return Container(
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Color(0xFF080C67).withOpacity(0.1),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      monthYear,
+      style: TextStyle(
+        color: Color(0xFF080C67),
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
       ),
-      child: Column(
-        children: [
-          Text(
-            'Riwayat',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+    ),
+  );
+}
+Widget _buildRiwayat() {
+  return Container(
+    margin: EdgeInsets.only(left: 20, right: 20, bottom: 30),
+    padding: EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(15),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.5),
+          spreadRadius: 2,
+          blurRadius: 5,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Riwayat Transaksi',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          SizedBox(height: 16),
-          StreamBuilder<QuerySnapshot>(
-  // Perbaiki path collection Pembelian
-  stream: FirebaseFirestore.instance
-      .collection("Users")
-      .doc(auth.currentUser?.uid) // Tambahkan userId
-      .collection("Pembelian")
-      .orderBy('Tanggal', descending: true)
-      .snapshots(),
-  builder: (context, pembelianSnapshot) {
-    if (pembelianSnapshot.hasError) {
-      return Text('Error: ${pembelianSnapshot.error}');
-    }
+            _buildMonthLabel(), // Menggunakan widget baru untuk menampilkan bulan
+          ],
+        ),
+        SizedBox(height: 16),
+        _buildRiwayatContent(),
+      ],
+    ),
+  );
+}
 
-    return StreamBuilder<QuerySnapshot>(
-      // Perbaiki path collection Barang
-      stream: FirebaseFirestore.instance
-          .collection("Users")
-          .doc(auth.currentUser?.uid) // Tambahkan userId
-          .collection("Barang")
-          .orderBy('Tanggal', descending: true)
-          .snapshots(),
-      builder: (context, barangSnapshot) {
-                  if (pembelianSnapshot.connectionState == ConnectionState.waiting ||
-                      barangSnapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
+Widget _buildRiwayatContent() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance
+        .collection("Users")
+        .doc(auth.currentUser?.uid)
+        .collection("Pembelian")
+        .orderBy('Tanggal', descending: true)
+        .snapshots(),
+    builder: (context, pembelianSnapshot) {
+      if (pembelianSnapshot.hasError) {
+        return _buildErrorState('Terjadi kesalahan saat memuat data');
+      }
 
-                  if (barangSnapshot.hasError) {
-                    return Text('Error: ${barangSnapshot.error}');
-                  }
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection("Users")
+            .doc(auth.currentUser?.uid)
+            .collection("Barang")
+            .orderBy('Tanggal', descending: true)
+            .snapshots(),
+        builder: (context, barangSnapshot) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection("Users")
+                .doc(auth.currentUser?.uid)
+                .collection("Penjualan")
+                .orderBy('tanggal', descending: true)
+                .snapshots(),
+            builder: (context, penjualanSnapshot) {
+              if (pembelianSnapshot.connectionState == ConnectionState.waiting ||
+                  barangSnapshot.connectionState == ConnectionState.waiting ||
+                  penjualanSnapshot.connectionState == ConnectionState.waiting) {
+                return _buildLoadingState();
+              }
 
-                  List<RiwayatItem> riwayatItems = [];
-                  
-                  // Add Persediaan Awal items
-                  if (barangSnapshot.hasData) {
-                    for (var doc in barangSnapshot.data!.docs) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      riwayatItems.add(
-                        RiwayatItem(
-                          title: data["Name"] ?? "Unknown",
-                          description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])} (Persediaan Awal)",
-                          price: "Rp ${NumberFormat('#,###').format((data["Jumlah"] as int) * (data["Price"] as int))}",
-                        ),
-                      );
-                    }
-                  }
+              if (barangSnapshot.hasError || penjualanSnapshot.hasError) {
+                return _buildErrorState('Terjadi kesalahan saat memuat data');
+              }
 
-                  // Add Pembelian items
-                  if (pembelianSnapshot.hasData) {
-                    for (var doc in pembelianSnapshot.data!.docs) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      riwayatItems.add(
-                        RiwayatItem(
-                          title: data["Name"] ?? "Unknown",
-                          description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])} (Pembelian)",
-                          price: "Rp ${NumberFormat('#,###').format((data["Jumlah"] as int) * (data["Price"] as int))}",
-                        ),
-                      );
-                    }
-                  }
+              List<RiwayatItem> riwayatItems = [];
+              
+              // Add Persediaan Awal items
+              if (barangSnapshot.hasData) {
+                for (var doc in barangSnapshot.data!.docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  riwayatItems.add(
+                    RiwayatItem(
+                      title: data["Name"] ?? "Unknown",
+                      description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])}",
+                      price: (data["Jumlah"] as int) * (data["Price"] as int),
+                      type: "Persediaan Awal",
+                      date: data["Tanggal"] ?? "",
+                    ),
+                  );
+                }
+              }
 
-                  if (riwayatItems.isEmpty) {
-                    return Center(child: Text('Tidak ada riwayat'));
-                  }
+              // Add Pembelian items
+              if (pembelianSnapshot.hasData) {
+                for (var doc in pembelianSnapshot.data!.docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  riwayatItems.add(
+                    RiwayatItem(
+                      title: data["Name"] ?? "Unknown",
+                      description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])}",
+                      price: (data["Jumlah"] as int) * (data["Price"] as int),
+                      type: "Pembelian",
+                      date: data["Tanggal"] ?? "",
+                    ),
+                  );
+                }
+              }
 
-                  return Column(
+              // Add Penjualan items
+              if (penjualanSnapshot.hasData) {
+                for (var doc in penjualanSnapshot.data!.docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  riwayatItems.add(
+                    RiwayatItem(
+                      title: data["namaBarang"] ?? "Unknown",
+                      description: "${data["jumlah"]} ${data["satuan"]} - Rp ${NumberFormat('#,###').format(data["hargaJual"])}",
+                      price: data["total"] ?? 0,
+                      type: "Penjualan",
+                      date: data["tanggal"] ?? "",
+                    ),
+                  );
+                }
+              }
+
+              // Sort all items by date
+              riwayatItems.sort((a, b) {
+                return DateTime.parse(b.date).compareTo(DateTime.parse(a.date));
+              });
+
+              if (riwayatItems.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              return Column(
+                children: [
+                  Container(
+                    height: 300,
+                    child: ListView.builder(
+                      itemCount: riwayatItems.length,
+                      padding: EdgeInsets.only(top: 8),
+                      itemBuilder: (context, index) {
+                        return riwayatItems[index];
+                      },
+                    ),
+                  ),
+                  Divider(height: 32, thickness: 1),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        height: 300,
-                        child: ListView.builder(
-                          itemCount: riwayatItems.length,
-                          shrinkWrap: true,
-                          itemBuilder: (context, index) {
-                            return riwayatItems[index];
-                          },
+                      Text(
+                        'Total Biaya:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
                         ),
                       ),
-                      SizedBox(height: 16),
                       Text(
-                        'Total Biaya: Rp ${NumberFormat('#,###').format(_calculateTotalBiaya(pembelianSnapshot.data?.docs ?? [], barangSnapshot.data?.docs ?? []))}',
+                        'Rp ${NumberFormat('#,###').format(_calculateTotalBiaya(pembelianSnapshot.data?.docs ?? [], barangSnapshot.data?.docs ?? []))}',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: Color(0xFF080C67),
                         ),
                       ),
                     ],
-                  );
-                },
+                  ),
+                ],
               );
             },
+          );
+        },
+      );
+    },
+  );
+}
+
+// State widgets remain the same
+Widget _buildLoadingState() {
+  return Container(
+    height: 200,
+    child: Center(
+      child: CircularProgressIndicator(
+        color: Color(0xFF080C67),
+      ),
+    ),
+  );
+}
+
+Widget _buildErrorState(String message) {
+  return Container(
+    height: 200,
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: Colors.red,
+            size: 48,
+          ),
+          SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.red[700],
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+Widget _buildEmptyState() {
+  return Container(
+    height: 200,
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.history,
+            color: Colors.grey[400],
+            size: 48,
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Belum ada riwayat transaksi',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   int _calculateTotalBiaya(List<QueryDocumentSnapshot> pembelianDocs, List<QueryDocumentSnapshot> barangDocs) {
     int total = 0;
@@ -738,60 +981,143 @@ Widget _buildMenuItem(IconData icon, String label, double itemWidth,
   }
 }
 
+// RiwayatItem Widget
 class RiwayatItem extends StatelessWidget {
   final String title;
   final String description;
-  final String price;
+  final int price;
+  final String type;
+  final String date;
 
   const RiwayatItem({
+    Key? key,
     required this.title,
     required this.description,
     required this.price,
-  });
+    required this.type,
+    required this.date,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Determine color and icon based on type
+    Color typeColor;
+    IconData typeIcon;
+    
+    switch (type) {
+      case "Penjualan":
+        typeColor = Colors.green;
+        typeIcon = Icons.shopping_bag_outlined;
+        break;
+      case "Pembelian":
+        typeColor = Colors.red;
+        typeIcon = Icons.shopping_cart_outlined;
+        break;
+      default:
+        typeColor = Colors.blue;
+        typeIcon = Icons.inventory_outlined;
+    }
+
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey[200]!,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: typeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  typeIcon,
+                  color: typeColor,
+                  size: 20,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      date,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: typeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  type,
+                  style: TextStyle(
+                    color: typeColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 8),
-          Text(description),
-          SizedBox(height: 8),
-          Text(
-            price,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
-            ),
+          SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Text(
+                'Rp ${NumberFormat('#,###').format(price)}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: typeColor,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+
+
 
 class ClipPathClass extends CustomClipper<Path> {
   @override
@@ -806,7 +1132,5 @@ class ClipPathClass extends CustomClipper<Path> {
   }
 
   @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) {
-    return false;
-  }
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

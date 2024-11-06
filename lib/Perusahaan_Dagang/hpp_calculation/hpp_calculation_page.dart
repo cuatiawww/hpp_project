@@ -586,9 +586,22 @@ Future<void> _calculateHPP() async {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Perhitungan HPP'),
-        elevation: 0,
+      centerTitle: true,
+      elevation: 0,
+      title: const Text(
+        'Perhitungan HPP',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 20,
+        ),
       ),
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      backgroundColor: const Color(0xFF080C67),
+    ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
