@@ -198,7 +198,7 @@ class _HomePageState extends State<HomePage> {
   return GestureDetector(
     onTap: () => _onItemTapped(index),
     child: Container(
-      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
         color: isSelected ? Color.fromARGB(255, 1, 0, 3).withOpacity(0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(50),
