@@ -3,8 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/view/info_screen.dart';
-
-import 'package:hpp_project/home_page.dart';
+import 'package:hpp_project/home/home_page.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/input_pers_awal.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pers_akhir_page.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/pers_awal_page.dart';
