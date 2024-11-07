@@ -6,8 +6,8 @@ import 'package:hpp_project/auth/controllers/auth_controller.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/home/components/bottom_nav_bar.dart';
-import 'package:hpp_project/home/components/custom_app_bar.dart';
-import 'package:hpp_project/home/components/pers_awal_content.dart';
+import 'package:hpp_project/home/components/custom_header.dart'; // Import header baru
+import 'package:hpp_project/home/components/nav_content.dart';
 import 'package:hpp_project/laporan_page.dart';
 import 'package:hpp_project/profile_page.dart';
 
@@ -58,17 +58,57 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  static final List<Widget> _widgetOptions = <Widget>[
-    PersAwalContent(),
-    LaporanPage(),
-    ProfilePage()
-  ];
+ Widget _buildPageContent() {
+    switch (_selectedIndex) {
+      case 0:
+        return Column(
+          children: [
+            CustomHeader(), // Tambahkan header di sini
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: PersAwalContent(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      case 1:
+        return Column(
+          children: [
+            CustomHeader(), // Tambahkan header di sini
+            Expanded(
+              child: LaporanPage(),
+            ),
+          ],
+        );
+      case 2:
+        return Column(
+          children: [
+            // CustomHeader(), // Tambahkan header di sini
+            Expanded(
+              child: ProfilePage(),
+            ),
+          ],
+        );
+      default:
+        return Column(
+          children: [
+            CustomHeader(),
+            Expanded(
+              child: PersAwalContent(),
+            ),
+          ],
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(),
-      body: _widgetOptions[_selectedIndex],
+      body: _buildPageContent(),
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,

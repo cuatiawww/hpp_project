@@ -1,5 +1,3 @@
-  // lib/pages/home/components/clip_path.dart
-
 import 'package:flutter/material.dart';
 
 class ClipPathClass extends CustomClipper<Path> {
