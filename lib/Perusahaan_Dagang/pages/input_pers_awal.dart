@@ -49,28 +49,44 @@ class _InputPersAwalState extends State<InputPersAwal> {
   }
 
   Widget _buildInputField({
-    required String label,
-    required TextEditingController controller,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    bool readOnly = false,
-    VoidCallback? onTap,
-    Widget? suffix,
-    String? hintText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Colors.grey,
-          ),
+  required String label,
+  required TextEditingController controller,
+  TextInputType? keyboardType,
+  String? Function(String?)? validator,
+  bool readOnly = false,
+  VoidCallback? onTap,
+  String? hintText,
+  IconData? icon,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+          color: Color(0xFF080C67),
         ),
-        const SizedBox(height: 8),
-        TextFormField(
+      ),
+      SizedBox(height: 8),
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 0,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           readOnly: readOnly,
@@ -83,86 +99,104 @@ class _InputPersAwalState extends State<InputPersAwal> {
           },
           decoration: InputDecoration(
             hintText: hintText,
-            suffixIcon: suffix,
-            filled: true,
-            fillColor: Colors.grey[100],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+            hintStyle: TextStyle(
+              color: Colors.grey[400],
+              fontSize: 14,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.grey, width: 1),
+            prefixIcon: Icon(
+              icon,
+              color: Color(0xFF080C67),
+              size: 20,
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 1),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red, width: 2),
-            ),
-            contentPadding: const EdgeInsets.all(16),
           ),
         ),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
+      ),
+      SizedBox(height: 16),
+    ],
+  );
+}
 
-  Widget _buildUnitDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Satuan',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Colors.grey,
-          ),
+ Widget _buildUnitDropdown() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Satuan',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
+          color: Color(0xFF080C67),
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey),
+      ),
+      SizedBox(height: 8),
+      Container(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.2),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedUnit,
-              isExpanded: true,
-              items: _units.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedUnit = newValue!;
-                  _isOtherSelected = newValue == 'Lainnya';
-                });
-              },
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 0,
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 16),
-        if (_isOtherSelected)
-          _buildInputField(
-            label: 'Satuan Lainnya',
-            controller: _satuanController,
-            hintText: 'Masukkan satuan custom',
-          ),
-      ],
-    );
-  }
+        child: Row(
+          children: [
+            Icon(
+              Icons.straighten_rounded,
+              color: Color(0xFF080C67),
+              size: 20,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedUnit,
+                  isExpanded: true,
+                  style: TextStyle(
+                    color: Colors.black87,
+                    fontSize: 14,
+                  ),
+                  items: _units.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedUnit = newValue!;
+                      _isOtherSelected = newValue == 'Lainnya';
+                    });
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      SizedBox(height: 16),
+      if (_isOtherSelected)
+        _buildInputField(
+          label: 'Satuan Lainnya',
+          controller: _satuanController,
+          hintText: 'Masukkan satuan custom',
+          icon: Icons.edit_rounded,
+        ),
+    ],
+  );
+}
 
   //DATABASES
   Future<void> _submitForm() async {
@@ -222,119 +256,158 @@ class _InputPersAwalState extends State<InputPersAwal> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+ Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
       centerTitle: true,
       elevation: 0,
       title: const Text(
-        'Input Persedian Awal',
+        'Input Persediaan Awal',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
-          fontSize: 20,
+          fontSize: 24,
         ),
       ),
       leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: Colors.white),
+        icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
         onPressed: () => Navigator.of(context).pop(),
       ),
-      backgroundColor: const Color(0xFF080C67),
-    ),
-      body: Container(
+      flexibleSpace: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
             colors: [
-              Colors.white24,
-              Colors.white,
+              Color(0xFF080C67),
+              Color(0xFF1E23A7),
             ],
           ),
         ),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildInputField(
-                          label: 'Nama Barang',
-                          controller: _namaBarangController,
-                          hintText: 'Masukkan nama barang',
+      ),
+    ),
+    body: Container(
+      decoration: BoxDecoration(
+        color: Color(0xFFF8FAFC),
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 0,
+                      blurRadius: 20,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInputField(
+                      label: 'Nama Barang',
+                      controller: _namaBarangController,
+                      hintText: 'Masukkan nama barang',
+                      icon: Icons.inventory_2_rounded,
+                    ),
+                    _buildInputField(
+                      label: 'Tipe',
+                      controller: _tipeController,
+                      hintText: 'Masukkan tipe barang',
+                      icon: Icons.category_rounded,
+                    ),
+                    _buildUnitDropdown(),
+                    _buildInputField(
+                      label: 'Jumlah',
+                      controller: _jumlahController,
+                      keyboardType: TextInputType.number,
+                      hintText: 'Masukkan jumlah',
+                      icon: Icons.numbers_rounded,
+                    ),
+                    _buildInputField(
+                      label: 'Harga',
+                      controller: _hargaController,
+                      keyboardType: TextInputType.number,
+                      hintText: 'Masukkan harga per unit',
+                      icon: Icons.attach_money_rounded,
+                    ),
+                    _buildInputField(
+                      label: 'Tanggal',
+                      controller: _tanggalController,
+                      readOnly: true,
+                      onTap: () => _selectDate(context),
+                      icon: Icons.calendar_today_rounded,
+                    ),
+                    SizedBox(height: 32),
+                    Container(
+                      width: double.infinity,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xFF080C67),
+                            Color(0xFF1E23A7),
+                          ],
                         ),
-                        _buildInputField(
-                          label: 'Tipe',
-                          controller: _tipeController,
-                          hintText: 'Masukkan tipe barang',
-                        ),
-                        _buildUnitDropdown(),
-                        _buildInputField(
-                          label: 'Jumlah',
-                          controller: _jumlahController,
-                          keyboardType: TextInputType.number,
-                          hintText: 'Masukkan jumlah',
-                        ),
-                        _buildInputField(
-                          label: 'Harga',
-                          controller: _hargaController,
-                          keyboardType: TextInputType.number,
-                          hintText: 'Masukkan harga per unit',
-                        ),
-                        _buildInputField(
-                          label: 'Tanggal',
-                          controller: _tanggalController,
-                          readOnly: true,
-                          onTap: () => _selectDate(context),
-                          suffix: const Icon(Icons.calendar_today),
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _submitForm,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0xFF080C67).withOpacity(0.3),
+                            spreadRadius: 0,
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _isLoading ? null : _submitForm,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Center(
                             child: _isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
-                                : const Text(
-                                    'Tambah Barang',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                ? CircularProgressIndicator(color: Colors.white)
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add_circle_outline_rounded,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Tambah Barang',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   @override
   void dispose() {
     _namaBarangController.dispose();
