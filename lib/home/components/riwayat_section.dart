@@ -1,5 +1,3 @@
-// lib/pages/home/components/riwayat_section.dart
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,19 +12,6 @@ class RiwayatSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(left: 20, right: 20, bottom: 30),
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -38,44 +23,69 @@ class RiwayatSection extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  color: Color(0xFF080C67),
                 ),
               ),
               _buildMonthLabel(),
             ],
           ),
-          SizedBox(height: 16),
-          _buildRiwayatContent(),
+          SizedBox(height: 24),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 0,
+                  blurRadius: 20,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: _buildRiwayatContent(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMonthLabel() {
-    final now = DateTime.now();
-    final List<String> monthNames = [
-      'Januari', 'Februari', 'Maret', 'April', 
-      'Mei', 'Juni', 'Juli', 'Agustus',
-      'September', 'Oktober', 'November', 'Desember'
-    ];
-    final String monthYear = '${monthNames[now.month - 1]} ${now.year}';
+ Widget _buildMonthLabel() {
+  final now = DateTime.now();
+  final List<String> monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 
+    'Mei', 'Juni', 'Juli', 'Agustus',
+    'September', 'Oktober', 'November', 'Desember'
+  ];
+  final String monthYear = '${monthNames[now.month - 1]} ${now.year}';
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Color(0xFF080C67).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        monthYear,
-        style: TextStyle(
+  return Container(
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Color(0xFFEEF2FF), // Warna background yang lebih soft
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.calendar_today_outlined,
+          size: 14,
           color: Color(0xFF080C67),
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
         ),
-      ),
-    );
-  }
-
+        SizedBox(width: 6),
+        Text(
+          monthYear,
+          style: TextStyle(
+            color: Color(0xFF080C67),
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    ),
+  );
+}
   Widget _buildRiwayatContent() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -182,55 +192,90 @@ class RiwayatSection extends StatelessWidget {
     return items;
   }
 
-  Widget _buildRiwayatList(
-    List<RiwayatItem> items,
-    List<QueryDocumentSnapshot> pembelianDocs,
-    List<QueryDocumentSnapshot> barangDocs,
-  ) {
-    return Column(
-      children: [
-        Container(
-          height: 300,
-          child: ListView.builder(
-            itemCount: items.length,
-            padding: EdgeInsets.only(top: 8),
-            itemBuilder: (context, index) {
-              return items[index];
-            },
+Widget _buildRiwayatList(
+  List<RiwayatItem> items,
+  List<QueryDocumentSnapshot> pembelianDocs,
+  List<QueryDocumentSnapshot> barangDocs,
+) {
+  return Column(
+    children: [
+      Container(
+        height: 300,
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: ListView.builder(
+          itemCount: items.length,
+          padding: EdgeInsets.only(top: 8),
+          itemBuilder: (context, index) {
+            return items[index];
+          },
+        ),
+      ),
+      Container(
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: Colors.grey.withOpacity(0.1),
+              width: 1,
+            ),
           ),
         ),
-        Divider(height: 32, thickness: 1),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
           children: [
-            Text(
-              'Total Biaya:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-            ),
-            Text(
-              'Rp ${NumberFormat('#,###').format(_calculateTotalBiaya(pembelianDocs, barangDocs))}',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF080C67),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Biaya:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF080C67),
+                        Color(0xFF1E23A7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF080C67).withOpacity(0.2),
+                        spreadRadius: 0,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'Rp ${NumberFormat('#,###').format(_calculateTotalBiaya(pembelianDocs, barangDocs))}',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ],
-    );
-  }
-
+      ),
+    ],
+  );
+}
   Widget _buildLoadingState() {
     return Container(
       height: 200,
       child: Center(
         child: CircularProgressIndicator(
-          color: Color(0xFF080C67),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
         ),
       ),
     );
@@ -239,21 +284,23 @@ class RiwayatSection extends StatelessWidget {
   Widget _buildErrorState(String message) {
     return Container(
       height: 200,
+      padding: EdgeInsets.all(20),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.error_outline,
-              color: Colors.red,
+              color: Color(0xFFFF6B6B),
               size: 48,
             ),
             SizedBox(height: 16),
             Text(
               message,
               style: TextStyle(
-                color: Colors.red[700],
+                color: Color(0xFFFF6B6B),
                 fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
             ),
@@ -262,18 +309,25 @@ class RiwayatSection extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildEmptyState() {
     return Container(
       height: 200,
+      padding: EdgeInsets.all(20),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.history,
-              color: Colors.grey[400],
-              size: 48,
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Color(0xFF080C67).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.history,
+                color: Color(0xFF080C67),
+                size: 32,
+              ),
             ),
             SizedBox(height: 16),
             Text(

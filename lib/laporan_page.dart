@@ -224,6 +224,7 @@ void _loadInitialData() async {
     );
   }
 
+
 Widget _buildStatisticsCards() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -446,120 +447,137 @@ Widget _buildStatisticsCards() {
   }
 
  Widget _buildTransactionList(List<QueryDocumentSnapshot<Map<String, dynamic>>> documents, bool isPenjualan) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: documents.length,
-      itemBuilder: (context, index) {
-        final data = documents[index].data();
-        
-        // Determine type-specific values
-        final String title = isPenjualan ? data['namaBarang'] ?? '' : data['Name'] ?? '';
-        final int quantity = isPenjualan ? data['jumlah'] ?? 0 : data['Jumlah'] ?? 0;
-        final String unit = data['satuan'] ?? '';
-        final double price = isPenjualan 
-            ? (data['hargaJual']?.toDouble() ?? 0)
-            : (data['Price']?.toDouble() ?? 0);
-        final double total = isPenjualan 
-            ? (data['total']?.toDouble() ?? 0)
-            : ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0)).toDouble();
-        final String date = isPenjualan ? data['tanggal'] ?? '' : data['Tanggal'] ?? '';
-        
-        // Determine styling based on transaction type
-        final Color typeColor = isPenjualan ? Colors.green : Colors.red;
-        final IconData typeIcon = isPenjualan 
-            ? Icons.shopping_bag_outlined 
-            : Icons.shopping_cart_outlined;
-        final String typeText = isPenjualan ? 'Penjualan' : 'Pembelian';
+  return ListView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: documents.length,
+    itemBuilder: (context, index) {
+      final data = documents[index].data();
+      
+      // Data processing
+      final String title = isPenjualan ? data['namaBarang'] ?? '' : data['Name'] ?? '';
+      final int quantity = isPenjualan ? data['jumlah'] ?? 0 : data['Jumlah'] ?? 0;
+      final String unit = data['satuan'] ?? '';
+      final double price = isPenjualan 
+          ? (data['hargaJual']?.toDouble() ?? 0)
+          : (data['Price']?.toDouble() ?? 0);
+      final double total = isPenjualan 
+          ? (data['total']?.toDouble() ?? 0)
+          : ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0)).toDouble();
+      final String date = isPenjualan ? data['tanggal'] ?? '' : data['Tanggal'] ?? '';
+      
+      // Gradient colors based on transaction type
+      List<Color> typeGradient = isPenjualan 
+          ? [Color(0xFF00B07D), Color(0xFF00CA8E)]  // Green gradient for sales
+          : [Color(0xFFFF6B6B), Color(0xFFFF8E8E)]; // Red gradient for purchases
+          
+      IconData typeIcon = isPenjualan 
+          ? Icons.trending_up_rounded
+          : Icons.trending_down_rounded;
 
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.grey[200]!,
-              width: 1,
-            ),
+      return Container(
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.1),
+            width: 1,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: typeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 0,
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: typeGradient,
                     ),
-                    child: Icon(
-                      typeIcon,
-                      color: typeColor,
-                      size: 20,
-                    ),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                  child: Icon(
+                    typeIcon,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[800],
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          date,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        date,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
                         ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: typeColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      typeText,
-                      style: TextStyle(
-                        color: typeColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
                       ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: typeGradient.map((c) => c.withOpacity(0.15)).toList(),
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isPenjualan ? 'Penjualan' : 'Pembelian',
+                    style: TextStyle(
+                      color: typeGradient[0],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      '$quantity $unit - ${NumberFormat.currency(
-                        locale: 'id',
-                        symbol: 'Rp ',
-                        decimalDigits: 0,
-                      ).format(price)}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    '$quantity $unit - ${NumberFormat.currency(
+                      locale: 'id',
+                      symbol: 'Rp ',
+                      decimalDigits: 0,
+                    ).format(price)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Text(
+                ),
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: typeGradient,
+                  ).createShader(bounds),
+                  child: Text(
                     NumberFormat.currency(
                       locale: 'id',
                       symbol: 'Rp ',
@@ -568,17 +586,19 @@ Widget _buildStatisticsCards() {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: typeColor,
+                      color: Colors.white,
                     ),
                   ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }
+  
   @override
   void dispose() {
     _tabController.dispose();

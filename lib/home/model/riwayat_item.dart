@@ -1,8 +1,5 @@
-// lib/pages/home/models/riwayat_item.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 class RiwayatItem extends StatelessWidget {
   final String title;
   final String description;
@@ -21,34 +18,42 @@ class RiwayatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine color and icon based on type
-    Color typeColor;
+    // Determine gradient and icon based on type
+    List<Color> typeGradient;
     IconData typeIcon;
     
     switch (type) {
       case "Penjualan":
-        typeColor = Colors.green;
-        typeIcon = Icons.shopping_bag_outlined;
+        typeGradient = [Color(0xFF00B07D), Color(0xFF00CA8E)];
+        typeIcon = Icons.trending_up_rounded;
         break;
       case "Pembelian":
-        typeColor = Colors.red;
-        typeIcon = Icons.shopping_cart_outlined;
+        typeGradient = [Color(0xFFFF6B6B), Color(0xFFFF8E8E)];
+        typeIcon = Icons.trending_down_rounded;
         break;
       default:
-        typeColor = Colors.blue;
-        typeIcon = Icons.inventory_outlined;
+        typeGradient = [Color(0xFF3B82F6), Color(0xFF60A5FA)];
+        typeIcon = Icons.inventory_2_rounded;
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 16),
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.grey[200]!,
+          color: Colors.grey.withOpacity(0.1),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 0,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,14 +61,16 @@ class RiwayatItem extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(8),
+                padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: typeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  gradient: LinearGradient(
+                    colors: typeGradient,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   typeIcon,
-                  color: typeColor,
+                  color: Colors.white,
                   size: 20,
                 ),
               ),
@@ -77,7 +84,7 @@ class RiwayatItem extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: Colors.grey[800],
                       ),
                     ),
                     SizedBox(height: 4),
@@ -85,22 +92,24 @@ class RiwayatItem extends StatelessWidget {
                       date,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey[600],
+                        color: Colors.grey[500],
                       ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: typeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: typeGradient.map((c) => c.withOpacity(0.15)).toList(),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   type,
                   style: TextStyle(
-                    color: typeColor,
+                    color: typeGradient[0],
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -122,12 +131,17 @@ class RiwayatItem extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 8),
-              Text(
-                'Rp ${NumberFormat('#,###').format(price)}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: typeColor,
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: typeGradient,
+                ).createShader(bounds),
+                child: Text(
+                  'Rp ${NumberFormat('#,###').format(price)}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
