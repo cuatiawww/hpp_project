@@ -38,46 +38,84 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
   }
 
   Widget _buildMonthFilter() {
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(Icons.calendar_today),
-            const SizedBox(width: 16),
-            const Text(
-              "Filter Bulan:",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+    return Container(
+    margin: EdgeInsets.all(16),
+    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 20,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.calendar_today_rounded,
+            color: Color(0xFF080C67),
+            size: 20,
+          ),
+        ),
+        SizedBox(width: 12),
+        Text(
+          "Filter Bulan:",
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: Color(0xFF080C67),
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(width: 16),
-            Expanded(
+            child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 isExpanded: true,
                 value: _selectedMonth,
-                items: _months.map((month) {
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded, 
+                  color: Color(0xFF080C67)
+                ),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[800],
+                ),
+                items: _months.map((String month) {
                   return DropdownMenuItem<String>(
                     value: month,
                     child: Text(
                       DateFormat('MMMM yyyy').format(DateTime.parse('$month-01')),
-                      style: const TextStyle(fontSize: 16),
                     ),
                   );
                 }).toList(),
-                onChanged: (newValue) {
+                onChanged: (String? newValue) {
                   if (newValue != null) {
                     setState(() => _selectedMonth = newValue);
                   }
                 },
               ),
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      ],
+    ),
+  );
   }
 
   Widget _buildDataTable(Map<String, Map<String, dynamic>> combinedData) {
@@ -462,22 +500,31 @@ class _PersAkhirPageState extends State<PersAkhirPage> {
 Widget build(BuildContext context) {
   return Scaffold(
     appBar: AppBar(
-      centerTitle: true,
-      elevation: 0,
-      title: const Text(
-        'Persediaan Akhir',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
+        centerTitle: true,
+        elevation: 0,
+        title: const Text(
+          'Persediaan Akhir',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 24,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF080C67),
+                Color(0xFF1E23A7),
+              ],
+            ),
+          ),
         ),
       ),
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      backgroundColor: const Color(0xFF080C67),
-    ),
     body: RefreshIndicator(
       onRefresh: () async {
         _loadInitialData();
