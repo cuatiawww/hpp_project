@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/routes/routes.dart';
+import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 
 class AuthController extends GetxController {
   final FirebaseAuth auth = FirebaseAuth.instance;
@@ -84,6 +85,13 @@ class AuthController extends GetxController {
         email: email,
         password: password,
       );
+
+        // Menambahkan notifikasi login berhasil
+        await addNotification(
+          title: 'Login Berhasil',
+          message: 'Anda telah berhasil login.',
+        );
+
       ScaffoldMessenger.of(Get.context!).showSnackBar(
         SnackBar(
           content: Text(
@@ -118,7 +126,7 @@ class AuthController extends GetxController {
     }
   }
 
-  // Function untuk reset password
+  // Fungsi untuk reset password
   Future<void> resetPassword(String email) async {
     if (email.isNotEmpty && GetUtils.isEmail(email)) {
       try {

@@ -4,6 +4,7 @@ import 'package:hpp_project/home/home_page.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 
 class InfoScreen extends StatefulWidget {
 
@@ -103,6 +104,12 @@ class _InfoScreenState extends State<InfoScreen> {
         'Tipe Usaha': tipeUsaha,
         'Nomor Telepon': nomorTelepon.text,
       });
+
+      // Simpan notifikasi
+      await addNotification(
+      title: 'Pendaftaran Akun Berhasil',
+      message: 'Akun Anda berhasil dibuat dan data telah disimpan.',
+    );
       print('Data Berhasil Disimpan');
     } else {
       print('UID pengguna tidak ditemukan.');

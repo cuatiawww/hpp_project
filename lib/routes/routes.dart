@@ -14,4 +14,5 @@ class Routes {
   static const String persAkhir = '/pers_akhir';
   static const String inputPersAwal = '/input_pers_awal';
   static const String testFirestore = '/test-firestore'; // Tambahkan rute ini
+  static const String notif = '/notif_page';
 }
