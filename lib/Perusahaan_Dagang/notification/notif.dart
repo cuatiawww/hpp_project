@@ -53,9 +53,31 @@ class _NotificationPageState extends State<NotificationPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Notifikasi'),
-        backgroundColor: Colors.indigo,
+      centerTitle: true,
+      elevation: 0,
+      title: const Text(
+        'Notifikasi',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+          fontSize: 24,
+        ),
       ),
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF080C67),
+              Color(0xFF1E23A7),
+            ],
+          ),
+        ),
+      ),
+    ),
       body: StreamBuilder(
         // Ambil data dari subkoleksi "Notifications" pengguna yang login
         stream: FirebaseFirestore.instance

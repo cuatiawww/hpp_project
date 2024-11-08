@@ -227,127 +227,153 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundImage: AssetImage('assets/images/profile.jpg'),
-                ),
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1E23A7),
+                  Color(0xFF080C67),
+                ],
               ),
-              SizedBox(height: 16),
-              Center(
-                child: Obx(() => Text(
-                  dataPribadiC.namaLengkap.value, // Menggunakan Obx untuk mendengarkan perubahan
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )),
-              ),
-              SizedBox(height: 8),
-              Center(
-                child: Text(
-                  FirebaseAuth.instance.currentUser?.email ?? '',
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Center(
-                child: ElevatedButton(
-                  onPressed: isSaving 
-                    ? null  // Disable button while saving
-                    : () {
-                      setState(() {
-                        if (isEditing) {
-                          _saveProfile();
-                        } else {
-                          isEditing = true;
-                        }
-                      });
-                    },
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Color(0xFF080C67), 
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12), 
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 36, vertical: 8), 
-                  ),
-                  child: isSaving
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
+            ),
+            constraints: BoxConstraints.expand(),
+            ), 
+            SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundImage: AssetImage('assets/images/profile.jpg'),
+                        ),
                       ),
-                    )
-                  : Text(
-                      isEditing ? 'Simpan' : 'Edit Akun',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600
+                      SizedBox(height: 16),
+                      Center(
+                        child: Obx(() => Text(
+                          dataPribadiC.namaLengkap.value, // Menggunakan Obx untuk mendengarkan perubahan
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )),
                       ),
-                    ),
-                ),
-              ),
-              SizedBox(height: 24),
-              Text(
-                'Informasi Pribadi',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-              _buildEditableTextField('Nama Lengkap', namaLengkapController),
-              SizedBox(height: 16),
-              _buildEditableTextField('NPWP', npwpController, isNPWP: true),
-              SizedBox(height: 16),
-              _buildEditableTextField('Tanggal Lahir', tanggalLahirController, 
-                isDatePicker: true,),
-              SizedBox(height: 16),
-              _buildEditableTextField('Jenis Kelamin', jenisKelaminController, 
-                isDropdown: true,),
-              SizedBox(height: 24),
-              Text(
-                'Informasi Usaha',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-              _buildEditableTextField('Nama Usaha', namaUsahaController),
-              SizedBox(height: 16),
-              _buildEditableTextField('Tipe Usaha', tipeUsahaController, isReadOnly: true),
-              SizedBox(height: 16),
-              _buildEditableTextField('Nomor Telepon', nomorTeleponController, isNumeric: true),
-              SizedBox(height: 40),
-              Center(
-                child: ElevatedButton(
-                  onPressed: () => authC.logout(), // Memanggil fungsi logout pada authController
-                  style: ElevatedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.red, // Warna merah untuk tombol log out
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 42, vertical: 12),
+                      SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          FirebaseAuth.instance.currentUser?.email ?? '',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: isSaving 
+                            ? null  // Disable button while saving
+                            : () {
+                              setState(() {
+                                if (isEditing) {
+                                  _saveProfile();
+                                } else {
+                                  isEditing = true;
+                                }
+                              });
+                            },
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Color(0xFF080C67), 
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20), 
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 36, vertical: 10), 
+                          ),
+                          child: isSaving
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              isEditing ? 'Simpan' : 'Edit Akun',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600
+                              ),
+                            ),
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Text(
+                        'Informasi Pribadi',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      _buildEditableTextField('Nama Lengkap', namaLengkapController),
+                      SizedBox(height: 16),
+                      _buildEditableTextField('NPWP', npwpController, isNPWP: true),
+                      SizedBox(height: 16),
+                      _buildEditableTextField('Tanggal Lahir', tanggalLahirController, 
+                        isDatePicker: true,),
+                      SizedBox(height: 16),
+                      _buildEditableTextField('Jenis Kelamin', jenisKelaminController, 
+                        isDropdown: true,),
+                      SizedBox(height: 24),
+                      Text(
+                        'Informasi Usaha',
+                        style: TextStyle(
+                          fontSize: 20,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      _buildEditableTextField('Nama Usaha', namaUsahaController),
+                      SizedBox(height: 16),
+                      _buildEditableTextField('Tipe Usaha', tipeUsahaController, isReadOnly: true),
+                      SizedBox(height: 16),
+                      _buildEditableTextField('Nomor Telepon', nomorTeleponController, isNumeric: true),
+                      SizedBox(height: 40),
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () => authC.logout(), // Memanggil fungsi logout pada authController
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.red, // Warna merah untuk tombol log out
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 38, vertical: 10),
+                          ),
+                          child: Text('Log Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: Text('Log Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
