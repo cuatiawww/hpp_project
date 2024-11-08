@@ -170,7 +170,7 @@ Widget _buildTable() {
                       minWidth: MediaQuery.of(context).size.width - 64,
                     ),
                     child: DataTable(
-                      headingRowColor: MaterialStateProperty.all(
+                      headingRowColor: WidgetStateProperty.all(
                         Color(0xFFEEF2FF),
                       ),
                       headingTextStyle: TextStyle(
