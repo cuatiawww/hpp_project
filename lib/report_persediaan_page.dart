@@ -211,8 +211,11 @@ pw.Widget _buildPDFTable() {
 
         return pw.TableRow(
           children: [
-            _buildPDFCell('${index + 1}'),
-            _buildPDFCell(persAwal['name'] ?? pembelian['name'] ?? ''),
+    _buildPDFCell('${index + 1}'),
+    _buildPDFCell(_formatNameWithType(
+      persAwal['name'] ?? pembelian['name'] ?? '',
+      persAwal['tipe'] ?? pembelian['tipe'] ?? ''
+    )),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
               children: [
@@ -388,12 +391,15 @@ Widget _buildPreviewTable() {
                 color: isEvenRow ? Colors.grey.withOpacity(0.05) : Colors.white,
               ),
               children: [
-                _buildPreviewCell('${index + 1}', isEvenRow: isEvenRow),
-                _buildPreviewCell(
-                  persAwal['name'] ?? pembelian['name'] ?? '',
-                  isEvenRow: isEvenRow,
-                  alignment: TextAlign.left,
-                ),
+    _buildPreviewCell('${index + 1}', isEvenRow: isEvenRow),
+    _buildPreviewCell(
+      _formatNameWithType(
+        persAwal['name'] ?? pembelian['name'] ?? '',
+        persAwal['tipe'] ?? pembelian['tipe'] ?? ''
+      ),
+      isEvenRow: isEvenRow,
+      alignment: TextAlign.left,
+    ),
                 _buildPreviewDataGroup(
                   unit: persAwal['jumlah']?.toString() ?? '0',
                   price: _formatCurrency(persAwal['price'] ?? 0),
@@ -459,6 +465,11 @@ Widget _buildPreviewCell(
       ),
     ),
   );
+}
+String _formatNameWithType(String? name, String? type) {
+  if (name == null || name.isEmpty) return '';
+  if (type == null || type.isEmpty) return name;
+  return '$name ($type)';
 }
 
 Widget _buildPreviewDataGroup({
@@ -552,7 +563,7 @@ Widget _buildPreviewDataGroup({
     Map<String, Map<String, dynamic>> result = {};
     for (var doc in snapshot.docs) {
       var data = doc.data();
-      String key = '${data['Name']}_${data['Tipe']}';
+      String key = '${data['Name']}_${data['Tipe']}';//KONDISI NAMA SAMA TIPE
       result[key] = {
         'name': data['Name'],
         'tipe': data['Tipe'],

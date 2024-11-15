@@ -314,56 +314,54 @@
     }
 
     Map<String, Map<String, dynamic>> _processCombinedData(
-    List<QueryDocumentSnapshot> barangDocs,
-    List<QueryDocumentSnapshot> pembelianDocs,
-    Map<String, Map<String, dynamic>> barangReference,
-  ) {
-    final combinedData = <String, Map<String, dynamic>>{};
-    
-    // First process all barang docs
-    for (var doc in barangDocs) {
-      final data = doc.data() as Map<String, dynamic>;
-      if (_isDocInSelectedMonth(data)) {
-        // Only include non-pembelian items in initial processing
-        if (data['isFromPembelian'] != true) {
-          final key = '${doc.id}_${data["Tipe"] ?? "Default"}';
-          combinedData[key] = _createBarangEntry(doc.id, data);
-        }
+  List<QueryDocumentSnapshot> barangDocs,
+  List<QueryDocumentSnapshot> pembelianDocs,
+  Map<String, Map<String, dynamic>> barangReference,
+) {
+  final combinedData = <String, Map<String, dynamic>>{};
+  
+  // First process all barang docs
+  for (var doc in barangDocs) {
+    final data = doc.data() as Map<String, dynamic>;
+    if (_isDocInSelectedMonth(data)) {
+      if (data['isFromPembelian'] != true) {
+        final key = '${doc.id}_${data["Tipe"] ?? "Default"}';
+        combinedData[key] = _createBarangEntry(doc.id, data);
       }
     }
-
-    // Then process all pembelian docs
-    for (var doc in pembelianDocs) {
-      final data = doc.data() as Map<String, dynamic>;
-      if (_isDocInSelectedMonth(data)) {
-        final barangId = data["BarangId"];
-        final key = '${barangId}_${data["Type"]}';
-        
-        // If this barang already exists in combinedData
-        if (combinedData.containsKey(key)) {
-          // Update existing entry
-          combinedData[key]!["Jumlah"] = (combinedData[key]!["Jumlah"] as int) + (data["Jumlah"] as int);
-          if (data["Price"] != null) {
-            combinedData[key]!["Price"] = data["Price"];
-          }
-        } else {
-          // Create new entry
-          combinedData[key] = {
-            "id": barangId,
-            "Name": data["Name"] ?? "N/A",
-            "Satuan": data["Satuan"] ?? "N/A",
-            "Jumlah": data["Jumlah"] ?? 0,
-            "Price": data["Price"] ?? 0,
-            "Tipe": data["Type"] ?? "Default",
-            "isOriginal": false,
-            "docId": doc.id,
-          };
-        }
-      }
-    }
-
-    return combinedData;
   }
+
+  // Then process all pembelian docs
+  for (var doc in pembelianDocs) {
+    final data = doc.data() as Map<String, dynamic>;
+    if (_isDocInSelectedMonth(data)) {
+      final barangId = data["BarangId"];
+      final key = '${barangId}_${data["Type"]}';
+      
+      if (combinedData.containsKey(key)) {
+        // Update existing entry
+        combinedData[key]!["Jumlah"] = (combinedData[key]!["Jumlah"] as int) + (data["Jumlah"] as int);
+        combinedData[key]!["pembelianIds"] = [...(combinedData[key]!["pembelianIds"] ?? []), doc.id];
+      } else {
+        // Create new entry
+        combinedData[key] = {
+          "id": barangId,
+          "Name": data["Name"] ?? "N/A",
+          "Satuan": data["Satuan"] ?? "N/A",
+          "Jumlah": data["Jumlah"] ?? 0,
+          "Price": data["Price"] ?? 0,
+          "Tipe": data["Type"] ?? "Default",
+          "isOriginal": false,
+          "docId": doc.id,
+          "pembelianIds": [doc.id],
+        };
+      }
+    }
+  }
+
+  return combinedData;
+}
+    
     bool _isDocInSelectedMonth(Map<String, dynamic> data) {
       if (data.containsKey("Tanggal")) {
         final docMonth = data["Tanggal"].substring(0, 7);
@@ -557,28 +555,92 @@
 
 
   Future<void> _updateJumlah(Map<String, dynamic> data, int newJumlah) async {
-      final userId = DatabaseMethods().currentUserId;
+  final userId = DatabaseMethods().currentUserId;
+  
+  try {
+    if (data["isOriginal"] == true) {
+      // Case 1: This is an original inventory entry
+      await DatabaseMethods().updateBarangDetail(
+        data["docId"],
+        {"Jumlah": newJumlah},
+      );
+    } else {
+      // Case 2: This is a combined entry from purchases
+      final barangId = data["id"];
       
-      if (data["isOriginal"] == true) {
-        await DatabaseMethods().updateBarangDetail(
-          data["docId"],
-          {"Jumlah": newJumlah},
-        );
-      } else {
-        final pembelianIds = data["pembelianIds"] as List<String>?;
-        if (pembelianIds != null) {
-          final newJumlahPerDoc = newJumlah ~/ pembelianIds.length;
-          await Future.wait(
-            pembelianIds.map((id) => _db
-                .collection("Users")
-                .doc(userId)
-                .collection("Pembelian")
-                .doc(id)
-                .update({"Jumlah": newJumlahPerDoc})),
-          );
-        }
+      // First, get all related purchase documents
+      final pembelianSnapshot = await _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Pembelian")
+          .where("BarangId", isEqualTo: barangId)
+          .where("Type", isEqualTo: data["Tipe"])
+          .where("Tanggal", isGreaterThanOrEqualTo: "${_selectedMonth}-01")
+          .where("Tanggal", isLessThan: "${_getNextMonthString()}")
+          .get();
+
+      // Get the original inventory document for this month
+      final barangSnapshot = await _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Barang")
+          .doc(barangId)
+          .get();
+
+      if (!barangSnapshot.exists) {
+        throw Exception("Barang not found");
       }
+
+      final barangData = barangSnapshot.data()!;
+      final originalJumlah = barangData["Jumlah"] ?? 0;
+
+      // Calculate total from purchases
+      int totalPembelian = 0;
+      for (var doc in pembelianSnapshot.docs) {
+        totalPembelian += (doc.data()["Jumlah"] as int);
+      }
+
+      // Calculate the current total (original + purchases)
+      final currentTotal = originalJumlah + totalPembelian;
+
+      // Calculate the difference ratio for distribution
+      final ratio = newJumlah / currentTotal;
+
+      // Start a new batch operation
+      final batch = _db.batch();
+
+      // Update original inventory
+      final newOriginalJumlah = (originalJumlah * ratio).round();
+      batch.update(
+        _db.collection("Users").doc(userId).collection("Barang").doc(barangId),
+        {"Jumlah": newOriginalJumlah}
+      );
+
+      // Update each purchase document proportionally
+      for (var doc in pembelianSnapshot.docs) {
+        final currentPembelianJumlah = doc.data()["Jumlah"] as int;
+        final newPembelianJumlah = (currentPembelianJumlah * ratio).round();
+        
+        batch.update(doc.reference, {"Jumlah": newPembelianJumlah});
+      }
+
+      // Commit all updates
+      await batch.commit();
+    }
+
+    // Refresh the data after update
+    await _refreshData();
+  } catch (e) {
+    print("Error in _updateJumlah: $e");
+    throw e;
   }
+}
+String _getNextMonthString() {
+  final date = DateTime.parse('${_selectedMonth}-01');
+  final nextMonth = DateTime(date.year, date.month + 1, 1);
+  return DateFormat('yyyy-MM').format(nextMonth);
+}
+  
   Future<void> _deleteBarang(Map<String, dynamic> data, String key) async {
     final confirm = await showDialog<bool>(
       context: context,
