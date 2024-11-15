@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/service/database.dart';
+import 'package:random_string/random_string.dart';
 import 'package:intl/intl.dart';
 
 class PembelianPage extends StatefulWidget {
@@ -37,6 +38,17 @@ class _PembelianPageState extends State<PembelianPage> {
   // Firebase references
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   late Query _pembelianQuery;
+
+  final TextEditingController _newNamaBarangController = TextEditingController();
+final TextEditingController _newHargaController = TextEditingController();
+final TextEditingController _newSatuanController = TextEditingController();
+final TextEditingController _newJumlahController = TextEditingController();
+final TextEditingController _newTipeController = TextEditingController();
+final TextEditingController _newTanggalController = TextEditingController();
+String _newSelectedUnit = 'Pcs';
+bool _newIsOtherSelected = false;
+DateTime _newSelectedDate = DateTime.now();
+final List<String> _newUnits = ['Pcs', 'Kg', 'Lt', 'Meter', 'Box', 'Lainnya'];
 
   @override
   void initState() {
@@ -352,195 +364,637 @@ Future<void> _loadPembelianData() async {
   }
 
   Widget _buildInputCard() {
-    return Container(
-      padding: EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 0,
-            blurRadius: 20,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Input Pembelian',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF080C67),
-            ),
-          ),
-          SizedBox(height: 24),
-          _buildDropdownField(
-            label: 'Pilih Barang',
-            icon: Icons.inventory_2_rounded,
-            child: DropdownButtonFormField<String>(
-              value: _selectedBarang,
-              hint: Text('Pilih Barang'),
-              items: _barangCache.entries.map((entry) {
-                return DropdownMenuItem<String>(
-                  value: entry.key,
-                  child: Text(entry.value["Name"] ?? ""),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  _selectedBarang = value;
-                  final data = _barangCache[value]!;
-                  _priceController.text = data["Price"]?.toString() ?? "";
-                  _typeController.text = data["Tipe"] ?? "";
-                  _isDifferentType = false;
-                });
-              },
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16),
+  return Container(
+    padding: EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 20,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header section with title and new item button
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Input Pembelian',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF080C67),
               ),
             ),
-          ),
-          SizedBox(height: 16),
-          _buildInputField(
-            label: 'Jumlah Unit',
-            controller: _unitController,
-            icon: Icons.numbers_rounded,
-            keyboardType: TextInputType.number,
-          ),
-          SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.category_rounded,
+            TextButton.icon(
+              onPressed: () {
+                _newTanggalController.text = DateFormat('yyyy-MM-dd').format(_newSelectedDate);
+                _showAddNewItemDialog();
+              },
+              icon: Icon(
+                Icons.add_circle_outline_rounded,
+                color: Color(0xFF080C67),
+              ),
+              label: Text(
+                'Tambah Barang Baru',
+                style: TextStyle(
                   color: Color(0xFF080C67),
-                  size: 20,
+                  fontWeight: FontWeight.w600,
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: CheckboxListTile(
-                    value: _isDifferentType,
-                    onChanged: (value) {
-                      setState(() {
-                        _isDifferentType = value ?? false;
-                        if (!_isDifferentType && _selectedBarang != null) {
-                          final data = _barangCache[_selectedBarang]!;
-                          _typeController.text = data["Tipe"] ?? "";
-                          _priceController.text = data["Price"]?.toString() ?? "";
-                        }
-                      });
-                    },
-                    title: Text(
-                      "Type berbeda",
-                      style: TextStyle(
-                        color: Color(0xFF080C67),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: Color(0xFFEEF2FF),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8),
+        // Informative text about options
+        Container(
+          padding: EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pilihan Pembelian:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF080C67),
+                ),
+              ),
+              SizedBox(height: 8),
+              _buildInfoItem(
+                '1. Barang yang sudah ada',
+                'Pilih dari daftar barang yang tersedia di bawah',
+              ),
+              SizedBox(height: 4),
+              _buildInfoItem(
+                '2. Barang dengan tipe berbeda',
+                'Centang "Tipe berbeda" untuk mengubah tipe dan harga',
+              ),
+              SizedBox(height: 4),
+              _buildInfoItem(
+                '3. Barang baru',
+                'Klik tombol "Tambah Barang Baru" di atas',
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 24),
+        
+        // Main input form
+        Text(
+          'Detail Pembelian',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF080C67),
+          ),
+        ),
+        SizedBox(height: 16),
+        
+        // Existing item selection
+        _buildDropdownField(
+          label: 'Pilih Barang yang Tersedia',
+          icon: Icons.inventory_2_rounded,
+          child: DropdownButtonFormField<String>(
+            value: _selectedBarang,
+            hint: Text('Pilih barang yang sudah ada'),
+            items: _barangCache.entries.map((entry) {
+              return DropdownMenuItem<String>(
+                value: entry.key,
+                child: Text(
+                  '${entry.value["Name"]} (${entry.value["Tipe"] ?? "Default"})',
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedBarang = value;
+                final data = _barangCache[value]!;
+                _priceController.text = data["Price"]?.toString() ?? "";
+                _typeController.text = data["Tipe"] ?? "";
+                _isDifferentType = false;
+              });
+            },
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        
+        _buildInputField(
+          label: 'Jumlah Unit',
+          controller: _unitController,
+          icon: Icons.numbers_rounded,
+          keyboardType: TextInputType.number,
+          hintText: 'Masukkan jumlah yang dibeli',
+        ),
+        SizedBox(height: 16),
+
+        // Different type option
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.category_rounded,
+                    color: Color(0xFF080C67),
+                    size: 20,
                   ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 16),
-          if (_isDifferentType) ...[
-            _buildInputField(
-              label: 'Type Barang',
-              controller: _typeController,
-              icon: Icons.category_rounded,
-            ),
-            SizedBox(height: 16),
-            _buildInputField(
-              label: 'Harga per Unit',
-              controller: _priceController,
-              icon: Icons.attach_money_rounded,
-              keyboardType: TextInputType.number,
-            ),
-          ] else
-            _buildInputField(
-              label: 'Harga per Unit',
-              controller: _priceController,
-              icon: Icons.attach_money_rounded,
-              readOnly: true,
-              hintText: '(tidak bisa diubah)',
-            ),
-          SizedBox(height: 16),
-          _buildInputField(
-            label: 'Tanggal',
-            controller: _tanggalController,
-            icon: Icons.calendar_today_rounded,
-            readOnly: true,
-            onTap: () => _selectDate(context),
-          ),
-          SizedBox(height: 32),
-          Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF080C67),
-                  Color(0xFF1E23A7),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: CheckboxListTile(
+                      value: _isDifferentType,
+                      onChanged: (value) {
+                        setState(() {
+                          _isDifferentType = value ?? false;
+                          if (!_isDifferentType && _selectedBarang != null) {
+                            final data = _barangCache[_selectedBarang]!;
+                            _typeController.text = data["Tipe"] ?? "";
+                            _priceController.text = data["Price"]?.toString() ?? "";
+                          }
+                        });
+                      },
+                      title: Text(
+                        "Tipe barang berbeda",
+                        style: TextStyle(
+                          color: Color(0xFF080C67),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: Text(
+                        "Centang jika membeli barang dengan tipe atau harga berbeda",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0xFF080C67).withOpacity(0.3),
-                  spreadRadius: 0,
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
+            ],
+          ),
+        ),
+        SizedBox(height: 16),
+
+        // Conditional fields for different type
+        if (_isDifferentType) ...[
+          _buildInputField(
+            label: 'Tipe Barang Baru',
+            controller: _typeController,
+            icon: Icons.category_rounded,
+            hintText: 'Masukkan tipe barang yang berbeda',
+          ),
+          SizedBox(height: 16),
+          _buildInputField(
+            label: 'Harga per Unit Baru',
+            controller: _priceController,
+            icon: Icons.payments_rounded,
+            keyboardType: TextInputType.number,
+            hintText: 'Masukkan harga baru',
+          ),
+        ] else
+          _buildInputField(
+            label: 'Harga per Unit',
+            controller: _priceController,
+            icon: Icons.payments_rounded,
+            readOnly: true,
+            hintText: '(mengikuti harga barang yang dipilih)',
+          ),
+        SizedBox(height: 16),
+        
+        _buildInputField(
+          label: 'Tanggal Pembelian',
+          controller: _tanggalController,
+          icon: Icons.calendar_today_rounded,
+          readOnly: true,
+          onTap: () => _selectDate(context),
+          hintText: 'Pilih tanggal pembelian',
+        ),
+        SizedBox(height: 32),
+
+        // Submit button
+        Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
             ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _isSubmitting ? null : _tambahBarang,
-                borderRadius: BorderRadius.circular(16),
-                child: Center(
-                  child: _isSubmitting
-                    ? CircularProgressIndicator(color: Colors.white)
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.add_circle_outline_rounded,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0xFF080C67).withOpacity(0.3),
+                spreadRadius: 0,
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _isSubmitting ? null : _tambahBarang,
+              borderRadius: BorderRadius.circular(16),
+              child: Center(
+                child: _isSubmitting
+                  ? CircularProgressIndicator(color: Colors.white)
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_circle_outline_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        SizedBox(width: 12),
+                        Text(
+                          'Simpan Pembelian',
+                          style: TextStyle(
                             color: Colors.white,
-                            size: 24,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                          SizedBox(width: 12),
-                          Text(
-                            'Tambah Pembelian',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                ),
+                        ),
+                      ],
+                    ),
               ),
             ),
           ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Helper method for building info items
+Widget _buildInfoItem(String title, String description) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(
+        Icons.info_outline_rounded,
+        size: 16,
+        color: Color(0xFF6B7280),
+      ),
+      SizedBox(width: 8),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF374151),
+              ),
+            ),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+  
+  void _showAddNewItemDialog() {
+  // Reset all controllers and selections
+  _newNamaBarangController.clear();
+  _newHargaController.clear();
+  _newSatuanController.clear();
+  _newJumlahController.clear();
+  _newTipeController.clear();
+  _newSelectedUnit = 'Pcs';
+  _newIsOtherSelected = false;
+  _newTanggalController.text = DateFormat('yyyy-MM-dd').format(_newSelectedDate);
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text(
+          'Tambah Barang Baru',
+          style: TextStyle(
+            color: Color(0xFF080C67),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDialogInputField(
+                label: 'Nama Barang',
+                controller: _newNamaBarangController,
+                icon: Icons.inventory_2_rounded,
+              ),
+              SizedBox(height: 16),
+              _buildDialogInputField(
+                label: 'Tipe',
+                controller: _newTipeController,
+                icon: Icons.category_rounded,
+              ),
+              SizedBox(height: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Satuan',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF080C67),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.straighten_rounded, color: Color(0xFF080C67)),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _newSelectedUnit,
+                              items: _newUnits.map((String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                );
+                              }).toList(),
+                              onChanged: (String? value) {
+                                setState(() {
+                                  _newSelectedUnit = value!;
+                                  _newIsOtherSelected = value == 'Lainnya';
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (_newIsOtherSelected) ...[
+                SizedBox(height: 16),
+                _buildDialogInputField(
+                  label: 'Satuan Custom',
+                  controller: _newSatuanController,
+                  icon: Icons.edit_rounded,
+                ),
+              ],
+              SizedBox(height: 16),
+              _buildDialogInputField(
+                label: 'Jumlah',
+                controller: _newJumlahController,
+                icon: Icons.numbers_rounded,
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: 16),
+              _buildDialogInputField(
+                label: 'Harga per Unit',
+                controller: _newHargaController,
+                icon: Icons.payments_rounded,
+                keyboardType: TextInputType.number,
+              ),
+              SizedBox(height: 16),
+              _buildDialogInputField(
+                label: 'Tanggal',
+                controller: _newTanggalController,
+                icon: Icons.calendar_today_rounded,
+                readOnly: true,
+                onTap: () => _selectNewDate(context, setState),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Batal',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => _saveNewItem(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFF080C67),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text('Simpan'),
+          ),
         ],
       ),
-    );
+    ),
+  );
+}
+
+//database
+Future<void> _selectNewDate(BuildContext context, StateSetter setState) async {
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: _newSelectedDate,
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2101),
+  );
+  if (picked != null && picked != _newSelectedDate) {
+    setState(() {
+      _newSelectedDate = picked;
+      _newTanggalController.text = DateFormat('yyyy-MM-dd').format(picked);
+    });
   }
+}
+
+Widget _buildDialogInputField({
+  required String label,
+  required TextEditingController controller,
+  required IconData icon,
+  TextInputType? keyboardType,
+  bool readOnly = false,
+  VoidCallback? onTap,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF080C67),
+        ),
+      ),
+      SizedBox(height: 8),
+      Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          readOnly: readOnly,
+          onTap: onTap,
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: Color(0xFF080C67), size: 20),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Future<void> _saveNewItem(BuildContext context) async {
+  // Validate all required fields
+  if (_newNamaBarangController.text.isEmpty ||
+      _newTipeController.text.isEmpty ||
+      _newJumlahController.text.isEmpty ||
+      _newHargaController.text.isEmpty ||
+      _newTanggalController.text.isEmpty ||
+      (_newIsOtherSelected && _newSatuanController.text.isEmpty)) {
+    _showError("Semua field harus diisi");
+    return;
+  }
+
+  try {
+    final String barangId = randomAlphaNumeric(10);
+    final userId = DatabaseMethods().currentUserId;
+    
+    // Create a barang reference but with isFromPembelian flag
+    final Map<String, dynamic> barangData = {
+      "Name": _newNamaBarangController.text,
+      "Tipe": _newTipeController.text,
+      "Satuan": _newIsOtherSelected ? _newSatuanController.text : _newSelectedUnit,
+      "Price": int.parse(_newHargaController.text),
+      "Jumlah": 0,  // Initial stock is 0
+      "Id": barangId,
+      "Tanggal": _newTanggalController.text,
+      "isFromPembelian": true,  // Add this flag
+      "userId": userId,
+      "createdAt": FieldValue.serverTimestamp(),
+    };
+
+    // Add to Barang collection with the flag
+    await _db.collection("Users")
+        .doc(userId)
+        .collection("Barang")
+        .doc(barangId)
+        .set(barangData);
+    
+    // Create the pembelian entry
+    final Map<String, dynamic> pembelianData = {
+      "BarangId": barangId,
+      "Name": _newNamaBarangController.text,
+      "Jumlah": int.parse(_newJumlahController.text),
+      "Price": int.parse(_newHargaController.text),
+      "Type": _newTipeController.text,
+      "Satuan": _newIsOtherSelected ? _newSatuanController.text : _newSelectedUnit,
+      "Timestamp": FieldValue.serverTimestamp(),
+      "Tanggal": _newTanggalController.text,
+    };
+
+    // Add to Pembelian collection
+    await _db.collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
+        .add(pembelianData);
+
+    // Update PersediaanTotal
+    await _db.collection("Users")
+        .doc(userId)
+        .collection("PersediaanTotal")
+        .doc(barangId)
+        .set({
+          'Name': _newNamaBarangController.text,
+          'Tipe': _newTipeController.text,
+          'Jumlah': int.parse(_newJumlahController.text),
+          'Price': int.parse(_newHargaController.text),
+          'Satuan': _newIsOtherSelected ? _newSatuanController.text : _newSelectedUnit,
+          'Tanggal': _newTanggalController.text,
+          'LastUpdated': FieldValue.serverTimestamp(),
+        });
+
+    // Add to Riwayat
+    await _db.collection("Users")
+        .doc(userId)
+        .collection("Riwayat")
+        .add({
+          'type': 'Pembelian',
+          'name': _newNamaBarangController.text,
+          'tipe': _newTipeController.text,
+          'jumlah': int.parse(_newJumlahController.text),
+          'price': int.parse(_newHargaController.text),
+          'satuan': _newIsOtherSelected ? _newSatuanController.text : _newSelectedUnit,
+          'tanggal': _newTanggalController.text,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+    
+    Navigator.pop(context);
+    _showSuccess("Pembelian barang baru berhasil ditambahkan");
+    
+    // Refresh the data
+    setState(() {
+      _isLoadingBarang = true;
+      _isLoadingPembelian = true;
+    });
+    await Future.wait([
+      _loadBarangData(),
+      _loadPembelianData(),
+    ]);
+    
+  } catch (e) {
+    print('Error saving new item: $e');
+    _showError("Gagal menambahkan pembelian: $e");
+  }
+}
+  
   
   Widget _buildInputForm() {
   return Card(
@@ -796,7 +1250,7 @@ Future<void> _loadPembelianData() async {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
+              headingRowColor: WidgetStateProperty.all(Color(0xFFEEF2FF)),
               headingTextStyle: TextStyle(
                 color: Color(0xFF080C67),
                 fontWeight: FontWeight.w600,
@@ -859,7 +1313,7 @@ Future<void> _loadPembelianData() async {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
+              headingRowColor: WidgetStateProperty.all(Color(0xFFEEF2FF)),
               headingTextStyle: TextStyle(
                 color: Color(0xFF080C67),
                 fontWeight: FontWeight.w600,
@@ -1015,7 +1469,14 @@ Future<void> _loadPembelianData() async {
     _priceController.dispose();
     _typeController.dispose();
     _tanggalController.dispose();
+    _newNamaBarangController.dispose();
+  _newHargaController.dispose();
+  _newSatuanController.dispose();
+  _newJumlahController.dispose();
+  _newTipeController.dispose();
+  _newTanggalController.dispose();
     super.dispose();
   }
+  
   
 }

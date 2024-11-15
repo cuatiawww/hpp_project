@@ -337,7 +337,7 @@ class _InputPersAwalState extends State<InputPersAwal> {
                       controller: _hargaController,
                       keyboardType: TextInputType.number,
                       hintText: 'Masukkan harga per unit',
-                      icon: Icons.attach_money_rounded,
+                      icon: Icons.payments_rounded,
                     ),
                     _buildInputField(
                       label: 'Tanggal',

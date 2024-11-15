@@ -125,7 +125,7 @@ class _PenjualanPageState extends State<PenjualanPage> {
           _buildInputField(
             label: 'Harga Jual per Unit',
             controller: _priceController,
-            icon: Icons.attach_money_rounded,
+            icon: Icons.payments_rounded,
             keyboardType: TextInputType.number,
             onChanged: (_) => _calculateTotal(),
           ),
