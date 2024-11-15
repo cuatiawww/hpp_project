@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({Key? key}) : super(key: key);
@@ -13,6 +15,9 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   void initState() {
     super.initState();
+    initializeDateFormatting('id_ID', null).then((_) {
+      setState(() {});
+    });
     _markNotificationsAsRead();
   }
 
@@ -33,6 +38,91 @@ class _NotificationPageState extends State<NotificationPage> {
         await doc.reference.update({'isRead': true});
       }
     }
+  }
+
+  // Fungsi untuk menghapus notifikasi
+  Future<void> _deleteNotification(String notificationId) async {
+    try {
+      String? uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance
+            .collection('Users')
+            .doc(uid)
+            .collection('Notifications')
+            .doc(notificationId)
+            .delete();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Notifikasi berhasil dihapus'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Gagal menghapus notifikasi'),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.all(16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+  }
+
+  // Dialog konfirmasi hapus
+  Future<void> _showDeleteDialog(String notificationId) {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.delete_outline, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Hapus Notifikasi'),
+          ],
+        ),
+        content: Text('Apakah Anda yakin ingin menghapus notifikasi ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _deleteNotification(notificationId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Hapus'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -107,6 +197,7 @@ class _NotificationPageState extends State<NotificationPage> {
                 title: notification['title'] ?? 'No Title',
                 message: notification['message'] ?? 'No Message',
                 timestamp: (notification['createdAt'] as Timestamp).toDate(),
+                onLongPress: () => _showDeleteDialog(notification.id),
               );
             },
           );
@@ -120,33 +211,45 @@ class NotificationCard extends StatelessWidget {
   final String title;
   final String message;
   final DateTime timestamp;
+  final VoidCallback? onLongPress;
 
   const NotificationCard({
     Key? key,
     required this.title,
     required this.message,
     required this.timestamp,
+    this.onLongPress,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-      color: Colors.blue.shade50,
-      child: ListTile(
-        leading: Icon(Icons.notifications, color: Colors.blueAccent),
-        title: Text(
-          title,
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          message,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Text(
-          "${timestamp.hour}:${timestamp.minute}",
-          style: TextStyle(color: Colors.grey),
+    return GestureDetector( // Menambahkan gesture detector untuk menangani long Press
+      onLongPress: onLongPress,
+      child: Card(
+        elevation: 3,
+        margin: EdgeInsets.symmetric(vertical: 7, horizontal: 15),
+        color: Colors.blue.shade50,
+        child: ListTile(
+          leading: Icon(Icons.notifications, color: Colors.blueAccent),
+          title: Text(
+            title,
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                message,
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 6),
+              Text(
+                DateFormat('EEEE h:mm a', 'id_ID').format(timestamp),
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       ),
     );

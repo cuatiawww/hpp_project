@@ -1,4 +1,4 @@
-// lib/pages/home/components/bottom_nav_bar.dart
+// lib//home/components/bottom_nav_bar.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -16,8 +16,7 @@ class CustomBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(left: 16, right: 16, bottom: 16),
-      height: 64,
+      height: 70,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -27,7 +26,6 @@ class CustomBottomNavBar extends StatelessWidget {
             Color(0xFF1E23A7),
           ],
         ),
-        borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),

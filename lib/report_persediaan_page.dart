@@ -792,8 +792,8 @@ Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
                         strokeWidth: 2,
                       ),
                     )
-                  : const Icon(Icons.print),
-              label: Text(_isLoading ? 'Generating...' : 'Generate PDF'),
+                  : const Icon(Icons.print, color: Colors.white),
+              label: Text(_isLoading ? 'Generating...' : 'Generate PDF', style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF080C67),
                 padding: const EdgeInsets.symmetric(

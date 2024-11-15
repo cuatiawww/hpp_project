@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
 import 'package:random_string/random_string.dart';
@@ -217,11 +218,17 @@ class _InputPersAwalState extends State<InputPersAwal> {
       };
 
       await DatabaseMethods().addBarang(barangInfoMap, id);
+
+      // Menambahkan notifikasi
+        await addNotification(
+          title: 'Persediaan Awal Baru',
+          message: 'Menambahkan ${_namaBarangController.text} sebanyak ${_jumlahController.text} ${_satuanController.text} dengan tipe ${_tipeController.text}',
+        );
       
       _showSuccessMessage("Data berhasil ditambahkan");
       _resetForm();
     } catch (e) {
-      _showErrorMessage("Gagal menambahkan data: $e");
+      _showErrorMessage("Gagal menambahkan data: ${e.toString()}");
     } finally {
       setState(() => _isLoading = false);
     }

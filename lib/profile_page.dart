@@ -13,16 +13,15 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool isEditing = false; // Untuk melacak mode edit
-  bool isSaving = false; // Untuk tracking proses penyimpanan
-  final authC = Get.find<AuthController>(); // Inisialisasi AuthController untuk mengakses fungsi logout
+  bool isEditing = false;
+  bool isSaving = false;
+  int _selectedIndex = 2; // Index untuk tab Akun
+  final authC = Get.find<AuthController>();
   final String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
-  // Inisialisasi controller DataPribadi dan DataUsaha
   late final DataPribadiController dataPribadiC;
   late final DataUsahaController dataUsahaC;
 
-  // Controller untuk TextFormField
   final namaLengkapController = TextEditingController();
   final npwpController = TextEditingController();
   final tanggalLahirController = TextEditingController();
@@ -31,12 +30,9 @@ class _ProfilePageState extends State<ProfilePage> {
   final tipeUsahaController = TextEditingController();
   final nomorTeleponController = TextEditingController();
 
-  // List untuk dropdown jenis kelamin
   final List<String> jenisKelaminOptions = ['Laki-laki', 'Perempuan'];
-
-  // Formatter untuk NPWP (XX.XXX.XXX.X-XXX.XXX)
   final npwpFormatter = FilteringTextInputFormatter.allow(RegExp(r'[0-9]'));
-  
+
   String formatNPWP(String text) {
     if (text.isEmpty) return '';
     text = text.replaceAll(RegExp(r'[^\d]'), '');
@@ -59,12 +55,9 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    
-    // Inisialisasi controller
     dataPribadiC = Get.put(DataPribadiController(uid: currentUserUid));
     dataUsahaC = Get.put(DataUsahaController(uid: currentUserUid));
 
-    // Menambahkan listener untuk format NPWP
     npwpController.addListener(() {
       final text = npwpController.text;
       if (text.isNotEmpty) {
@@ -78,26 +71,24 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     });
 
-    // Load data
     loadUserData();
   }
 
   Future<void> loadUserData() async {
-  await dataPribadiC.fetchDataPribadi(currentUserUid);
-  await dataUsahaC.fetchDataUsaha(currentUserUid);
+    await dataPribadiC.fetchDataPribadi(currentUserUid);
+    await dataUsahaC.fetchDataUsaha(currentUserUid);
 
-  setState(() {
-    namaLengkapController.text = dataPribadiC.namaLengkap.value;
-    npwpController.text = formatNPWP(dataPribadiC.npwp.value);
-    tanggalLahirController.text = dataPribadiC.tanggalLahir.value;
-    jenisKelaminController.text = dataPribadiC.jenisKelamin.value;
-    namaUsahaController.text = dataUsahaC.namaUsaha.value;
-    tipeUsahaController.text = dataUsahaC.tipeUsaha.value;
-    nomorTeleponController.text = dataUsahaC.nomorTelepon.value;
-  });
-}
+    setState(() {
+      namaLengkapController.text = dataPribadiC.namaLengkap.value;
+      npwpController.text = formatNPWP(dataPribadiC.npwp.value);
+      tanggalLahirController.text = dataPribadiC.tanggalLahir.value;
+      jenisKelaminController.text = dataPribadiC.jenisKelamin.value;
+      namaUsahaController.text = dataUsahaC.namaUsaha.value;
+      tipeUsahaController.text = dataUsahaC.tipeUsaha.value;
+      nomorTeleponController.text = dataUsahaC.nomorTelepon.value;
+    });
+  }
 
-  // Function untuk menampilkan date picker
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -117,10 +108,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _saveProfile() async {
     try {
       setState(() {
-        isSaving = true; // Set loading state
+        isSaving = true;
       });
 
-      // Simpan data pribadi
       await dataPribadiC.updateDataPribadi(
         namaLengkapController.text,
         npwpController.text,
@@ -128,35 +118,31 @@ class _ProfilePageState extends State<ProfilePage> {
         jenisKelaminController.text,
       );
 
-      // Simpan data usaha
       await dataUsahaC.updateDataUsaha(
         namaUsahaController.text,
         tipeUsahaController.text,
         nomorTeleponController.text,
       );
 
-      // Reload data setelah update
       await loadUserData();
 
       setState(() {
         isEditing = false;
-        isSaving = false; // Reset loading state
+        isSaving = false;
       });
 
-      // Tampilkan snackbar sukses
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Profil berhasil diperbarui'),
+          content: Text('Profil berhasil diperbarui!'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       setState(() {
-        isSaving = false; // Reset loading state
+        isSaving = false;
       });
       
-      // Tampilkan snackbar error
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal memperbarui profil: ${e.toString()}'),
@@ -230,151 +216,146 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: Colors.transparent,
       extendBody: true,
       extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF1E23A7),
-                  Color(0xFF080C67),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1E23A7),
+              Color(0xFF080C67),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundImage: AssetImage('assets/images/profile.jpg'),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Center(
+                    child: Obx(() => Text(
+                      dataPribadiC.namaLengkap.value,
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )),
+                  ),
+                  SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      FirebaseAuth.instance.currentUser?.email ?? '',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: isSaving 
+                        ? null
+                        : () {
+                          setState(() {
+                            if (isEditing) {
+                              _saveProfile();
+                            } else {
+                              isEditing = true;
+                            }
+                          });
+                        },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Color(0xFF080C67),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 36, vertical: 10),
+                      ),
+                      child: isSaving
+                        ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                        : Text(
+                          isEditing ? 'Simpan' : 'Edit Akun',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600
+                          ),
+                        ),
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  Text(
+                    'Informasi Pribadi',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  _buildEditableTextField('Nama Lengkap', namaLengkapController),
+                  SizedBox(height: 16),
+                  _buildEditableTextField('NPWP', npwpController, isNPWP: true),
+                  SizedBox(height: 16),
+                  _buildEditableTextField('Tanggal Lahir', tanggalLahirController, isDatePicker: true),
+                  SizedBox(height: 16),
+                  _buildEditableTextField('Jenis Kelamin', jenisKelaminController, isDropdown: true),
+                  SizedBox(height: 24),
+                  Text(
+                    'Informasi Usaha',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  _buildEditableTextField('Nama Usaha', namaUsahaController),
+                  SizedBox(height: 16),
+                  _buildEditableTextField('Tipe Usaha', tipeUsahaController, isReadOnly: true),
+                  SizedBox(height: 16),
+                  _buildEditableTextField('Nomor Telepon', nomorTeleponController, isNumeric: true),
+                  SizedBox(height: 40),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () => authC.logout(),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 70, vertical: 12),
+                      ),
+                      child: Text('LOGOUT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  SizedBox(height: 20), // Tambahan padding bawah untuk bottom navbar
                 ],
               ),
             ),
-            constraints: BoxConstraints.expand(),
-            ), 
-            SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundImage: AssetImage('assets/images/profile.jpg'),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      Center(
-                        child: Obx(() => Text(
-                          dataPribadiC.namaLengkap.value, // Menggunakan Obx untuk mendengarkan perubahan
-                          style: TextStyle(
-                            fontSize: 24,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )),
-                      ),
-                      SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          FirebaseAuth.instance.currentUser?.email ?? '',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: isSaving 
-                            ? null  // Disable button while saving
-                            : () {
-                              setState(() {
-                                if (isEditing) {
-                                  _saveProfile();
-                                } else {
-                                  isEditing = true;
-                                }
-                              });
-                            },
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Color(0xFF080C67), 
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20), 
-                            ),
-                            padding: EdgeInsets.symmetric(horizontal: 36, vertical: 10), 
-                          ),
-                          child: isSaving
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              isEditing ? 'Simpan' : 'Edit Akun',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600
-                              ),
-                            ),
-                        ),
-                      ),
-                      SizedBox(height: 24),
-                      Text(
-                        'Informasi Pribadi',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      _buildEditableTextField('Nama Lengkap', namaLengkapController),
-                      SizedBox(height: 16),
-                      _buildEditableTextField('NPWP', npwpController, isNPWP: true),
-                      SizedBox(height: 16),
-                      _buildEditableTextField('Tanggal Lahir', tanggalLahirController, 
-                        isDatePicker: true,),
-                      SizedBox(height: 16),
-                      _buildEditableTextField('Jenis Kelamin', jenisKelaminController, 
-                        isDropdown: true,),
-                      SizedBox(height: 24),
-                      Text(
-                        'Informasi Usaha',
-                        style: TextStyle(
-                          fontSize: 20,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      _buildEditableTextField('Nama Usaha', namaUsahaController),
-                      SizedBox(height: 16),
-                      _buildEditableTextField('Tipe Usaha', tipeUsahaController, isReadOnly: true),
-                      SizedBox(height: 16),
-                      _buildEditableTextField('Nomor Telepon', nomorTeleponController, isNumeric: true),
-                      SizedBox(height: 40),
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: () => authC.logout(), // Memanggil fungsi logout pada authController
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.red, // Warna merah untuk tombol log out
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            padding: EdgeInsets.symmetric(horizontal: 38, vertical: 10),
-                          ),
-                          child: Text('Log Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
+          ),
+        ),
       ),
+
     );
   }
 

@@ -286,6 +286,8 @@ class _InfoScreenState extends State<InfoScreen> {
                 SizedBox(height: 5),
                 DropdownButtonFormField<String>(
                   value: jenisKelamin,
+                  isExpanded: true,
+                  hint: Text('Pilih Jenis Kelamin'),
                   items: <String>['Laki-laki', 'Perempuan']
                       .map((String value) {
                     return DropdownMenuItem<String>(

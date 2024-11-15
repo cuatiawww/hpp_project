@@ -5,7 +5,7 @@ class Routes {
   static const String infoScreen = '/info_screen';
   static const String forgot = '/forgot';
   static const String otp = '/otp';
-  static const String otpSuccess = '/otp-success';
+  static const String otpSuccess = '/otp_success';
   static const String reset = '/reset';
   static const String home = '/home';
   static const String profile = '/profile';
@@ -13,6 +13,7 @@ class Routes {
   static const String persAwal = '/pers_awal';
   static const String persAkhir = '/pers_akhir';
   static const String inputPersAwal = '/input_pers_awal';
-  static const String testFirestore = '/test-firestore'; // Tambahkan rute ini
+  static const String testFirestore = '/test-firestore';
   static const String notif = '/notif_page';
+  static const String splashScreen = '/splash_screen';
 }
