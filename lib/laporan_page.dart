@@ -239,7 +239,7 @@ Widget _buildStatisticsCards() {
             ValueListenableBuilder<double>(
               valueListenable: _totalPenjualan,
               builder: (context, value, _) => _buildStatCard(
-                'Total Penjualan',
+                'Total\nPenjualan',
                 value,
                 Icons.arrow_upward_rounded,
                 Color(0xFF4CAF50),
@@ -250,7 +250,7 @@ Widget _buildStatisticsCards() {
             ValueListenableBuilder<double>(
               valueListenable: _totalPembelian,
               builder: (context, value, _) => _buildStatCard(
-                'Total Pembelian',
+                'Total\nPembelian',
                 value,
                 Icons.arrow_downward_rounded,
                 Color(0xFFE53935),
@@ -261,7 +261,7 @@ Widget _buildStatisticsCards() {
             ValueListenableBuilder<int>(
               valueListenable: _totalBarangTerjual,
               builder: (context, value, _) => _buildStatCard(
-                'Jumlah Terjual',
+                'Jumlah\nTerjual',
                 value.toDouble(),
                 Icons.inventory_2_rounded,
                 Color(0xFF1976D2),

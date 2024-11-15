@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 // import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_calculation_page.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/input_pers_awal.dart';
 // import 'package:hpp_project/perusahaan_dagang/pages/pembelian_page.dart';
@@ -480,6 +481,15 @@ Future<void> _editBarangDetail(DocumentSnapshot ds) {
                       "Tipe": tipeController.text,
                     },
                   );
+
+                  // Menambahkan notifikasi update
+                  await addPersediaanAwalNotification(
+                    namaBarang: nameController.text,
+                    jumlah: int.parse(jumlahController.text),
+                    satuan: ds["Satuan"],
+                    action: 'update',
+                  );
+
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -607,7 +617,17 @@ Future<void> _deleteBarang(DocumentSnapshot doc) async {
               onTap: () async {
                 Navigator.pop(context, true);
                 try {
+                  final data = doc.data() as Map<String, dynamic>;
                   await DatabaseMethods().deleteBarangDetail(doc.id);
+
+                    // Menambahkan notifikasi delete
+                    await addPersediaanAwalNotification(
+                      namaBarang: data['Name'],
+                      jumlah: data['Jumlah'],
+                      satuan: data['Satuan'],
+                      action: 'delete',
+                    );
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Row(

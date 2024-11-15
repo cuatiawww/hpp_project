@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:random_string/random_string.dart';
 import 'package:intl/intl.dart';
+import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 
 class PembelianPage extends StatefulWidget {
   const PembelianPage({super.key});
@@ -236,10 +237,9 @@ Future<void> _loadPembelianData() async {
 
       final userId = DatabaseMethods().currentUserId;
 
-      // Perbaiki collection path - tambahkan ke collection Pembelian di bawah Users/{userId}
       await _db.collection("Users")
           .doc(userId)
-          .collection("Pembelian") // Path yang benar
+          .collection("Pembelian")
           .add({
         "BarangId": barangData['id'],
         "Name": barangData['Name'],
@@ -253,6 +253,14 @@ Future<void> _loadPembelianData() async {
         "Tanggal": _tanggalController.text,
       });
 
+      // Tambah notifikasi
+      await addPembelianNotification(
+        namaBarang: barangData['Name'],
+        jumlah: int.parse(_unitController.text),
+        satuan: barangData["Satuan"],
+        type: _isDifferentType ? _typeController.text : barangData["Tipe"],
+      );
+
       _showSuccess("Pembelian berhasil ditambahkan!");
       _resetForm();
       _refreshData();
@@ -264,6 +272,7 @@ Future<void> _loadPembelianData() async {
       });
     }
 }
+
   bool _validateInput() {
     if (_selectedBarang == null || 
         _unitController.text.isEmpty || 
@@ -300,6 +309,8 @@ Future<void> _loadPembelianData() async {
       });
     }
   }
+
+
 
   @override
  @override

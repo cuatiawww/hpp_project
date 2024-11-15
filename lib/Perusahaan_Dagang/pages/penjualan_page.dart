@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/invoice_detail.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
@@ -672,6 +673,14 @@ Future<void> _submitPenjualan() async {
         'total': int.parse(_unitController.text) * int.parse(_priceController.text),
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      // Tambah notifikasi
+      await addPenjualanNotification(
+        namaBarang: barangData['Name'],
+        jumlah: int.parse(_unitController.text),
+        satuan: barangData['Satuan'],
+        tipe: _selectedTipe ?? '',
+      );
 
       // Reset form
       setState(() {

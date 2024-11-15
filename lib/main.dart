@@ -2,7 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import 'package:hpp_project/Perusahaan_Dagang/notification/notif.dart';
+import 'package:hpp_project/Splash_Screen/splash_screen.dart';
 import 'package:hpp_project/auth/view/info_screen.dart';
 import 'package:hpp_project/home/home_page.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/input_pers_awal.dart';
@@ -49,7 +51,7 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
               useMaterial3: true,
             ),
-            initialRoute: snapshot.data != null ? Routes.home : Routes.onboarding,
+            initialRoute: snapshot.data != null ? Routes.home : Routes.splashScreen,
             getPages: [
               GetPage(name: Routes.onboarding, page: () => OnboardingView()),
               GetPage(name: Routes.login, page: () => LoginPage()),
@@ -64,6 +66,7 @@ class MyApp extends StatelessWidget {
               GetPage(name: Routes.persAkhir, page: () => PersAkhirPage()),
               GetPage(name: Routes.infoScreen, page: () => InfoScreen()),
               GetPage(name: Routes.notif, page: () => NotificationPage()),
+              GetPage(name: Routes.splashScreen, page: () => SplashScreen()),
             ],
           );
         }
