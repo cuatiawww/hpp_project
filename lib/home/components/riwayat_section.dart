@@ -227,7 +227,7 @@ Widget _buildRiwayatList(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total Biaya:',
+                  'Total Riwayat Mutasi:',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,

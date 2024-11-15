@@ -705,7 +705,7 @@
                   Color(0xFF1E23A7),
                 ],
               ),
-            ),
+            ),  
           ),
         ),
       body: RefreshIndicator(
