@@ -645,6 +645,8 @@ Future<void> _submitPenjualan() async {
 
     try {
       final userId = DatabaseMethods().currentUserId;
+      
+      // 1. Ambil data barang
       final barangDoc = await _db
           .collection('Users')
           .doc(userId)
@@ -657,27 +659,55 @@ Future<void> _submitPenjualan() async {
       }
 
       final barangData = barangDoc.data()!;
-      
-      await _db
+      final int currentStock = barangData['Jumlah'] ?? 0;
+      final int jumlahJual = int.parse(_unitController.text);
+
+      // 2. Periksa stok mencukupi
+      if (currentStock < jumlahJual) {
+        throw 'Stok tidak mencukupi. Stok tersedia: $currentStock ${barangData['Satuan']}';
+      }
+
+      // 3. Mulai transaksi batch
+      final batch = _db.batch();
+
+      // Update stok barang
+      batch.update(
+        _db
           .collection('Users')
           .doc(userId)
-          .collection('Penjualan')  // Path yang benar
-          .add({
+          .collection('Barang')
+          .doc(_selectedBarang),
+        {
+          'Jumlah': FieldValue.increment(-jumlahJual)
+        }
+      );
+
+      // Tambah data penjualan
+      final penjualanRef = _db
+          .collection('Users')
+          .doc(userId)
+          .collection('Penjualan')
+          .doc();
+
+      batch.set(penjualanRef, {
         'barangId': _selectedBarang,
         'namaBarang': barangData['Name'],
         'tipe': _selectedTipe,
-        'jumlah': int.parse(_unitController.text),
+        'jumlah': jumlahJual,
         'hargaJual': int.parse(_priceController.text),
         'satuan': barangData['Satuan'],
         'tanggal': _tanggalController.text,
-        'total': int.parse(_unitController.text) * int.parse(_priceController.text),
+        'total': jumlahJual * int.parse(_priceController.text),
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      // Jalankan batch
+      await batch.commit();
 
       // Tambah notifikasi
       await addPenjualanNotification(
         namaBarang: barangData['Name'],
-        jumlah: int.parse(_unitController.text),
+        jumlah: jumlahJual,
         satuan: barangData['Satuan'],
         tipe: _selectedTipe ?? '',
       );
@@ -688,22 +718,28 @@ Future<void> _submitPenjualan() async {
         _selectedTipe = null;
         _unitController.clear();
         _priceController.clear();
+        _totalHarga = 0;
         _selectedDate = DateTime.now();
         _tanggalController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Penjualan berhasil disimpan')),
+        SnackBar(
+          content: Text('Penjualan berhasil disimpan'),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       setState(() => _isLoading = false);
     }
 }
-  
   @override
   void dispose() {
     _unitController.dispose();

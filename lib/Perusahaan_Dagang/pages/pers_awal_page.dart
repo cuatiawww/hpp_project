@@ -82,11 +82,17 @@ Widget _buildTable() {
         );
       }
 
-      // Filter documents berdasarkan bulan yang dipilih
-      Map<String, DocumentSnapshot> earliestEntries = {};
+      // Filter documents berdasarkan bulan yang dipilih dan bukan dari pembelian
+      Map<String, DocumentSnapshot> filteredEntries = {};
       
       for (var doc in snapshot.data!.docs) {
         var data = doc.data() as Map<String, dynamic>;
+        
+        // Skip jika data berasal dari pembelian
+        if (data['isFromPembelian'] == true) {
+          continue;
+        }
+        
         if (data.containsKey("Tanggal")) {
           String docDate = data["Tanggal"];
           String docMonth = docDate.substring(0, 7);
@@ -94,23 +100,23 @@ Widget _buildTable() {
           if (docMonth == _selectedMonth) {
             String itemKey = "${data['Name']}_${data['Tipe']}";
             
-            if (!earliestEntries.containsKey(itemKey)) {
-              earliestEntries[itemKey] = doc;
+            if (!filteredEntries.containsKey(itemKey)) {
+              filteredEntries[itemKey] = doc;
             } else {
               DateTime currentDate = DateTime.parse(docDate);
               DateTime existingDate = DateTime.parse(
-                (earliestEntries[itemKey]!.data() as Map<String, dynamic>)['Tanggal']
+                (filteredEntries[itemKey]!.data() as Map<String, dynamic>)['Tanggal']
               );
               
               if (currentDate.isBefore(existingDate)) {
-                earliestEntries[itemKey] = doc;
+                filteredEntries[itemKey] = doc;
               }
             }
           }
         }
       }
 
-      List<DocumentSnapshot> filteredDocs = earliestEntries.values.toList();
+      List<DocumentSnapshot> filteredDocs = filteredEntries.values.toList();
 
       if (filteredDocs.isEmpty) {
         return Column(
@@ -166,75 +172,56 @@ Widget _buildTable() {
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(16),
                   scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: MediaQuery.of(context).size.width - 64,
+                  child: DataTable(
+                       headingRowColor: MaterialStateProperty.all(
+                      Color(0xFFEEF2FF),
                     ),
-                    child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(
-                        Color(0xFFEEF2FF),
-                      ),
-                      headingTextStyle: TextStyle(
-                        color: Color(0xFF080C67),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      dataTextStyle: TextStyle(
-                        color: Colors.grey[800],
-                        fontSize: 14,
-                      ),
-                      columnSpacing: 20,
-                      horizontalMargin: 16,
-                      columns: const [
-                        DataColumn(
-                          label: Text("Nama Barang"),
-                        ),
-                        DataColumn(
-                          label: Text("Tipe"),
-                        ),
-                        DataColumn(
-                          label: Text("Jumlah Awal"),
-                        ),
-                        DataColumn(
-                          label: Text("Satuan"),
-                        ),
-                        DataColumn(
-                          label: Text("Harga"),
-                        ),
-                        DataColumn(
-                          label: Text("Total"),
-                        ),
-                        DataColumn(
-                          label: Text("Actions"),
-                        ),
-                      ],
-                      rows: filteredDocs.map((doc) {
-                        var data = doc.data() as Map<String, dynamic>;
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(data["Name"] ?? "Nama tidak ada")),
-                            DataCell(Text(data["Tipe"] ?? "Tipe tidak ada")),
-                            DataCell(Text(data["Jumlah"]?.toString() ?? "0")),
-                            DataCell(Text(data["Satuan"] ?? "Satuan tidak ada")),
-                            DataCell(Text(
-                              NumberFormat.currency(
-                                locale: 'id',
-                                symbol: 'Rp ',
-                                decimalDigits: 0,
-                              ).format(data["Price"] ?? 0),
-                            )),
-                            DataCell(Text(
-                              NumberFormat.currency(
-                                locale: 'id',
-                                symbol: 'Rp ',
-                                decimalDigits: 0,
-                              ).format((data["Jumlah"] ?? 0) * (data["Price"] ?? 0)),
-                            )),
-                            DataCell(_buildActionButtons(doc)),
-                          ],
-                        );
-                      }).toList(),
+                    headingTextStyle: TextStyle(
+                      color: Color(0xFF080C67),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
+                    dataTextStyle: TextStyle(
+                      color: Colors.grey[800],
+                      fontSize: 14,
+                    ),
+                    columnSpacing: 20,
+                    horizontalMargin: 16,
+                    columns: const [
+                      DataColumn(label: Text("Nama Barang")),
+                      DataColumn(label: Text("Tipe")),
+                      DataColumn(label: Text("Jumlah Awal")),
+                      DataColumn(label: Text("Satuan")),
+                      DataColumn(label: Text("Harga")),
+                      DataColumn(label: Text("Total")),
+                      DataColumn(label: Text("Actions")),
+                    ],
+                    rows: filteredDocs.map((doc) {
+                      var data = doc.data() as Map<String, dynamic>;
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(data["Name"] ?? "Nama tidak ada")),
+                          DataCell(Text(data["Tipe"] ?? "Tipe tidak ada")),
+                          DataCell(Text(data["Jumlah"]?.toString() ?? "0")),
+                          DataCell(Text(data["Satuan"] ?? "Satuan tidak ada")),
+                          DataCell(Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(data["Price"] ?? 0),
+                          )),
+                          DataCell(Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format((data["Jumlah"] ?? 0) * (data["Price"] ?? 0)),
+                          )),
+                          DataCell(_buildActionButtons(doc)),
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ),
               ),

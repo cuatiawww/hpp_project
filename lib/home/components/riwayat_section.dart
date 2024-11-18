@@ -144,16 +144,18 @@ class RiwayatSection extends StatelessWidget {
     );
   }
 
-  List<RiwayatItem> _processRiwayatItems(
-    List<QueryDocumentSnapshot> barangDocs,
-    List<QueryDocumentSnapshot> pembelianDocs,
-    List<QueryDocumentSnapshot> penjualanDocs,
-  ) {
-    List<RiwayatItem> items = [];
+ List<RiwayatItem> _processRiwayatItems(
+  List<QueryDocumentSnapshot> barangDocs,
+  List<QueryDocumentSnapshot> pembelianDocs,
+  List<QueryDocumentSnapshot> penjualanDocs,
+) {
+  List<RiwayatItem> items = [];
 
-    // Process Persediaan Awal items
-    for (var doc in barangDocs) {
-      final data = doc.data() as Map<String, dynamic>;
+  // Process Persediaan Awal items
+  for (var doc in barangDocs) {
+    final data = doc.data() as Map<String, dynamic>;
+    // Hanya tambahkan jika bukan dari pembelian dan jumlah > 0
+    if (data['isFromPembelian'] != true && (data["Jumlah"] ?? 0) > 0) {
       items.add(RiwayatItem(
         title: data["Name"] ?? "Unknown",
         description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])}",
@@ -162,10 +164,13 @@ class RiwayatSection extends StatelessWidget {
         date: data["Tanggal"] ?? "",
       ));
     }
+  }
 
-    // Process Pembelian items
-    for (var doc in pembelianDocs) {
-      final data = doc.data() as Map<String, dynamic>;
+  // Process Pembelian items
+  for (var doc in pembelianDocs) {
+    final data = doc.data() as Map<String, dynamic>;
+    // Hanya tambahkan jika jumlah > 0
+    if ((data["Jumlah"] ?? 0) > 0) {
       items.add(RiwayatItem(
         title: data["Name"] ?? "Unknown",
         description: "${data["Jumlah"]} ${data["Satuan"]} - Rp ${NumberFormat('#,###').format(data["Price"])}",
@@ -174,10 +179,13 @@ class RiwayatSection extends StatelessWidget {
         date: data["Tanggal"] ?? "",
       ));
     }
+  }
 
-    // Process Penjualan items
-    for (var doc in penjualanDocs) {
-      final data = doc.data() as Map<String, dynamic>;
+  // Process Penjualan items
+  for (var doc in penjualanDocs) {
+    final data = doc.data() as Map<String, dynamic>;
+    // Hanya tambahkan jika jumlah > 0
+    if ((data["jumlah"] ?? 0) > 0) {
       items.add(RiwayatItem(
         title: data["namaBarang"] ?? "Unknown",
         description: "${data["jumlah"]} ${data["satuan"]} - Rp ${NumberFormat('#,###').format(data["hargaJual"])}",
@@ -186,12 +194,12 @@ class RiwayatSection extends StatelessWidget {
         date: data["tanggal"] ?? "",
       ));
     }
-
-    // Sort all items by date
-    items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
-    return items;
   }
 
+  // Sort all items by date
+  items.sort((a, b) => DateTime.parse(b.date).compareTo(DateTime.parse(a.date)));
+  return items;
+}
 Widget _buildRiwayatList(
   List<RiwayatItem> items,
   List<QueryDocumentSnapshot> pembelianDocs,
@@ -221,51 +229,51 @@ Widget _buildRiwayatList(
             ),
           ),
         ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total Riwayat Mutasi:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF080C67),
-                        Color(0xFF1E23A7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0xFF080C67).withOpacity(0.2),
-                        spreadRadius: 0,
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    'Rp ${NumberFormat('#,###').format(_calculateTotalBiaya(pembelianDocs, barangDocs))}',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+        // child: Column(
+        //   children: [
+        //     Row(
+        //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        //       children: [
+        //         Text(
+        //           'Total Riwayat Mutasi:',
+        //           style: TextStyle(
+        //             fontSize: 16,
+        //             fontWeight: FontWeight.w500,
+        //             color: Colors.grey[600],
+        //           ),
+        //         ),
+        //         Container(
+        //           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        //           decoration: BoxDecoration(
+        //             gradient: LinearGradient(
+        //               colors: [
+        //                 Color(0xFF080C67),
+        //                 Color(0xFF1E23A7),
+        //               ],
+        //             ),
+        //             borderRadius: BorderRadius.circular(12),
+        //             boxShadow: [
+        //               BoxShadow(
+        //                 color: Color(0xFF080C67).withOpacity(0.2),
+        //                 spreadRadius: 0,
+        //                 blurRadius: 8,
+        //                 offset: Offset(0, 2),
+        //               ),
+        //             ],
+        //           ),
+        //           child: Text(
+        //             'Rp ${NumberFormat('#,###').format(_calculateTotalBiaya(pembelianDocs, barangDocs))}',
+        //             style: TextStyle(
+        //               fontSize: 18,
+        //               fontWeight: FontWeight.bold,
+        //               color: Colors.white,
+        //             ),
+        //           ),
+        //         ),
+        //       ],
+        //     ),
+        //   ],
+        // ),
       ),
     ],
   );

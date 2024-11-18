@@ -1,4 +1,3 @@
-// hpp_model.dart
 class HPPData {
   final String startDate;
   final String endDate;
@@ -7,9 +6,9 @@ class HPPData {
   final double bebanAngkut;
   final double returPembelian;
   final double potonganPembelian;
+  final double persediaanAkhir;
   final double pembelianBersih;
   final double barangTersedia;
-  final double persediaanAkhir;
   final double hpp;
 
   HPPData({
@@ -20,11 +19,10 @@ class HPPData {
     required this.bebanAngkut,
     required this.returPembelian,
     required this.potonganPembelian,
-    required this.pembelianBersih,
-    required this.barangTersedia,
     required this.persediaanAkhir,
-    required this.hpp,
-  });
+  }) : pembelianBersih = pembelian + bebanAngkut - returPembelian - potonganPembelian,
+       barangTersedia = persediaanAwal + (pembelian + bebanAngkut - returPembelian - potonganPembelian),
+       hpp = (persediaanAwal + (pembelian + bebanAngkut - returPembelian - potonganPembelian)) - persediaanAkhir;
 
   factory HPPData.empty() {
     return HPPData(
@@ -35,10 +33,7 @@ class HPPData {
       bebanAngkut: 0,
       returPembelian: 0,
       potonganPembelian: 0,
-      pembelianBersih: 0,
-      barangTersedia: 0,
       persediaanAkhir: 0,
-      hpp: 0,
     );
   }
 
@@ -51,10 +46,7 @@ class HPPData {
       bebanAngkut: map['bebanAngkut']?.toDouble() ?? 0,
       returPembelian: map['returPembelian']?.toDouble() ?? 0,
       potonganPembelian: map['potonganPembelian']?.toDouble() ?? 0,
-      pembelianBersih: map['pembelianBersih']?.toDouble() ?? 0,
-      barangTersedia: map['barangTersedia']?.toDouble() ?? 0,
       persediaanAkhir: map['persediaanAkhir']?.toDouble() ?? 0,
-      hpp: map['hpp']?.toDouble() ?? 0,
     );
   }
 
