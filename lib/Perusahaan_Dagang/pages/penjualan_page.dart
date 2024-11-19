@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/invoice_detail.dart';
 import 'package:hpp_project/service/database.dart';
@@ -389,73 +390,92 @@ class _PenjualanPageState extends State<PenjualanPage> {
     );
   }
 
-  Widget _buildBarangDropdown() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: DatabaseMethods().getBarangDetails(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
-          );
-        }
+ Widget _buildBarangDropdown() {
+  return FutureBuilder<Map<String, Map<String, dynamic>>>(
+    future: DatabaseMethods().getAvailableStock(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+        );
+      }
 
-        List<DropdownMenuItem<String>> items = snapshot.data!.docs.map((doc) {
-          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          return DropdownMenuItem(
-            value: doc.id,
-            child: Text(data['Name'] ?? 'Unnamed'),
-          );
-        }).toList();
+      var availableStock = snapshot.data!;
 
-        return _buildDropdownField(
-          label: 'Pilih Barang',
-          icon: Icons.inventory_2_rounded,
-          child: DropdownButtonFormField<String>(
-            value: _selectedBarang,
-            items: items,
-            onChanged: (value) {
+      // Filter hanya barang yang memiliki stok
+      var stockWithInventory = availableStock.entries
+          .where((entry) => entry.value['jumlah'] > 0)
+          .map((entry) => DropdownMenuItem(
+                value: '${entry.value['name']}_${entry.value['tipe']}', // Use composite key
+                child: Text(
+                  '${entry.value['name']} (${entry.value['tipe']}) - Stok: ${entry.value['jumlah']} ${entry.value['satuan']}',
+                ),
+              ))
+          .toList();
+
+      return _buildDropdownField(
+        label: 'Pilih Barang',
+        icon: Icons.inventory_2_rounded,
+        child: DropdownButtonFormField<String>(
+          value: _selectedBarang,
+          items: stockWithInventory,
+          onChanged: (value) {
+            if (value != null) {
+              final selectedStock = availableStock[value];
               setState(() {
                 _selectedBarang = value;
-                _selectedTipe = null;
+                if (selectedStock != null) {
+                  _selectedTipe = selectedStock['tipe'] as String?;
+                  _tipeList = [selectedStock['tipe'] as String? ?? '']
+                      .where((t) => t.isNotEmpty)
+                      .toList();
+                }
               });
-              if (value != null) {
-                _updateTipeList(value);
-              }
-            },
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.symmetric(horizontal: 16),
-            ),
+            } else {
+              setState(() {
+                _selectedBarang = null;
+                _selectedTipe = null;
+                _tipeList = [];
+              });
+            }
+          },
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(horizontal: 16),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTipeDropdown() {
-    return _buildDropdownField(
-      label: 'Pilih Tipe',
-      icon: Icons.category_rounded,
-      child: DropdownButtonFormField<String>(
-        value: _selectedTipe,
-        items: _tipeList.map((String tipe) {
-          return DropdownMenuItem(
-            value: tipe,
-            child: Text(tipe),
-          );
-        }).toList(),
-        onChanged: _selectedBarang == null ? null : (value) {
-          setState(() {
-            _selectedTipe = value;
-          });
-        },
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: 16),
         ),
+      );
+    },
+  );
+}
+ 
+// Update _buildTipeDropdown untuk menangani kasus ketika hanya ada satu tipe
+Widget _buildTipeDropdown() {
+  return _buildDropdownField(
+    label: 'Pilih Tipe',
+    icon: Icons.category_rounded,
+    child: DropdownButtonFormField<String>(
+      value: _selectedTipe,
+      items: _tipeList.map((String tipe) {
+        return DropdownMenuItem(
+          value: tipe,
+          child: Text(tipe),
+        );
+      }).toList(),
+      onChanged: _tipeList.isEmpty ? null : (value) {
+        setState(() {
+          _selectedTipe = value;
+        });
+      },
+      decoration: InputDecoration(
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+        // Tambahkan hint ketika tidak ada tipe yang tersedia
+        hintText: _tipeList.isEmpty ? 'Pilih barang terlebih dahulu' : null,
       ),
-    );
-  }
+    ),
+  );
+}
   Widget _buildInputField({
     required String label,
     required TextEditingController controller,
@@ -597,27 +617,17 @@ class _PenjualanPageState extends State<PenjualanPage> {
           .doc(barangId)
           .get();
 
-      final pembelianDocs = await _db
-          .collection('Users')
-          .doc(userId)
-          .collection('Pembelian')
-          .where('BarangId', isEqualTo: barangId)
-          .get();
+      if (!barangDoc.exists) {
+        throw 'Barang tidak ditemukan';
+      }
 
-      Set<String> tipeSet = {};
+      final data = barangDoc.data()!;
       
-      if (barangDoc.exists) {
-        tipeSet.add(barangDoc.data()!['Tipe']);
-      }
-
-      for (var doc in pembelianDocs.docs) {
-        tipeSet.add(doc.data()['Type']);
-      }
-
       setState(() {
-        _tipeList = tipeSet.where((tipe) => tipe != null).toList();
-        _selectedTipe = _tipeList.isNotEmpty ? _tipeList[0] : null;
+        _tipeList = [data['Tipe']];
+        _selectedTipe = data['Tipe'];
       });
+
     } catch (e) {
       print('Error loading tipe: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -627,119 +637,104 @@ class _PenjualanPageState extends State<PenjualanPage> {
         ),
       );
     }
-  }
-
-
+}
 
 Future<void> _submitPenjualan() async {
-    if (_selectedBarang == null || 
-        _unitController.text.isEmpty || 
-        _priceController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Mohon lengkapi semua field')),
-      );
-      return;
+  if (_selectedBarang == null || 
+      _selectedTipe == null ||  
+      _unitController.text.isEmpty || 
+      _priceController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Mohon lengkapi semua field')),
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final userId = DatabaseMethods().currentUserId;
+    final availableStock = await DatabaseMethods().getAvailableStock();
+    final selectedStock = availableStock[_selectedBarang];
+    
+    if (selectedStock == null) {
+      throw 'Barang tidak ditemukan';
     }
 
-    setState(() => _isLoading = true);
+    final int currentStock = selectedStock['jumlah'] as int;
+    final int jumlahJual = int.parse(_unitController.text);
 
-    try {
-      final userId = DatabaseMethods().currentUserId;
-      
-      // 1. Ambil data barang
-      final barangDoc = await _db
-          .collection('Users')
-          .doc(userId)
-          .collection('Barang')
-          .doc(_selectedBarang)
-          .get();
-
-      if (!barangDoc.exists) {
-        throw 'Barang tidak ditemukan';
-      }
-
-      final barangData = barangDoc.data()!;
-      final int currentStock = barangData['Jumlah'] ?? 0;
-      final int jumlahJual = int.parse(_unitController.text);
-
-      // 2. Periksa stok mencukupi
-      if (currentStock < jumlahJual) {
-        throw 'Stok tidak mencukupi. Stok tersedia: $currentStock ${barangData['Satuan']}';
-      }
-
-      // 3. Mulai transaksi batch
-      final batch = _db.batch();
-
-      // Update stok barang
-      batch.update(
-        _db
-          .collection('Users')
-          .doc(userId)
-          .collection('Barang')
-          .doc(_selectedBarang),
-        {
-          'Jumlah': FieldValue.increment(-jumlahJual)
-        }
-      );
-
-      // Tambah data penjualan
-      final penjualanRef = _db
-          .collection('Users')
-          .doc(userId)
-          .collection('Penjualan')
-          .doc();
-
-      batch.set(penjualanRef, {
-        'barangId': _selectedBarang,
-        'namaBarang': barangData['Name'],
-        'tipe': _selectedTipe,
-        'jumlah': jumlahJual,
-        'hargaJual': int.parse(_priceController.text),
-        'satuan': barangData['Satuan'],
-        'tanggal': _tanggalController.text,
-        'total': jumlahJual * int.parse(_priceController.text),
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // Jalankan batch
-      await batch.commit();
-
-      // Tambah notifikasi
-      await addPenjualanNotification(
-        namaBarang: barangData['Name'],
-        jumlah: jumlahJual,
-        satuan: barangData['Satuan'],
-        tipe: _selectedTipe ?? '',
-      );
-
-      // Reset form
-      setState(() {
-        _selectedBarang = null;
-        _selectedTipe = null;
-        _unitController.clear();
-        _priceController.clear();
-        _totalHarga = 0;
-        _selectedDate = DateTime.now();
-        _tanggalController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Penjualan berhasil disimpan'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
+    if (currentStock < jumlahJual) {
+      throw 'Stok tidak mencukupi. Stok tersedia: $currentStock ${selectedStock['satuan']}';
     }
+
+    // Mulai batch operation
+    final batch = _db.batch();
+    
+    // Update stok di Barang jika ada
+    final barangDoc = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Barang")
+        .doc(selectedStock['id'])
+        .get();
+
+    if (barangDoc.exists) {
+      batch.update(barangDoc.reference, {
+        'Jumlah': FieldValue.increment(-jumlahJual)
+      });
+    }
+
+    // Tambah data penjualan
+    final penjualanRef = _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Penjualan")
+        .doc();
+
+    batch.set(penjualanRef, {
+      'barangId': selectedStock['id'],
+      'namaBarang': selectedStock['name'],
+      'tipe': selectedStock['tipe'],
+      'jumlah': jumlahJual,
+      'hargaJual': int.parse(_priceController.text),
+      'satuan': selectedStock['satuan'],
+      'tanggal': _tanggalController.text,
+      'total': jumlahJual * int.parse(_priceController.text),
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+
+    // Reset form dan tampilkan pesan sukses
+    setState(() {
+      _selectedBarang = null;
+      _selectedTipe = null;
+      _unitController.clear();
+      _priceController.clear();
+      _totalHarga = 0;
+      _selectedDate = DateTime.now();
+      _tanggalController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Penjualan berhasil disimpan'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
 }
+  
   @override
   void dispose() {
     _unitController.dispose();

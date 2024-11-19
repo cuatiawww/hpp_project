@@ -506,13 +506,14 @@ Widget _buildHeaderSection() {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_rounded, size: 18),
+                            Icon(Icons.add_rounded, size: 18, color: Colors.white,),
                             SizedBox(width: 4),
                             Text(
                               'Tambah Pembelian',
                               style: TextStyle(
                                 fontWeight: FontWeight.w500,
                                 fontSize: 13,
+                                color: Colors.white,
                               ),
                             ),
                           ],

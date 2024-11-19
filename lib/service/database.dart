@@ -66,94 +66,46 @@ class DatabaseMethods {
   }
 
   // Modifikasi method addPembelian
-  Future<void> addPembelian(Map<String, dynamic> pembelianData) async {
+ Future<void> addPembelian(Map<String, dynamic> pembelianData) async {
     String userId = currentUserId;
     
-    // Tambahkan userId dan timestamp
-    pembelianData['userId'] = userId;
-    pembelianData['createdAt'] = FieldValue.serverTimestamp();
-
-    // Simpan ke collection Pembelian
-    DocumentReference pembelianRef = await _db
-        .collection("Users")
-        .doc(userId)
-        .collection("Pembelian")
-        .add(pembelianData);
-
-    // Add to Riwayat
-    await _db.collection("Users")
-        .doc(userId)
-        .collection("Riwayat")
-        .add({
-      'type': 'Pembelian',
-      'name': pembelianData['Name'],
-      'tipe': pembelianData['Type'],
-      'jumlah': pembelianData['Jumlah'],
-      'price': pembelianData['Price'],
-      'satuan': pembelianData['Satuan'],
-      'tanggal': pembelianData['Tanggal'],
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-
-//     Stream<QuerySnapshot> getPenjualanDetails() {
-//     String userId = currentUserId;
-//     return _db.collection("Users")
-//         .doc(userId)
-//         .collection("Penjualan")
-//         .snapshots();
-//   }
-//  Stream<QuerySnapshot> getPenjualanStream() {
-//   String userId = currentUserId;
-//   print("Current User ID: $userId"); // Untuk debugging
-  
-//   return _db
-//       .collection("Users")
-//       .doc(userId)
-//       .collection("Penjualan")
-//       .orderBy('timestamp', descending: true)
-//       .snapshots();
-// }
-
-//   Future<void> addPenjualan(Map<String, dynamic> penjualanData) async {
-//     String userId = currentUserId;
-//     await _db.collection("Users")
-//         .doc(userId)
-//         .collection("Penjualan")
-//         .add(penjualanData);
-//         // Update stok barang
-//     await updateStokAfterPenjualan(
-//       penjualanData['barangId'],
-//       penjualanData['jumlah']
-//     );
-//   }
-  
-
-    // Update PersediaanTotal
     try {
-      final QuerySnapshot totalSnapshot = await _db
+      // 1. Mulai transaction/batch
+      WriteBatch batch = _db.batch();
+
+      // 2. Simpan data pembelian
+      DocumentReference pembelianRef = _db
           .collection("Users")
           .doc(userId)
-          .collection("PersediaanTotal")
-          .where('Name', isEqualTo: pembelianData['Name'])
-          .where('Tipe', isEqualTo: pembelianData['Type'])
-          .get();
+          .collection("Pembelian")
+          .doc();
+          
+      batch.set(pembelianRef, {
+        ...pembelianData,
+        'userId': userId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-      if (totalSnapshot.docs.isNotEmpty) {
-        await _db
-            .collection("Users")
-            .doc(userId)
-            .collection("PersediaanTotal")
-            .doc(totalSnapshot.docs.first.id)
-            .update({
+      // 3. Update stok di collection Barang
+      DocumentReference barangRef = _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Barang")
+          .doc(pembelianData['BarangId']);
+
+      // Cek apakah barang sudah ada
+      DocumentSnapshot barangDoc = await barangRef.get();
+      
+      if (barangDoc.exists) {
+        // Update stok jika barang sudah ada
+        batch.update(barangRef, {
           'Jumlah': FieldValue.increment(pembelianData['Jumlah'] as int),
+          'Price': pembelianData['Price'], // Update harga dengan harga terbaru
           'LastUpdated': FieldValue.serverTimestamp(),
         });
       } else {
-        await _db
-            .collection("Users")
-            .doc(userId)
-            .collection("PersediaanTotal")
-            .add({
+        // Buat dokumen baru jika barang belum ada
+        batch.set(barangRef, {
           'Name': pembelianData['Name'],
           'Tipe': pembelianData['Type'],
           'Jumlah': pembelianData['Jumlah'],
@@ -163,15 +115,79 @@ class DatabaseMethods {
           'LastUpdated': FieldValue.serverTimestamp(),
         });
       }
-    } catch (e) {
-      await pembelianRef.delete();
-      throw Exception('Failed to update total persediaan: $e');
-    }
-  }
 
+      // 4. Add to Riwayat
+      DocumentReference riwayatRef = _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Riwayat")
+          .doc();
+          
+      batch.set(riwayatRef, {
+        'type': 'Pembelian',
+        'name': pembelianData['Name'],
+        'tipe': pembelianData['Type'],
+        'jumlah': pembelianData['Jumlah'],
+        'price': pembelianData['Price'],
+        'satuan': pembelianData['Satuan'],
+        'tanggal': pembelianData['Tanggal'],
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // 5. Commit batch operation
+      await batch.commit();
+      
+    } catch (e) {
+      print("Error in addPembelian: $e");
+      throw e;
+    }
+}
 
 
   // Modifikasi method untuk mendapatkan pembelian
+  Future<int> getTotalStok(String barangId) async {
+    String userId = currentUserId;
+    
+    try {
+      // 1. Ambil stok dari collection Barang
+      final barangDoc = await _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Barang")
+          .doc(barangId)
+          .get();
+
+      if (!barangDoc.exists) {
+        return 0;
+      }
+
+      return (barangDoc.data()?['Jumlah'] ?? 0) as int;
+
+    } catch (e) {
+      print("Error getting total stok: $e");
+      throw e;
+    }
+}
+
+// Method untuk mengupdate stok yang sudah ada
+Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async {
+    String userId = currentUserId;
+    
+    try {
+      await _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Barang")
+          .doc(barangId)
+          .update({
+        ...updateData,
+        'LastUpdated': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print("Error updating stok: $e");
+      throw e;
+    }
+}
 
 
   Stream<QuerySnapshot> getPersediaanTotal() {
@@ -275,6 +291,65 @@ Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPenjualanStream(
 
 
   //PENJUALAN
+  Future<Map<String, Map<String, dynamic>>> getAvailableStock() async {
+    String userId = currentUserId;
+    
+    try {
+      // 1. Ambil data dari collection Barang dan Pembelian
+      final results = await Future.wait([
+        _db.collection("Users").doc(userId).collection("Barang").get(),
+        _db.collection("Users").doc(userId).collection("Pembelian").get(),
+      ]);
+
+      final barangDocs = results[0];
+      final pembelianDocs = results[1];
+      
+      Map<String, Map<String, dynamic>> stockMap = {};
+
+      // Proses data barang
+      for (var doc in barangDocs.docs) {
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Tipe']}'; // Gunakan kombinasi nama dan tipe sebagai key
+        
+        stockMap[key] = {
+          'id': doc.id,
+          'name': data['Name'],
+          'tipe': data['Tipe'],
+          'jumlah': data['Jumlah'] ?? 0,
+          'price': data['Price'] ?? 0,
+          'satuan': data['Satuan'],
+        };
+      }
+
+      // Proses data pembelian
+      for (var doc in pembelianDocs.docs) {
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Type']}';
+        
+        if (stockMap.containsKey(key)) {
+          // Update existing entry
+          stockMap[key]!['jumlah'] = (stockMap[key]!['jumlah'] as int) + (data['Jumlah'] ?? 0);
+          // Update price with the latest price from purchase
+          stockMap[key]!['price'] = data['Price'] ?? stockMap[key]!['price'];
+        } else {
+          // Create new entry
+          stockMap[key] = {
+            'id': data['BarangId'],
+            'name': data['Name'],
+            'tipe': data['Type'],
+            'jumlah': data['Jumlah'] ?? 0,
+            'price': data['Price'] ?? 0,
+            'satuan': data['Satuan'],
+          };
+        }
+      }
+
+      return stockMap;
+    } catch (e) {
+      print("Error getting available stock: $e");
+      throw e;
+    }
+}
   
   Future<void> updateStokAfterPenjualan(String barangId, int jumlahTerjual) async {
     String userId = currentUserId;
@@ -315,6 +390,8 @@ Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPenjualanStream(
       }
     });
   }
+  
+  
   // Modifikasi method update dan delete
   Future<void> updateBarangDetail(String id, Map<String, dynamic> updateInfo) async {
     String userId = currentUserId;

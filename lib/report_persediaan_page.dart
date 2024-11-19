@@ -552,29 +552,82 @@ Widget _buildPreviewDataGroup({
 }
 
   // Data fetching methods
-  Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate) async {
+Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate) async {
     final userId = auth.currentUser?.uid;
-    final snapshot = await _db
-        .collection("Users").doc(userId)
-        .collection("Barang")
+    
+    // Parse startDate untuk mendapatkan bulan dan tahun
+    final targetDate = DateTime.parse(startDate);
+    
+    // 1. Pertama, ambil semua pembelian di bulan yang dipilih
+    final pembelianBulanIni = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
         .where('Tanggal', isGreaterThanOrEqualTo: startDate)
+        .where('Tanggal', isLessThan: DateFormat('yyyy-MM-dd')
+            .format(DateTime(targetDate.year, targetDate.month + 1, 1)))
+        .get();
+
+    // Kumpulkan semua item yang dibeli bulan ini
+    Set<String> itemDibeliBulanIni = {};
+    for (var doc in pembelianBulanIni.docs) {
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Type']}';
+        itemDibeliBulanIni.add(key);
+    }
+
+    // 2. Ambil data barang dari collection Barang
+    final snapshotBarang = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Barang")
         .get();
 
     Map<String, Map<String, dynamic>> result = {};
-    for (var doc in snapshot.docs) {
-      var data = doc.data();
-      String key = '${data['Name']}_${data['Tipe']}';//KONDISI NAMA SAMA TIPE
-      result[key] = {
-        'name': data['Name'],
-        'tipe': data['Tipe'],
-        'jumlah': data['Jumlah'] ?? 0,
-        'price': data['Price'] ?? 0,
-      };
+    
+    // Proses data barang, exclude yang dibeli bulan ini
+    for (var doc in snapshotBarang.docs) {
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Tipe']}';
+        
+        // Hanya masukkan ke persediaan awal jika BUKAN pembelian bulan ini
+        if (!itemDibeliBulanIni.contains(key)) {
+            result[key] = {
+                'name': data['Name'],
+                'tipe': data['Tipe'],
+                'jumlah': (data['Jumlah'] ?? 0) as int,
+                'price': (data['Price'] ?? 0).toDouble(),
+            };
+        }
     }
-    return result;
-  }
 
-  Future<Map<String, Map<String, dynamic>>> _fetchPembelian(String startDate, String endDate) async {
+    // 3. Kurangi dengan penjualan dari bulan-bulan sebelumnya
+    final snapshotPenjualan = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Penjualan")
+        .where('tanggal', isLessThan: startDate)
+        .get();
+
+    for (var doc in snapshotPenjualan.docs) {
+        var data = doc.data();
+        String key = '${data['namaBarang']}_${data['tipe']}';
+        
+        if (result.containsKey(key)) {
+            int currentStock = (result[key]!['jumlah'] as num).toInt();
+            int soldAmount = (data['jumlah'] ?? 0) as int;
+            
+            // Update stok
+            int newStock = currentStock - soldAmount;
+            result[key]!['jumlah'] = newStock < 0 ? 0 : newStock;
+        }
+    }
+
+    return result;
+}
+
+// Perbaiki juga method fetching pembelian untuk konsistensi
+Future<Map<String, Map<String, dynamic>>> _fetchPembelian(String startDate, String endDate) async {
     final userId = auth.currentUser?.uid;
     final snapshot = await _db
         .collection("Users")
@@ -582,28 +635,48 @@ Widget _buildPreviewDataGroup({
         .collection("Pembelian")
         .where('Tanggal', isGreaterThanOrEqualTo: startDate)
         .where('Tanggal', isLessThanOrEqualTo: endDate)
+        .orderBy('Tanggal', descending: true)  // Tambahkan ordering
         .get();
 
     Map<String, Map<String, dynamic>> result = {};
+    // Map untuk akumulasi total nilai pembelian per item
+    Map<String, double> totalValues = {};
+    
     for (var doc in snapshot.docs) {
-      var data = doc.data();
-      String key = '${data['Name']}_${data['Type']}';
-      
-      if (result.containsKey(key)) {
-        result[key]!['jumlah'] = (result[key]!['jumlah'] as int) + (data['Jumlah'] ?? 0);
-        // Use the latest price
-        result[key]!['price'] = data['Price'] ?? 0;
-      } else {
-        result[key] = {
-          'name': data['Name'],
-          'tipe': data['Type'],
-          'jumlah': data['Jumlah'] ?? 0,
-          'price': data['Price'] ?? 0,
-        };
-      }
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Type']}';
+        
+        double price = (data['Price'] ?? 0).toDouble();
+        int quantity = (data['Jumlah'] ?? 0) as int;
+        
+        if (result.containsKey(key)) {
+            // Akumulasi jumlah
+            result[key]!['jumlah'] = (result[key]!['jumlah'] as int) + quantity;
+            
+            // Akumulasi total nilai
+            totalValues[key] = (totalValues[key] ?? 0) + (price * quantity);
+        } else {
+            result[key] = {
+                'name': data['Name'],
+                'tipe': data['Type'],
+                'jumlah': quantity,
+                'price': price,
+            };
+            totalValues[key] = price * quantity;
+        }
     }
+    
+    // Hitung harga rata-rata tertimbang untuk setiap item
+    for (var key in result.keys) {
+        int totalQuantity = result[key]!['jumlah'] as int;
+        if (totalQuantity > 0) {
+            double avgPrice = totalValues[key]! / totalQuantity;
+            result[key]!['price'] = avgPrice;
+        }
+    }
+
     return result;
-  }
+}
 
 Future<Map<String, Map<String, dynamic>>> _fetchPenjualan(String startDate, String endDate) async {
     final userId = auth.currentUser?.uid;
@@ -687,30 +760,34 @@ Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
       var pembelian = pembelianData[key] ?? {'jumlah': 0, 'price': 0};
       var penjualan = penjualanData[key] ?? {'jumlah': 0, 'price': 0};
 
+      // Hitung saldo akhir
       int remainingStock = (persAwal['jumlah'] ?? 0) + 
                          (pembelian['jumlah'] ?? 0) - 
                          (penjualan['jumlah'] ?? 0);
       
-      // Hitung rata-rata tertimbang untuk harga akhir
-      double totalNilai = (persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0) +
-                         (pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0);
-      int totalUnit = (persAwal['jumlah'] ?? 0) + (pembelian['jumlah'] ?? 0);
-      
-      double weightedAvgPrice = totalUnit > 0 ? totalNilai / totalUnit : 0;
+      // Hitung harga rata-rata tertimbang hanya jika ada stok awal atau pembelian
+      double weightedAvgPrice;
+      if (persAwal['jumlah'] > 0 || pembelian['jumlah'] > 0) {
+          double totalNilai = (persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0) +
+                            (pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0);
+          int totalUnit = (persAwal['jumlah'] ?? 0) + (pembelian['jumlah'] ?? 0);
+          weightedAvgPrice = totalUnit > 0 ? totalNilai / totalUnit : 0;
+      } else {
+          weightedAvgPrice = 0;
+      }
 
       if (remainingStock >= 0) {
         result[key] = {
           'name': persAwal['name'] ?? pembelian['name'] ?? penjualan['name'],
           'tipe': persAwal['tipe'] ?? pembelian['tipe'] ?? penjualan['tipe'],
           'jumlah': remainingStock,
-          'price': weightedAvgPrice.round(), // Bulatkan ke integer
+          'price': weightedAvgPrice.round(),
         };
       }
     }
 
     return result;
 }
-
   String _formatCurrency(num value) {
     return NumberFormat.currency(
       locale: 'id',
