@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_model.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_widgets.dart';
 import 'package:hpp_project/service/database.dart';
@@ -593,57 +594,227 @@ Future<void> _calculateHPP() async {
     );
   }
 
-  Future<void> _generateAndPrintPDF() async {
-    try {
-      final pdf = pw.Document();
+Future<void> _generateAndPrintPDF() async {
+  try {
+    final pdf = pw.Document();
+    
+    // Add standard font
+    final font = await PdfGoogleFonts.nunitoRegular();
+    final fontBold = await PdfGoogleFonts.nunitoBold();
 
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Header(
-                  level: 0,
-                  child: pw.Text(
-                    'Laporan Perhitungan HPP',
-                    style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
+    // Load the decoration image
+    // final decorationImage = pw.MemoryImage(
+    //   (await rootBundle.load('assets/images/watermark.png')).buffer.asUint8List(),
+    // );
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.all(40),
+        build: (context) {
+          return pw.Stack(
+            children: [
+              // Decoration image at bottom right
+              // pw.Positioned(
+              //   bottom: 0,
+              //   right: 0,
+              //   child: pw.Image(decorationImage, width: 200),
+              // ),
+              // Main content
+              pw.Column(
+                children: [
+                  // Header
+                  pw.Center(
+                    child: pw.Column(
+                      children: [
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            children: [
+                              pw.TextSpan(
+                                text: 'Laporan ',
+                                style: pw.TextStyle(
+                                  font: fontBold,
+                                  fontSize: 24,
+                                ),
+                              ),
+                              pw.TextSpan(
+                                text: 'HPP',
+                                style: pw.TextStyle(
+                                  font: fontBold,
+                                  fontSize: 24,
+                                  color: PdfColor(0.4, 0.4, 0.8, 1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'PT. Nama Perusahaan',
+                          style: pw.TextStyle(
+                            font: font,
+                            fontSize: 14,
+                            color: PdfColors.grey800,
+                          ),
+                        ),
+                        pw.SizedBox(height: 4),
+                        pw.Text(
+                          'Dari ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.startDate))} sampai ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.endDate))}',
+                          style: pw.TextStyle(
+                            font: font,
+                            fontSize: 10,
+                            color: PdfColors.grey600,
+                          ),
+                        ),
+                        pw.SizedBox(height: 40),
+                      ],
                     ),
                   ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Periode: ${DateFormat('MMMM yyyy').format(DateTime.parse(_hppData.startDate))}',
-                  style: const pw.TextStyle(fontSize: 16),
-                ),
-                pw.Text(
-                  'Tanggal: ${DateFormat('d MMMM').format(DateTime.parse(_hppData.startDate))} - ${DateFormat('d MMMM yyyy').format(DateTime.parse(_hppData.endDate))}',
-                  style: const pw.TextStyle(fontSize: 16),
-                ),
-                pw.SizedBox(height: 20),
-                _buildPDFContent(),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  'Dicetak pada: ${DateFormat('dd MMMM yyyy HH:mm').format(DateTime.now())}',
-                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
-                ),
-              ],
-            );
-          },
-        ),
-      );
 
-      await Printing.layoutPdf(
-        onLayout: (format) => pdf.save(),
-      );
-    } catch (e) {
-      _showError('Gagal mencetak PDF: $e');
-    }
+                  // Table
+                  pw.Table(
+                    border: pw.TableBorder.all(
+                      color: PdfColors.grey400,
+                      width: 0.5,
+                    ),
+                    columnWidths: {
+                      0: const pw.FlexColumnWidth(3),  // Deskripsi
+                      1: const pw.FlexColumnWidth(2),  // Harga
+                    },
+                    children: [
+                      // Header row
+                      _buildHeaderRow(font),
+                      _buildDataRow('Persediaan Barang Dagang Awal', _hppData.persediaanAwal, font),
+                      _buildDataRow('Pembelian', _hppData.pembelian, font),
+                      _buildDataRow('Beban Angkut Pembelian', _hppData.bebanAngkut, font),
+                      _buildDataRow('Retur Pembelian', _hppData.returPembelian, font),
+                      _buildDataRow('Potongan Pembelian', _hppData.potonganPembelian, font),
+                      _buildDataRow('Pembelian Bersih', _hppData.pembelianBersih, font, subtotal: true),
+                      _buildDataRow('Jumlah Pembelian Bersih', _hppData.barangTersedia, font, subtotal: true),
+                      _buildDataRow('Barang Tersedia Untuk Dijual (BTUD)', _hppData.barangTersedia, font),
+                      _buildDataRow('Persediaan Barang Dagang Akhir', _hppData.persediaanAkhir, font),
+                      _buildDataRow('Harga Pokok Penjualan', _hppData.hpp, font, total: true),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) => pdf.save(),
+    );
+  } catch (e) {
+    _showError('Gagal mencetak PDF: $e');
   }
+}
 
+// Helper function to build header row
+pw.TableRow _buildHeaderRow(pw.Font font) {
+  return pw.TableRow(
+    children: [
+      'Deskripsi',
+      'Harga',
+    ].map((text) => pw.Container(
+      padding: pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: font,
+          fontSize: 10,
+        ),
+      ),
+    )).toList(),
+  );
+}
+
+// Helper function to build data row
+pw.TableRow _buildDataRow(
+  String description,
+  double value,
+  pw.Font font, {
+  bool subtotal = false,
+  bool total = false,
+}) {
+  final backgroundColor = total
+      ? PdfColor(0.4, 0.4, 0.8, 0.2)  // Light blue for total
+      : subtotal
+          ? PdfColor(0.95, 0.95, 1, 1)  // Very light blue for subtotal
+          : null;
+
+  return pw.TableRow(
+    decoration: backgroundColor != null
+        ? pw.BoxDecoration(color: backgroundColor)
+        : null,
+    children: [
+      pw.Padding(
+        padding: pw.EdgeInsets.all(8),
+        child: pw.Text(
+          description,
+          style: pw.TextStyle(font: font, fontSize: 10),
+        ),
+      ),
+      pw.Padding(
+        padding: pw.EdgeInsets.all(8),
+        child: pw.Text(
+          _currencyFormat.format(value),
+          style: pw.TextStyle(font: font, fontSize: 10),
+          textAlign: pw.TextAlign.right,
+        ),
+      ),
+    ],
+  );
+}
+
+pw.Widget _buildTableCell(String text, pw.Font font, {
+  bool isHeader = false,
+  bool isRight = false,
+  PdfColor? backgroundColor,
+}) {
+  return pw.Container(
+    padding: pw.EdgeInsets.all(8),
+    color: backgroundColor,
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        font: font,
+        fontSize: 10,
+        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+      ),
+      textAlign: isRight ? pw.TextAlign.right : pw.TextAlign.left,
+    ),
+  );
+}
+pw.TableRow _buildTableRow(
+  String description,
+  String unit,
+  double value,
+  pw.Font font, {
+  bool isSubtotal = false,
+  bool isTotal = false,
+  String keterangan = '',
+}) {
+  final backgroundColor = isTotal
+      ? PdfColor.fromHex('#EEF2FF')
+      : isSubtotal
+          ? PdfColor.fromHex('#F8FAFC')
+          : null;
+
+  return pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: backgroundColor,
+    ),
+    children: [
+      _buildTableCell(description, font),
+      _buildTableCell(unit, font),
+      _buildTableCell(_currencyFormat.format(value), font, isRight: true),
+      _buildTableCell(keterangan, font),
+    ],
+  );
+}
   pw.Widget _buildPDFContent() {
     return pw.Table(
       border: pw.TableBorder.all(),
