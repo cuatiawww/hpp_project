@@ -15,7 +15,6 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   final DatabaseMethods _db = DatabaseMethods();
   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
   
-  // Use ValueNotifier instead of setState for statistics
   final ValueNotifier<double> _totalPenjualan = ValueNotifier(0);
   final ValueNotifier<double> _totalPembelian = ValueNotifier(0);
   final ValueNotifier<int> _totalBarangTerjual = ValueNotifier(0);
@@ -24,66 +23,60 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   Stream<QuerySnapshot<Map<String, dynamic>>>? _pembelianStream;
 
   @override
- void initState() {
-  super.initState();
-  _tabController = TabController(length: 2, vsync: this);
-  
-  // Inisialisasi tanggal
-  final now = DateTime.now();
-  _selectedMonth = DateFormat('yyyy-MM').format(now);
-  
-  // Inisialisasi periode
-  final startDate = '$_selectedMonth-01';
-  final date = DateTime.parse(startDate);
-  final endDate = DateTime(date.year, date.month + 1, 0);
-  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _initializeData();
+  }
 
-  // Set up streams
-  _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
-  _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
-
-  // Langsung ambil data awal
-  _loadInitialData();
-}
-void _loadInitialData() async {
-  try {
+  void _initializeData() {
     final startDate = '$_selectedMonth-01';
     final date = DateTime.parse(startDate);
     final endDate = DateTime(date.year, date.month + 1, 0);
     final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
-    // Ambil data penjualan
-    final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDateStr).first;
-    if (penjualanDocs.docs.isNotEmpty) {
-      _calculatePenjualanStats(penjualanDocs.docs);
-    }
-
-    // Ambil data pembelian
-    final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDateStr).first;
-    if (pembelianDocs.docs.isNotEmpty) {
-      _calculatePembelianStats(pembelianDocs.docs);
-    }
-  } catch (e) {
-    print('Error loading initial data: $e');
-  }
-}
-
-  void _initializeStreams() {
-  if (!mounted) return;
-  
-  final startDate = '$_selectedMonth-01';
-  final date = DateTime.parse(startDate);
-  final endDate = DateTime(date.year, date.month + 1, 0);
-  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
-
-  setState(() {
     _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
     _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
-  });
+    _loadInitialData();
+  }
 
-  // Load data setelah stream diinisialisasi
-  _loadInitialData();
-}
+  void _loadInitialData() async {
+    try {
+      final startDate = '$_selectedMonth-01';
+      final date = DateTime.parse(startDate);
+      final endDate = DateTime(date.year, date.month + 1, 0);
+      final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+
+      final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDateStr).first;
+      if (penjualanDocs.docs.isNotEmpty) {
+        _calculatePenjualanStats(penjualanDocs.docs);
+      }
+
+      final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDateStr).first;
+      if (pembelianDocs.docs.isNotEmpty) {
+        _calculatePembelianStats(pembelianDocs.docs);
+      }
+    } catch (e) {
+      print('Error loading initial data: $e');
+    }
+  }
+
+  void _initializeStreams() {
+    if (!mounted) return;
+    
+    final startDate = '$_selectedMonth-01';
+    final date = DateTime.parse(startDate);
+    final endDate = DateTime(date.year, date.month + 1, 0);
+    final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+
+    setState(() {
+      _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
+      _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
+    });
+
+    _loadInitialData();
+  }
+
   void _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     if (!mounted) return;
     
@@ -121,176 +114,183 @@ void _loadInitialData() async {
     _totalPembelian.value = tempTotalPembelian;
   }
 
+  List<DropdownMenuItem<String>> _buildMonthDropdownItems() {
+    return List.generate(12, (index) {
+      final date = DateTime.now().subtract(Duration(days: 30 * index));
+      final value = DateFormat('yyyy-MM').format(date);
+      return DropdownMenuItem(
+        value: value,
+        child: Text(
+          DateFormat('MMMM yyyy').format(date),
+          style: const TextStyle(fontSize: 14),
+        ),
+      );
+    });
+  }
+
+  void _onMonthChanged(String? newValue) {
+    if (newValue != null && mounted) {
+      setState(() {
+        _selectedMonth = newValue;
+        _initializeStreams();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            TabBar(
-              controller: _tabController,
-              labelColor: const Color(0xFF080C67),
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: const Color(0xFF080C67),
-              tabs: const [
-                Tab(text: 'Report Penjualan'),
-                Tab(text: 'Report Pembelian'),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Column(
+              children: [
+                _buildHeader(constraints),
+                _buildTabBar(),
+                Expanded(
+                  child: _buildTabBarView(constraints),
+                ),
               ],
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildPenjualanTab(),
-                  _buildPembelianTab(),
-                ],
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BoxConstraints constraints) {
+    final isWideScreen = constraints.maxWidth > 600;
+    final padding = isWideScreen ? 24.0 : 16.0;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(padding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTitleAndDatePicker(),
-          const SizedBox(height: 16),
-          _buildStatisticsCards(),
+          _buildTitleAndDatePicker(isWideScreen),
+          SizedBox(height: isWideScreen ? 24 : 16),
+          _buildStatisticsCards(constraints),
         ],
       ),
     );
   }
 
-  Widget _buildTitleAndDatePicker() {
+  Widget _buildTitleAndDatePicker(bool isWideScreen) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           'Laporan',
           style: TextStyle(
-            fontSize: 24,
+            fontSize: isWideScreen ? 28 : 24,
             fontWeight: FontWeight.bold,
           ),
         ),
-        _buildMonthPicker(),
+        _buildMonthPicker(isWideScreen),
       ],
     );
   }
 
-  Widget _buildMonthPicker() {
+  Widget _buildMonthPicker(bool isWideScreen) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: isWideScreen ? 16 : 12,
+        vertical: isWideScreen ? 8 : 4,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.calendar_today, size: 20),
-          const SizedBox(width: 8),
+          Icon(Icons.calendar_today, size: isWideScreen ? 24 : 20),
+          SizedBox(width: 8),
           DropdownButton<String>(
             value: _selectedMonth,
             underline: Container(),
-            items: List.generate(12, (index) {
-              final date = DateTime.now().subtract(Duration(days: 30 * index));
-              final value = DateFormat('yyyy-MM').format(date);
-              return DropdownMenuItem(
-                value: value,
-                child: Text(
-                  DateFormat('MMMM yyyy').format(date),
-                  style: const TextStyle(fontSize: 14),
-                ),
-              );
-            }),
-            onChanged: (String? newValue) {
-              if (newValue != null && mounted) {
-                setState(() {
-                  _selectedMonth = newValue;
-                  _initializeStreams();
-                });
-              }
-            },
+            items: _buildMonthDropdownItems(),
+            onChanged: _onMonthChanged,
+            style: TextStyle(
+              fontSize: isWideScreen ? 16 : 14,
+              color: Colors.black87,
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildStatisticsCards(BoxConstraints constraints) {
+    final isWideScreen = constraints.maxWidth > 600;
+    final crossAxisCount = constraints.maxWidth > 900 ? 4 : 2;
+    final childAspectRatio = isWideScreen ? 1.8 : 1.5;
 
-Widget _buildStatisticsCards() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GridView.count(
-          shrinkWrap: true,
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.5,
-          children: [
-            // Total Penjualan Card
-            ValueListenableBuilder<double>(
-              valueListenable: _totalPenjualan,
-              builder: (context, value, _) => _buildStatCard(
-                'Total\nPenjualan',
-                value,
-                Icons.arrow_upward_rounded,
-                Color(0xFF4CAF50),
-                [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
-              ),
-            ),
-            // Total Pembelian Card
-            ValueListenableBuilder<double>(
-              valueListenable: _totalPembelian,
-              builder: (context, value, _) => _buildStatCard(
-                'Total\nPembelian',
-                value,
-                Icons.arrow_downward_rounded,
-                Color(0xFFE53935),
-                [Color(0xFFFFEBEE), Color(0xFFFFCDD2)],
-              ),
-            ),
-            // Total Barang Terjual Card
-            ValueListenableBuilder<int>(
-              valueListenable: _totalBarangTerjual,
-              builder: (context, value, _) => _buildStatCard(
-                'Jumlah\nTerjual',
-                value.toDouble(),
-                Icons.inventory_2_rounded,
-                Color(0xFF1976D2),
-                [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
-                isCount: true,
-              ),
-            ),
-            // Profit/Loss Card
-            ValueListenableBuilder<double>(
-              valueListenable: _totalPenjualan,
-              builder: (context, penjualan, _) {
-                return ValueListenableBuilder<double>(
-                  valueListenable: _totalPembelian,
-                  builder: (context, pembelian, _) {
-                    final profit = penjualan - pembelian;
-                    return _buildStatCard(
-                      'Profit',
-                      profit,
-                      profit >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                      profit >= 0 ? Color(0xFF9C27B0) : Color(0xFFFF7043),
-                      profit >= 0 
-                          ? [Color(0xFFF3E5F5), Color(0xFFE1BEE7)]
-                          : [Color(0xFFFBE9E7), Color(0xFFFFCCBC)],
-                    );
-                  },
-                );
-              },
-            ),
-          ],
+    return GridView.count(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: isWideScreen ? 24 : 16,
+      mainAxisSpacing: isWideScreen ? 24 : 16,
+      childAspectRatio: childAspectRatio,
+      children: [
+        _buildStatCard(
+          'Total\nPenjualan',
+          _totalPenjualan,
+          Icons.arrow_upward_rounded,
+          Color(0xFF4CAF50),
+          [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+          isWideScreen: isWideScreen,
+        ),
+        _buildStatCard(
+          'Total\nPembelian',
+          _totalPembelian,
+          Icons.arrow_downward_rounded,
+          Color(0xFFE53935),
+          [Color(0xFFFFEBEE), Color(0xFFFFCDD2)],
+          isWideScreen: isWideScreen,
+        ),
+        _buildStatCard(
+          'Jumlah\nTerjual',
+          ValueNotifier(_totalBarangTerjual.value.toDouble()),
+          Icons.inventory_2_rounded,
+          Color(0xFF1976D2),
+          [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+          isCount: true,
+          isWideScreen: isWideScreen,
+        ),
+        _buildProfitCard(isWideScreen),
+      ],
+    );
+  }
+
+  Widget _buildProfitCard(bool isWideScreen) {
+    return ValueListenableBuilder<double>(
+      valueListenable: _totalPenjualan,
+      builder: (context, penjualan, _) {
+        return ValueListenableBuilder<double>(
+          valueListenable: _totalPembelian,
+          builder: (context, pembelian, _) {
+            final profit = penjualan - pembelian;
+            return _buildStatCard(
+              'Profit',
+              ValueNotifier(profit),
+              profit >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+              profit >= 0 ? Color(0xFF9C27B0) : Color(0xFFFF7043),
+              profit >= 0 
+                  ? [Color(0xFFF3E5F5), Color(0xFFE1BEE7)]
+                  : [Color(0xFFFBE9E7), Color(0xFFFFCCBC)],
+              isWideScreen: isWideScreen,
+            );
+          },
         );
       },
     );
@@ -298,12 +298,13 @@ Widget _buildStatisticsCards() {
 
   Widget _buildStatCard(
     String title,
-    double value,
+    ValueNotifier<double> value,
     IconData icon,
     Color iconColor,
-    List<Color> gradientColors,
-    {bool isCount = false}
-  ) {
+    List<Color> gradientColors, {
+    bool isCount = false,
+    required bool isWideScreen,
+  }) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -311,68 +312,32 @@ Widget _buildStatisticsCards() {
           end: Alignment.bottomRight,
           colors: gradientColors,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isWideScreen ? 20 : 16),
         boxShadow: [
           BoxShadow(
             color: gradientColors[0].withOpacity(0.5),
-            blurRadius: 10,
+            blurRadius: isWideScreen ? 15 : 10,
             offset: Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
+        borderRadius: BorderRadius.circular(isWideScreen ? 20 : 16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(isWideScreen ? 20 : 16),
           onTap: () {},
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(isWideScreen ? 24 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Icon and Title Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: iconColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        icon,
-                        color: iconColor,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                ),
-                // Value
-                Text(
-                  isCount
-                      ? value.toInt().toString()
-                      : NumberFormat.currency(
-                          locale: 'id',
-                          symbol: 'Rp ',
-                          decimalDigits: 0,
-                        ).format(value),
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                _buildStatCardHeader(title, icon, iconColor, isWideScreen),
+                ValueListenableBuilder<double>(
+                  valueListenable: value,
+                  builder: (context, val, _) => 
+                      _buildStatCardValue(val, isCount, isWideScreen),
                 ),
               ],
             ),
@@ -382,223 +347,305 @@ Widget _buildStatisticsCards() {
     );
   }
 
-  Widget _buildPenjualanTab() {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _penjualanStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('Tidak ada data untuk bulan ini'));
-        }
-
-        final docs = snapshot.data!.docs;
-        _calculatePenjualanStats(docs);
-
-        final filteredDocs = docs.where((doc) {
-          final data = doc.data();
-          return data['tanggal'] != null && data['tanggal'].startsWith(_selectedMonth);
-        }).toList();
-
-        if (filteredDocs.isEmpty) {
-          return const Center(child: Text('Tidak ada data untuk bulan ini'));
-        }
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(8),
-          child: _buildTransactionList(filteredDocs, true),
-        );
-      },
-    );
-  }
-
-  Widget _buildPembelianTab() {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _pembelianStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('Tidak ada data untuk bulan ini'));
-        }
-
-        final docs = snapshot.data!.docs;
-        _calculatePembelianStats(docs);
-
-        final filteredDocs = docs.where((doc) {
-          final data = doc.data();
-          return data['Tanggal'] != null && data['Tanggal'].startsWith(_selectedMonth);
-        }).toList();
-
-        if (filteredDocs.isEmpty) {
-          return const Center(child: Text('Tidak ada data untuk bulan ini'));
-        }
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(8),
-          child: _buildTransactionList(filteredDocs, false),
-        );
-      },
-    );
-  }
-
- Widget _buildTransactionList(List<QueryDocumentSnapshot<Map<String, dynamic>>> documents, bool isPenjualan) {
-  return ListView.builder(
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    itemCount: documents.length,
-    itemBuilder: (context, index) {
-      final data = documents[index].data();
-      
-      // Data processing
-      final String title = isPenjualan ? data['namaBarang'] ?? '' : data['Name'] ?? '';
-      final int quantity = isPenjualan ? data['jumlah'] ?? 0 : data['Jumlah'] ?? 0;
-      final String unit = data['satuan'] ?? '';
-      final double price = isPenjualan 
-          ? (data['hargaJual']?.toDouble() ?? 0)
-          : (data['Price']?.toDouble() ?? 0);
-      final double total = isPenjualan 
-          ? (data['total']?.toDouble() ?? 0)
-          : ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0)).toDouble();
-      final String date = isPenjualan ? data['tanggal'] ?? '' : data['Tanggal'] ?? '';
-      
-      // Gradient colors based on transaction type
-      List<Color> typeGradient = isPenjualan 
-          ? [Color(0xFF00B07D), Color(0xFF00CA8E)]  // Green gradient for sales
-          : [Color(0xFFFF6B6B), Color(0xFFFF8E8E)]; // Red gradient for purchases
-          
-      IconData typeIcon = isPenjualan 
-          ? Icons.trending_up_rounded
-          : Icons.trending_down_rounded;
-
-      return Container(
-        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.grey.withOpacity(0.1),
-            width: 1,
+  Widget _buildStatCardHeader(String title, IconData icon, Color iconColor, bool isWideScreen) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: isWideScreen ? 16 : 14,
+            fontWeight: FontWeight.w500,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              spreadRadius: 0,
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: typeGradient,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    typeIcon,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        date,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: typeGradient.map((c) => c.withOpacity(0.15)).toList(),
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    isPenjualan ? 'Penjualan' : 'Pembelian',
-                    style: TextStyle(
-                      color: typeGradient[0],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+        Container(
+          padding: EdgeInsets.all(isWideScreen ? 10 : 8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(isWideScreen ? 14 : 12),
+          ),
+          child: Icon(
+            icon,
+            color: iconColor,
+            size: isWideScreen ? 24 : 20,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCardValue(double value, bool isCount, bool isWideScreen) {
+    return Text(
+      isCount
+          ? value.toInt().toString()
+          : NumberFormat.currency(
+              locale: 'id',
+              symbol: 'Rp ',
+              decimalDigits: 0,
+            ).format(value),
+      style: TextStyle(
+        color: Colors.black,
+        fontSize: isWideScreen ? 24 : 20,
+        fontWeight: FontWeight.bold,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200),
+        ),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        labelColor: const Color(0xFF080C67),
+        unselectedLabelColor: Colors.grey,
+        indicatorColor: const Color(0xFF080C67),
+        indicatorWeight: 3,
+        labelStyle: TextStyle(fontWeight: FontWeight.w600),
+        tabs: const [
+          Tab(text: 'Report Penjualan'),
+          Tab(text: 'Report Pembelian'),
+        ],
+      ),
+    );
+  }
+
+Widget _buildTabBarView(BoxConstraints constraints) {
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        _buildTransactionTab(_penjualanStream, true, constraints),
+        _buildTransactionTab(_pembelianStream, false, constraints),
+      ],
+    );
+  }
+
+  Widget _buildTransactionTab(
+    Stream<QuerySnapshot<Map<String, dynamic>>>? stream,
+    bool isPenjualan,
+    BoxConstraints constraints,
+  ) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Text(
+              'Tidak ada data untuk bulan ini',
+              style: TextStyle(
+                fontSize: constraints.maxWidth > 600 ? 16 : 14,
+                color: Colors.grey[600],
+              ),
             ),
-            SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    '$quantity $unit - ${NumberFormat.currency(
-                      locale: 'id',
-                      symbol: 'Rp ',
-                      decimalDigits: 0,
-                    ).format(price)}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ),
-                ShaderMask(
-                  shaderCallback: (bounds) => LinearGradient(
+          );
+        }
+
+        final docs = snapshot.data!.docs.where((doc) {
+          final data = doc.data();
+          final dateField = isPenjualan ? 'tanggal' : 'Tanggal';
+          return data[dateField] != null && 
+                 data[dateField].startsWith(_selectedMonth);
+        }).toList();
+
+        if (docs.isEmpty) {
+          return Center(
+            child: Text(
+              'Tidak ada data untuk bulan ini',
+              style: TextStyle(
+                fontSize: constraints.maxWidth > 600 ? 16 : 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          );
+        }
+
+        return _buildTransactionList(docs, isPenjualan, constraints);
+      },
+    );
+  }
+
+  Widget _buildTransactionList(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> documents,
+    bool isPenjualan,
+    BoxConstraints constraints,
+  ) {
+    final isWideScreen = constraints.maxWidth > 600;
+    final padding = isWideScreen ? 24.0 : 16.0;
+
+    return ListView.builder(
+      padding: EdgeInsets.all(padding),
+      itemCount: documents.length,
+      itemBuilder: (context, index) => 
+          _buildTransactionCard(documents[index], isPenjualan, isWideScreen),
+    );
+  }
+
+  Widget _buildTransactionCard(
+    QueryDocumentSnapshot<Map<String, dynamic>> document,
+    bool isPenjualan,
+    bool isWideScreen,
+  ) {
+    final data = document.data();
+    
+    // Data processing
+    final String title = isPenjualan ? data['namaBarang'] ?? '' : data['Name'] ?? '';
+    final int quantity = isPenjualan ? data['jumlah'] ?? 0 : data['Jumlah'] ?? 0;
+    final String unit = data['satuan'] ?? '';
+    final double price = isPenjualan 
+        ? (data['hargaJual']?.toDouble() ?? 0)
+        : (data['Price']?.toDouble() ?? 0);
+    final double total = isPenjualan 
+        ? (data['total']?.toDouble() ?? 0)
+        : ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0)).toDouble();
+    final String date = isPenjualan ? data['tanggal'] ?? '' : data['Tanggal'] ?? '';
+    
+    // Gradient colors based on transaction type
+    List<Color> typeGradient = isPenjualan 
+        ? [Color(0xFF00B07D), Color(0xFF00CA8E)]  // Green gradient for sales
+        : [Color(0xFFFF6B6B), Color(0xFFFF8E8E)]; // Red gradient for purchases
+        
+    IconData typeIcon = isPenjualan 
+        ? Icons.trending_up_rounded
+        : Icons.trending_down_rounded;
+
+    return Container(
+      margin: EdgeInsets.symmetric(
+        vertical: isWideScreen ? 12 : 8,
+        horizontal: isWideScreen ? 24 : 16
+      ),
+      padding: EdgeInsets.all(isWideScreen ? 20 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.1),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 0,
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isWideScreen ? 12 : 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
                     colors: typeGradient,
-                  ).createShader(bounds),
-                  child: Text(
-                    NumberFormat.currency(
-                      locale: 'id',
-                      symbol: 'Rp ',
-                      decimalDigits: 0,
-                    ).format(total),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  typeIcon,
+                  color: Colors.white,
+                  size: isWideScreen ? 24 : 20,
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: isWideScreen ? 18 : 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[800],
+                      ),
                     ),
+                    SizedBox(height: 4),
+                    Text(
+                      date,
+                      style: TextStyle(
+                        fontSize: isWideScreen ? 14 : 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isWideScreen ? 16 : 12,
+                  vertical: isWideScreen ? 8 : 6
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: typeGradient.map((c) => c.withOpacity(0.15)).toList(),
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isPenjualan ? 'Penjualan' : 'Pembelian',
+                  style: TextStyle(
+                    color: typeGradient[0],
+                    fontSize: isWideScreen ? 14 : 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-  
+              ),
+            ],
+          ),
+          SizedBox(height: isWideScreen ? 16 : 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '$quantity $unit - ${NumberFormat.currency(
+                    locale: 'id',
+                    symbol: 'Rp ',
+                    decimalDigits: 0,
+                  ).format(price)}',
+                  style: TextStyle(
+                    fontSize: isWideScreen ? 16 : 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: typeGradient,
+                ).createShader(bounds),
+                child: Text(
+                  NumberFormat.currency(
+                    locale: 'id',
+                    symbol: 'Rp ',
+                    decimalDigits: 0,
+                  ).format(total),
+                  style: TextStyle(
+                    fontSize: isWideScreen ? 18 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
