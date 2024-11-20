@@ -298,6 +298,7 @@
       );
     }
 
+
     Map<String, Map<String, dynamic>> _processBarangReference(
       List<QueryDocumentSnapshot> docs,
     ) {
@@ -313,25 +314,23 @@
       return result;
     }
 
-    Map<String, Map<String, dynamic>> _processCombinedData(
+  Map<String, Map<String, dynamic>> _processCombinedData(
   List<QueryDocumentSnapshot> barangDocs,
   List<QueryDocumentSnapshot> pembelianDocs,
   Map<String, Map<String, dynamic>> barangReference,
 ) {
   final combinedData = <String, Map<String, dynamic>>{};
   
-  // First process all barang docs
+  // 1. Proses data persediaan awal (Barang)
   for (var doc in barangDocs) {
     final data = doc.data() as Map<String, dynamic>;
     if (_isDocInSelectedMonth(data)) {
-      if (data['isFromPembelian'] != true) {
-        final key = '${doc.id}_${data["Tipe"] ?? "Default"}';
-        combinedData[key] = _createBarangEntry(doc.id, data);
-      }
+      final key = '${doc.id}_${data["Tipe"] ?? "Default"}';
+      combinedData[key] = _createBarangEntry(doc.id, data);
     }
   }
 
-  // Then process all pembelian docs
+  // 2. Proses pembelian (menambah stok)
   for (var doc in pembelianDocs) {
     final data = doc.data() as Map<String, dynamic>;
     if (_isDocInSelectedMonth(data)) {
@@ -339,11 +338,8 @@
       final key = '${barangId}_${data["Type"]}';
       
       if (combinedData.containsKey(key)) {
-        // Update existing entry
         combinedData[key]!["Jumlah"] = (combinedData[key]!["Jumlah"] as int) + (data["Jumlah"] as int);
-        combinedData[key]!["pembelianIds"] = [...(combinedData[key]!["pembelianIds"] ?? []), doc.id];
       } else {
-        // Create new entry
         combinedData[key] = {
           "id": barangId,
           "Name": data["Name"] ?? "N/A",
@@ -353,22 +349,50 @@
           "Tipe": data["Type"] ?? "Default",
           "isOriginal": false,
           "docId": doc.id,
-          "pembelianIds": [doc.id],
         };
       }
     }
   }
 
+  // 3. Proses penjualan (mengurangi stok) - Perbaikan utama di sini
+  FirebaseFirestore.instance
+      .collection("Users")
+      .doc(DatabaseMethods().currentUserId)
+      .collection("Penjualan")
+      .where('tanggal', isGreaterThanOrEqualTo: '${_selectedMonth}-01')
+      .where('tanggal', isLessThan: '${_getNextMonthString()}')
+      .get()
+      .then((penjualanSnapshot) {
+        for (var doc in penjualanSnapshot.docs) {
+          final data = doc.data();
+          final barangId = data["barangId"];
+          final tipe = data["tipe"];
+          final key = '${barangId}_$tipe';
+          
+          if (combinedData.containsKey(key)) {
+            final currentStock = combinedData[key]!["Jumlah"] as int;
+            final soldAmount = data["jumlah"] as int;
+            combinedData[key]!["Jumlah"] = currentStock - soldAmount;
+          }
+        }
+      });
+
   return combinedData;
 }
-    
-    bool _isDocInSelectedMonth(Map<String, dynamic> data) {
-      if (data.containsKey("Tanggal")) {
-        final docMonth = data["Tanggal"].substring(0, 7);
-        return docMonth == _selectedMonth;
-      }
-      return false;
-    }
+
+bool _isDocInSelectedMonth(Map<String, dynamic> data) {
+  final tanggal = data["Tanggal"] ?? data["tanggal"];
+  if (tanggal != null) {
+    return tanggal.startsWith(_selectedMonth);
+  }
+  return false;
+}
+
+String _getNextMonthString() {
+  final date = DateTime.parse('${_selectedMonth}-01');
+  final nextMonth = DateTime(date.year, date.month + 1, 1);
+  return DateFormat('yyyy-MM').format(nextMonth);
+}
 
     Map<String, dynamic> _createBarangEntry(String id, Map<String, dynamic> data) {
       return {
@@ -634,11 +658,6 @@
     print("Error in _updateJumlah: $e");
     throw e;
   }
-}
-String _getNextMonthString() {
-  final date = DateTime.parse('${_selectedMonth}-01');
-  final nextMonth = DateTime(date.year, date.month + 1, 1);
-  return DateFormat('yyyy-MM').format(nextMonth);
 }
   
   Future<void> _deleteBarang(Map<String, dynamic> data, String key) async {
