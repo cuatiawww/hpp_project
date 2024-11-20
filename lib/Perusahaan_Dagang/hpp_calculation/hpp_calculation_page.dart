@@ -1,4 +1,3 @@
-// hpp_calculation_page.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_model.dart';
@@ -64,169 +63,190 @@ Future<Map<String, dynamic>> _calculateStockValue(String startDate, String endDa
     double totalPembelian = 0;
     double persediaanAkhir = 0;
 
-    // 1. Hitung persediaan awal dari persediaan akhir bulan sebelumnya
-    final prevMonthDate = DateTime.parse(startDate).subtract(Duration(days: 1));
-    final prevMonthStr = DateFormat('yyyy-MM').format(prevMonthDate);
-    final prevMonthEndStr = DateFormat('yyyy-MM-dd').format(prevMonthDate);
+    final targetDate = DateTime.parse(startDate);
     
-    print('Getting previous month data: $prevMonthStr');
+    print('\n=== Debug Info ===');
+    print('Period Start: $startDate');
+    print('Period End: $endDate');
 
-    // Pertama, ambil data barang dari bulan sebelumnya
-    Map<String, Map<String, dynamic>> prevMonthStock = {};
-    
-    final prevBarangSnapshot = await _db
-        .collection("Users")
-        .doc(userId)
-        .collection("Barang")
-        .where('Tanggal', isLessThanOrEqualTo: prevMonthEndStr)
-        .orderBy('Tanggal', descending: true)
-        .get();
-
-    // Proses data barang
-    for (var doc in prevBarangSnapshot.docs) {
-      var data = doc.data();
-      String key = '${data['Name']}_${data['Tipe']}';
-      
-      if (!prevMonthStock.containsKey(key)) {
-        prevMonthStock[key] = {
-          'jumlah': data['Jumlah'] ?? 0,
-          'price': data['Price'] ?? 0,
-        };
-      }
-    }
-
-    // Tambahkan pembelian bulan sebelumnya
-    final prevPembelianSnapshot = await _db
-        .collection("Users")
-        .doc(userId)
-        .collection("Pembelian")
-        .where('Tanggal', isGreaterThanOrEqualTo: '$prevMonthStr-01')
-        .where('Tanggal', isLessThanOrEqualTo: prevMonthEndStr)
-        .get();
-
-    for (var doc in prevPembelianSnapshot.docs) {
-      var data = doc.data();
-      String key = '${data['Name']}_${data['Type']}';
-      
-      if (prevMonthStock.containsKey(key)) {
-        var currentStock = prevMonthStock[key]!;
-        int newJumlah = currentStock['jumlah'] + (data['Jumlah'] ?? 0);
-        double newPrice = ((currentStock['jumlah'] * currentStock['price']) + 
-                       ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0))) / newJumlah;
-        
-        prevMonthStock[key]!['jumlah'] = newJumlah;
-        prevMonthStock[key]!['price'] = newPrice;
-      } else {
-        prevMonthStock[key] = {
-          'jumlah': data['Jumlah'] ?? 0,
-          'price': data['Price'] ?? 0,
-        };
-      }
-    }
-
-    // Kurangi penjualan bulan sebelumnya
-    final prevPenjualanSnapshot = await _db
-        .collection("Users")
-        .doc(userId)
-        .collection("Penjualan")
-        .where('tanggal', isGreaterThanOrEqualTo: '$prevMonthStr-01')
-        .where('tanggal', isLessThanOrEqualTo: prevMonthEndStr)
-        .get();
-
-    for (var doc in prevPenjualanSnapshot.docs) {
-      var data = doc.data();
-      String key = '${data['namaBarang']}_${data['tipe']}';
-      
-      if (prevMonthStock.containsKey(key)) {
-        prevMonthStock[key]!['jumlah'] -= (data['jumlah'] ?? 0);
-      }
-    }
-
-    // Sisa stok bulan sebelumnya menjadi persediaan awal bulan ini
-    for (var stock in prevMonthStock.values) {
-      if (stock['jumlah'] > 0) {
-        persediaanAwal += stock['jumlah'] * stock['price'];
-      }
-    }
-
-    print('Persediaan Awal (from prev month): $persediaanAwal');
-
-    // 2. Hitung pembelian dalam periode ini
+    // 1. Ambil semua pembelian di periode ini untuk identifikasi
     final pembelianSnapshot = await _db
         .collection("Users")
         .doc(userId)
         .collection("Pembelian")
         .where('Tanggal', isGreaterThanOrEqualTo: startDate)
         .where('Tanggal', isLessThanOrEqualTo: endDate)
+        .orderBy('Tanggal')
         .get();
 
-    Map<String, Map<String, dynamic>> currentStock = Map.from(prevMonthStock);
-
-    // Tambahkan pembelian ke stok
+    // Kumpulkan tanggal pembelian pertama untuk setiap barang
+    Map<String, DateTime> firstPurchaseDates = {};
     for (var doc in pembelianSnapshot.docs) {
-      var data = doc.data();
-      String key = '${data['Name']}_${data['Type']}';
-      int jumlahBeli = data['Jumlah'] ?? 0;
-      double hargaBeli = (data['Price'] ?? 0).toDouble();
-      
-      totalPembelian += jumlahBeli * hargaBeli;
-
-      if (currentStock.containsKey(key)) {
-        var stock = currentStock[key]!;
-        int newJumlah = stock['jumlah'] + jumlahBeli;
-        double newPrice = ((stock['jumlah'] * stock['price']) + 
-                       (jumlahBeli * hargaBeli)) / newJumlah;
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Type']}';
+        DateTime purchaseDate = DateTime.parse(data['Tanggal']);
         
-        currentStock[key]!['jumlah'] = newJumlah;
-        currentStock[key]!['price'] = newPrice;
-      } else {
-        currentStock[key] = {
-          'jumlah': jumlahBeli,
-          'price': hargaBeli,
-        };
-      }
+        if (!firstPurchaseDates.containsKey(key) || 
+            purchaseDate.isBefore(firstPurchaseDates[key]!)) {
+            firstPurchaseDates[key] = purchaseDate;
+        }
     }
 
-    // 3. Kurangi penjualan periode ini
+    // 2. Hitung persediaan awal
+    final barangSnapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Barang")
+        .get();
+
+    Map<String, Map<String, dynamic>> stockAtStartOfMonth = {};
+
+    // Proses semua barang
+    for (var doc in barangSnapshot.docs) {
+        var data = doc.data();
+        String tanggalBarang = data['Tanggal'] ?? '';
+        String key = '${data['Name']}_${data['Tipe']}';
+        
+        // Cek apakah ini input awal atau pembelian
+        bool isPembelian = data['isFromPembelian'] ?? false;
+        
+        // Jika barang ini adalah input awal (bukan dari pembelian)
+        // ATAU jika tanggalnya sebelum pembelian pertama barang tersebut
+        if (!isPembelian || (firstPurchaseDates[key] == null || 
+            tanggalBarang.compareTo(DateFormat('yyyy-MM-dd').format(firstPurchaseDates[key]!)) < 0)) {
+            
+            int jumlah = (data['Jumlah'] as num?)?.toInt() ?? 0;
+            double harga = (data['Price'] as num?)?.toDouble() ?? 0;
+            
+            print('\nProcessing initial stock:');
+            print('Item: $key');
+            print('Date: $tanggalBarang');
+            print('Quantity: $jumlah');
+            print('Price: $harga');
+            print('Is from purchase: $isPembelian');
+            
+            if (!stockAtStartOfMonth.containsKey(key)) {
+                stockAtStartOfMonth[key] = {
+                    'jumlah': jumlah,
+                    'harga': harga,
+                };
+            } else {
+                // Update dengan metode average
+                var currentStock = stockAtStartOfMonth[key]!;
+                int totalJumlah = currentStock['jumlah'] + jumlah;
+                double totalNilai = (currentStock['jumlah'] * currentStock['harga']) + (jumlah * harga);
+                double avgHarga = totalJumlah > 0 ? totalNilai / totalJumlah : harga;
+                
+                stockAtStartOfMonth[key] = {
+                    'jumlah': totalJumlah,
+                    'harga': avgHarga,
+                };
+            }
+        }
+    }
+
+    // Kurangi dengan penjualan yang terjadi sebelum pembelian pertama
     final penjualanSnapshot = await _db
         .collection("Users")
         .doc(userId)
         .collection("Penjualan")
         .where('tanggal', isGreaterThanOrEqualTo: startDate)
         .where('tanggal', isLessThanOrEqualTo: endDate)
+        .orderBy('tanggal')
         .get();
 
     for (var doc in penjualanSnapshot.docs) {
-      var data = doc.data();
-      String key = '${data['namaBarang']}_${data['tipe']}';
-      
-      if (currentStock.containsKey(key)) {
-        currentStock[key]!['jumlah'] -= (data['jumlah'] ?? 0);
-      }
+        var data = doc.data();
+        String key = '${data['namaBarang']}_${data['tipe']}';
+        DateTime saleDate = DateTime.parse(data['tanggal']);
+        
+        // Hanya kurangi jika penjualan terjadi sebelum pembelian pertama
+        if (firstPurchaseDates[key] == null || 
+            saleDate.isBefore(firstPurchaseDates[key]!)) {
+            if (stockAtStartOfMonth.containsKey(key)) {
+                int soldAmount = (data['jumlah'] ?? 0) as int;
+                stockAtStartOfMonth[key]!['jumlah'] -= soldAmount;
+            }
+        }
+    }
+
+    // Hitung total persediaan awal
+    for (var entry in stockAtStartOfMonth.entries) {
+        var stock = entry.value;
+        if (stock['jumlah'] > 0) {
+            double nilai = stock['jumlah'] * stock['harga'];
+            persediaanAwal += nilai;
+            
+            print('\nPersediaan Awal Detail:');
+            print('Item: ${entry.key}');
+            print('Quantity: ${stock['jumlah']}');
+            print('Price: ${stock['harga']}');
+            print('Total Value: $nilai');
+        }
+    }
+
+    // 3. Hitung pembelian dalam periode
+    for (var doc in pembelianSnapshot.docs) {
+        var data = doc.data();
+        int jumlah = (data['Jumlah'] ?? 0) as int;
+        double harga = (data['Price'] ?? 0).toDouble();
+        totalPembelian += jumlah * harga;
     }
 
     // 4. Hitung persediaan akhir
-    for (var stock in currentStock.values) {
-      if (stock['jumlah'] > 0) {
-        persediaanAkhir += stock['jumlah'] * stock['price'];
-      }
+    Map<String, Map<String, dynamic>> finalStock = Map.from(stockAtStartOfMonth);
+
+    // Tambahkan pembelian ke stok akhir
+    for (var doc in pembelianSnapshot.docs) {
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Type']}';
+        int jumlah = (data['Jumlah'] ?? 0) as int;
+        double harga = (data['Price'] ?? 0).toDouble();
+
+        if (finalStock.containsKey(key)) {
+            var current = finalStock[key]!;
+            int newTotal = current['jumlah'] + jumlah;
+            double newAvg = ((current['jumlah'] * current['harga']) + (jumlah * harga)) / newTotal;
+            finalStock[key] = {'jumlah': newTotal, 'harga': newAvg};
+        } else {
+            finalStock[key] = {'jumlah': jumlah, 'harga': harga};
+        }
     }
 
-    print('Calculation Results:');
+    // Kurangi semua penjualan dalam periode
+    for (var doc in penjualanSnapshot.docs) {
+        var data = doc.data();
+        String key = '${data['namaBarang']}_${data['tipe']}';
+        if (finalStock.containsKey(key)) {
+            int soldAmount = (data['jumlah'] ?? 0) as int;
+            finalStock[key]!['jumlah'] -= soldAmount;
+        }
+    }
+
+    // Hitung total persediaan akhir
+    for (var stock in finalStock.values) {
+        if (stock['jumlah'] > 0) {
+            persediaanAkhir += stock['jumlah'] * stock['harga'];
+        }
+    }
+
+    print('\n=== Hasil Perhitungan ===');
     print('Persediaan Awal: $persediaanAwal');
     print('Total Pembelian: $totalPembelian');
     print('Persediaan Akhir: $persediaanAkhir');
 
     return {
-      'persediaan_awal': persediaanAwal,
-      'pembelian': totalPembelian,
-      'persediaan_akhir': persediaanAkhir
+        'persediaan_awal': persediaanAwal,
+        'pembelian': totalPembelian,
+        'persediaan_akhir': persediaanAkhir
     };
-  } catch (e) {
-    print('Error in _calculateStockValue: $e');
+  } catch (e, stackTrace) {
+    print('ERROR in _calculateStockValue: $e');
+    print('Stack trace: $stackTrace');
     rethrow;
   }
 }
+
 Future<void> _calculateHPP() async {
   setState(() => _isLoading = true);
   
@@ -292,6 +312,8 @@ Future<void> _calculateHPP() async {
     _showError('Error menghitung HPP: $e');
   }
 }
+  
+  
   Widget _buildPeriodSelection() {
     return Container(
       padding: const EdgeInsets.all(24),
