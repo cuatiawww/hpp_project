@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
+import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -14,6 +18,7 @@ class ReportPersediaanPage extends StatefulWidget {
 }
 
 class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
+  late DataUsahaController dataUsahaC;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final auth = FirebaseAuth.instance;
   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
@@ -29,6 +34,12 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
   @override
   void initState() {
     super.initState();
+    dataUsahaC = Get.put(DataUsahaController(uid: DatabaseMethods().currentUserId));
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await dataUsahaC.fetchDataUsaha(DatabaseMethods().currentUserId); // Load nama usaha
     _generateMonths();
     _fetchData();
   }
@@ -76,60 +87,85 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
 
   //GENERATE TO PDF
 
-  Future<void> _generatePDF() async {
-    setState(() => _isLoading = true);
-    try {
-      final pdf = pw.Document();
+Future<void> _generatePDF() async {
+  setState(() => _isLoading = true);
+  try {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.nunitoRegular();
+    final fontBold = await PdfGoogleFonts.nunitoBold();
 
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4.landscape,
-          build: (pw.Context context) {
-            return pw.Column(
-              children: [
-                pw.Center(
-                  child: pw.Text(
-                    'Laporan Persediaan',
-                    style: pw.TextStyle(
-                      fontSize: 20,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Center(
-                  child: pw.Text(
-                    'Periode: ${DateFormat('MMMM yyyy').format(DateTime.parse('$_selectedMonth-01'))}',
-                    style: pw.TextStyle(fontSize: 14),
-                  ),
-                ),
-                pw.SizedBox(height: 20),
-                _buildPDFTable(),
-              ],
-            );
-          },
-        ),
-      );
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: pw.EdgeInsets.all(40),
+        build: (context) {
+          return pw.Column(
+            children: [
+              _buildPDFHeader(font, fontBold),
+              pw.SizedBox(height: 20),
+              _buildPDFTable(font),
+            ],
+          );
+        },
+      ),
+    );
 
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) => pdf.save(),
+    await Printing.layoutPdf(
+      onLayout: (format) => pdf.save(),
+    );
+  } catch (e) {
+    print('Error generating PDF: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating PDF: $e')),
       );
-    } catch (e) {
-      print('Error generating PDF: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating PDF: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
+
+pw.Widget _buildPDFHeader(pw.Font font, pw.Font fontBold) {
+  return pw.Center(
+    child: pw.Column(
+      children: [
+        pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(
+                text: 'Laporan ',
+                style: pw.TextStyle(font: fontBold, fontSize: 24),
+              ),
+              pw.TextSpan(
+                text: 'Persediaan',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 24,
+                  color: PdfColor.fromHex('#4F46E5'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          dataUsahaC.namaUsaha.value,
+          style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey800),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'Periode: ${DateFormat('MMMM yyyy').format(DateTime.parse('$_selectedMonth-01'))}',
+          style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600),
+        ),
+      ],
+    ),
+  );
+}
 
   // PDF Table Building
-pw.Widget _buildPDFTable() {
+pw.Widget _buildPDFTable(pw.Font font) {
   Set<String> allItems = {
     ...persAwalData.keys,
     ...pembelianData.keys,
@@ -137,139 +173,272 @@ pw.Widget _buildPDFTable() {
     ...persAkhirData.keys,
   };
 
-  return pw.Table(
-    border: pw.TableBorder.all(),
-    columnWidths: const {
-      0: pw.FixedColumnWidth(40),    // No
-      1: pw.FixedColumnWidth(150),   // Nama Barang
-      2: pw.FixedColumnWidth(270),   // P.Awal (merged)
-      3: pw.FixedColumnWidth(270),   // Pembelian (merged)
-      4: pw.FixedColumnWidth(270),   // Penjualan (merged)
-      5: pw.FixedColumnWidth(270),   // Persediaan Akhir (merged)
-    },
-    children: [
-      // Header Row 1
-      pw.TableRow(
-        decoration: pw.BoxDecoration(color: PdfColors.grey200),
-        children: [
-          _buildPDFHeaderCell('No'),
-          _buildPDFHeaderCell('Nama\nBarang'),
-          _buildPDFHeaderCell('P.Awal'),
-          _buildPDFHeaderCell('Pembelian'),
-          _buildPDFHeaderCell('Penjualan'),
-          _buildPDFHeaderCell('Persediaan\nAkhir'),
-        ],
-      ),
-      // Header Row 2
-      pw.TableRow(
-        decoration: pw.BoxDecoration(color: PdfColors.grey200),
-        children: [
-          pw.Container(), // Empty for No
-          pw.Container(), // Empty for Nama Barang
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+  return pw.Container(
+    decoration: pw.BoxDecoration(
+      border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+    ),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        // Main Headers
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#EEF2FF'),
+            border: pw.Border(
+              bottom: pw.BorderSide(color: PdfColor.fromHex('#080C67'), width: 1),
+            ),
+          ),
+          child: pw.Row(
             children: [
-              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
-              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
-              pw.Expanded(child: _buildPDFHeaderCell('Total')),
+              pw.Expanded(flex: 1, child: _buildHeaderCell('No', font)),
+              pw.Expanded(flex: 3, child: _buildHeaderCell('Nama Barang', font)),
+              pw.Expanded(flex: 4, child: _buildHeaderCell('P.Awal', font)),
+              pw.Expanded(flex: 4, child: _buildHeaderCell('Pembelian', font)),
+              pw.Expanded(flex: 4, child: _buildHeaderCell('Penjualan', font)),
+              pw.Expanded(flex: 4, child: _buildHeaderCell('Persediaan Akhir', font)),
             ],
           ),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-            children: [
-              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
-              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
-              pw.Expanded(child: _buildPDFHeaderCell('Total')),
-            ],
-          ),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-            children: [
-              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
-              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
-              pw.Expanded(child: _buildPDFHeaderCell('Total')),
-            ],
-          ),
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-            children: [
-              pw.Expanded(child: _buildPDFHeaderCell('Unit')),
-              pw.Expanded(child: _buildPDFHeaderCell('Harga')),
-              pw.Expanded(child: _buildPDFHeaderCell('Total')),
-            ],
-          ),
-        ],
-      ),
-      // Data Rows
-      ...allItems.toList().asMap().entries.map((entry) {
-        final index = entry.key;
-        final itemKey = entry.value;
-        final persAwal = persAwalData[itemKey] ?? {};
-        final pembelian = pembelianData[itemKey] ?? {};
-        final penjualan = penjualanData[itemKey] ?? {};
-        final persAkhir = persAkhirData[itemKey] ?? {};
+        ),
 
-        return pw.TableRow(
-          children: [
-    _buildPDFCell('${index + 1}'),
-    _buildPDFCell(_formatNameWithType(
-      persAwal['name'] ?? pembelian['name'] ?? '',
-      persAwal['tipe'] ?? pembelian['tipe'] ?? ''
-    )),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-              children: [
-                pw.Expanded(child: _buildPDFCell(persAwal['jumlah']?.toString() ?? '0')),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency(persAwal['price'] ?? 0))),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency((persAwal['jumlah'] ?? 0) * (persAwal['price'] ?? 0)))),
-              ],
-            ),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-              children: [
-                pw.Expanded(child: _buildPDFCell(pembelian['jumlah']?.toString() ?? '0')),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency(pembelian['price'] ?? 0))),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency((pembelian['jumlah'] ?? 0) * (pembelian['price'] ?? 0)))),
-              ],
-            ),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-              children: [
-                pw.Expanded(child: _buildPDFCell(penjualan['jumlah']?.toString() ?? '0')),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency(penjualan['price'] ?? 0))),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency((penjualan['jumlah'] ?? 0) * (penjualan['price'] ?? 0)))),
-              ],
-            ),
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
-              children: [
-                pw.Expanded(child: _buildPDFCell(persAkhir['jumlah']?.toString() ?? '0')),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency(persAkhir['price'] ?? 0))),
-                pw.Expanded(child: _buildPDFCell(_formatCurrency((persAkhir['jumlah'] ?? 0) * (persAkhir['price'] ?? 0)))),
-              ],
-            ),
-          ],
-        );
-      }).toList(),
-    ],
+        // Sub Headers
+        pw.Container(
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#EEF2FF'),
+          ),
+          child: pw.Row(
+            children: [
+              pw.Expanded(flex: 1, child: pw.Container()),
+              pw.Expanded(flex: 3, child: pw.Container()),
+              ...List.generate(4, (index) => pw.Expanded(
+                flex: 4,
+                child: pw.Row(
+                  children: [
+                    pw.Expanded(child: _buildHeaderCell('Unit', font)),
+                    pw.Expanded(child: _buildHeaderCell('Harga', font)),
+                    pw.Expanded(child: _buildHeaderCell('Total', font)),
+                  ],
+                ),
+              )),
+            ],
+          ),
+        ),
+
+        // Data Rows
+        ...allItems.toList().asMap().entries.map((entry) {
+          final index = entry.key;
+          final itemKey = entry.value;
+          return _buildDataRow(
+            index + 1,
+            itemKey,
+            font,
+            backgroundColor: index % 2 == 0 ? null : PdfColor.fromHex('#F8FAFC'),
+          );
+        }),
+
+        // Totals Row
+        _buildTotalRow(font),
+      ],
+    ),
   );
 }
 
-pw.Widget _buildPDFHeaderCell(String text) {
+pw.Widget _buildTotalRow(pw.Font font) {
+  // Hitung total untuk setiap kategori
+  double totalPersAwal = 0;
+  double totalPembelian = 0;
+  double totalPenjualan = 0;
+  double totalPersAkhir = 0;
+
+  // Hitung total persediaan awal
+  persAwalData.forEach((key, data) {
+    totalPersAwal += (data['jumlah'] ?? 0) * (data['price'] ?? 0);
+  });
+
+  // Hitung total pembelian
+  pembelianData.forEach((key, data) {
+    totalPembelian += (data['jumlah'] ?? 0) * (data['price'] ?? 0);
+  });
+
+  // Hitung total penjualan
+  penjualanData.forEach((key, data) {
+    totalPenjualan += (data['jumlah'] ?? 0) * (data['price'] ?? 0);
+  });
+
+  // Hitung total persediaan akhir
+  persAkhirData.forEach((key, data) {
+    totalPersAkhir += (data['jumlah'] ?? 0) * (data['price'] ?? 0);
+  });
+
   return pw.Container(
-    padding: const pw.EdgeInsets.all(5),
+    decoration: pw.BoxDecoration(
+      color: PdfColor.fromHex('#EEF2FF'),
+      border: pw.Border(
+        top: pw.BorderSide(color: PdfColor.fromHex('#080C67'), width: 1),
+      ),
+    ),
+    child: pw.Row(
+      children: [
+        pw.Expanded(
+          flex: 1,
+          child: pw.Container(),
+        ),
+        pw.Expanded(
+          flex: 3,
+          child: pw.Container(
+            padding: const pw.EdgeInsets.all(8),
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(
+              'TOTAL',
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromHex('#080C67'),
+              ),
+            ),
+          ),
+        ),
+        _buildTotalSection(totalPersAwal, font),
+        _buildTotalSection(totalPembelian, font),
+        _buildTotalSection(totalPenjualan, font),
+        _buildTotalSection(totalPersAkhir, font),
+      ],
+    ),
+  );
+}
+
+pw.Widget _buildTotalSection(double total, pw.Font font) {
+  return pw.Expanded(
+    flex: 4,
+    child: pw.Row(
+      children: [
+        pw.Expanded(child: pw.Container()),
+        pw.Expanded(child: pw.Container()),
+        pw.Expanded(
+          child: pw.Container(
+            padding: const pw.EdgeInsets.all(8),
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(
+              _formatCurrency(total),
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromHex('#080C67'),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+pw.Widget _buildDataRow(
+  int index,
+  String itemKey,
+  pw.Font font, {
+  PdfColor? backgroundColor,
+}) {
+  final persAwal = persAwalData[itemKey] ?? {};
+  final pembelian = pembelianData[itemKey] ?? {};
+  final penjualan = penjualanData[itemKey] ?? {};
+  final persAkhir = persAkhirData[itemKey] ?? {};
+
+  return pw.Container(
+    decoration: pw.BoxDecoration(
+      color: backgroundColor,
+    ),
+    child: pw.Row(
+      children: [
+        // No
+        pw.Expanded(
+          flex: 1,
+          child: _buildCell(index.toString(), font, alignment: pw.TextAlign.center),
+        ),
+        // Nama Barang
+        pw.Expanded(
+          flex: 3,
+          child: _buildCell(
+            _formatNameWithType(
+              persAwal['name'] ?? pembelian['name'] ?? '',
+              persAwal['tipe'] ?? pembelian['tipe'] ?? ''
+            ),
+            font,
+            alignment: pw.TextAlign.left,
+          ),
+        ),
+        // Persediaan Awal
+        _buildDetailSection(persAwal, font),
+        // Pembelian
+        _buildDetailSection(pembelian, font),
+        // Penjualan
+        _buildDetailSection(penjualan, font),
+        // Persediaan Akhir
+        _buildDetailSection(persAkhir, font),
+      ],
+    ),
+  );
+}
+
+pw.Widget _buildDetailSection(Map<String, dynamic> data, pw.Font font) {
+  final jumlah = data['jumlah'] ?? 0;
+  final harga = data['price'] ?? 0;
+  final total = jumlah * harga;
+
+  return pw.Expanded(
+    flex: 4,
+    child: pw.Row(
+      children: [
+        pw.Expanded(
+          child: _buildCell(jumlah.toString(), font, alignment: pw.TextAlign.right),
+        ),
+        pw.Expanded(
+          child: _buildCell(_formatCurrency(harga), font, alignment: pw.TextAlign.right),
+        ),
+        pw.Expanded(
+          child: _buildCell(_formatCurrency(total), font, alignment: pw.TextAlign.right),
+        ),
+      ],
+    ),
+  );
+}
+
+pw.Widget _buildCell(
+  String text,
+  pw.Font font, {
+  pw.TextAlign alignment = pw.TextAlign.center,
+}) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        font: font,
+        fontSize: 9,
+      ),
+      textAlign: alignment,
+    ),
+  );
+}
+
+pw.Widget _buildHeaderCell(String text, pw.Font font) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.symmetric(vertical: 10, horizontal: 8),
     alignment: pw.Alignment.center,
     child: pw.Text(
       text,
       style: pw.TextStyle(
+        font: font,
         fontSize: 10,
         fontWeight: pw.FontWeight.bold,
+        color: PdfColor.fromHex('#080C67'),
       ),
       textAlign: pw.TextAlign.center,
     ),
   );
 }
-
 pw.Widget _buildPDFCell(String text) {
   return pw.Container(
     padding: const pw.EdgeInsets.all(5),
