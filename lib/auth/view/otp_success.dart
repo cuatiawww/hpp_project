@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hpp_project/auth/view/login.dart';
+import 'package:hpp_project/routes/routes.dart';
 
 class OtpSuccess extends StatelessWidget {
   const OtpSuccess({super.key});
@@ -74,8 +76,7 @@ class OtpSuccess extends StatelessWidget {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.pushReplacement(context,
-                          MaterialPageRoute(builder: (context) => LoginPage()));
+                      Get.toNamed(Routes.infoScreen);
                     },
                     child: Text(
                       style: TextStyle(

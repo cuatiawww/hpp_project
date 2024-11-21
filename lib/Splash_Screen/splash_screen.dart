@@ -1,25 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final VoidCallback onComplete; // Fungsi callback setelah splash selesai.
+
+  const SplashScreen({super.key, required this.onComplete});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> 
-  with TickerProviderStateMixin {
-
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-
-    Future.delayed(const Duration(seconds: 2), () {
-      Get.toNamed('/onboarding');
-    });
+    
+    // Timer untuk menjalankan fungsi callback setelah splash selesai.
+    Future.delayed(const Duration(seconds: 2), widget.onComplete);
   }
 
   @override
@@ -43,16 +41,16 @@ class _SplashScreenState extends State<SplashScreen>
             end: Alignment.bottomRight,
           ),
         ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/logo-splash.png',
-                width: 250,
-                height: 250,
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/logo-splash.png',
+              width: 250,
+              height: 250,
+            ),
+          ],
+        ),
       ),
     );
   }

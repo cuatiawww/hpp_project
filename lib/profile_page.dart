@@ -1,11 +1,18 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/controllers/data_pribadi_controller.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
+import 'package:hpp_project/routes/routes.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'dart:io';
+
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -15,7 +22,10 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool isEditing = false;
   bool isSaving = false;
-  int _selectedIndex = 2; // Index untuk tab Akun
+
+  String? avatarBase64; // Menyimpan avatar Base64 pengguna
+  final picker = ImagePicker(); // Untuk memilih gambar
+  
   final authC = Get.find<AuthController>();
   final String currentUserUid = FirebaseAuth.instance.currentUser!.uid;
 
@@ -70,10 +80,37 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       }
     });
-
+    validateAndLoadAvatar();
     loadUserData();
   }
 
+  // Validasi UID di Firestore dan memuat avatar
+  Future<void> validateAndLoadAvatar() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('Users')
+        .doc(currentUserUid)
+        .get();
+
+    if (userDoc.exists) {
+      // Ambil avatar dari SharedPreferences
+      final storedAvatar = prefs.getString('avatar_$currentUserUid');
+      setState(() {
+        avatarBase64 = storedAvatar; // Set avatar untuk ditampilkan
+      });
+    } else {
+      // Jika UID tidak ditemukan, logout pengguna
+      Get.offAllNamed(Routes.login);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('UID pengguna tidak valid!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Memuat data pengguna dari Firestore
   Future<void> loadUserData() async {
     await dataPribadiC.fetchDataPribadi(currentUserUid);
     await dataUsahaC.fetchDataUsaha(currentUserUid);
@@ -102,6 +139,34 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() {
         tanggalLahirController.text = DateFormat('dd-MM-yyyy').format(picked);
       });
+    }
+  }
+
+  // Menyimpan avatar ke SharedPreferences
+  Future<void> saveAvatar(String base64Image) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('avatar_$currentUserUid', base64Image);
+    setState(() {
+      avatarBase64 = base64Image;
+    });
+  }
+
+  // Fungsi untuk memilih dan menyimpan avatar
+  Future<void> _pickAndSaveAvatar() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final imageFile = File(pickedFile.path);
+      final bytes = await imageFile.readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      await saveAvatar(base64Image);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Avatar berhasil diperbarui!'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -235,9 +300,35 @@ class _ProfilePageState extends State<ProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Center(
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundImage: AssetImage('assets/images/profile.jpg'),
+                    child: GestureDetector(
+                      onTap: isEditing 
+                      ? _pickAndSaveAvatar
+                      : null,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 50,
+                            backgroundImage: avatarBase64 != null
+                            ? MemoryImage(base64Decode(avatarBase64!))
+                            : AssetImage('assets/images/default_avatar.png') as ImageProvider, // Avatar Default
+                          ),
+                        if (isEditing)
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.white,
+                              child: Icon(
+                                Icons.camera_alt,
+                                color: Colors.grey[800],
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   SizedBox(height: 16),
@@ -281,7 +372,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 36, vertical: 10),
+                        padding: EdgeInsets.symmetric(horizontal: 36, vertical: 13),
                       ),
                       child: isSaving
                         ? SizedBox(
@@ -343,7 +434,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 70, vertical: 12),
+                        padding: EdgeInsets.symmetric(horizontal: 70, vertical: 13),
                       ),
                       child: Text('LOGOUT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
@@ -355,7 +446,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
-
     );
   }
 

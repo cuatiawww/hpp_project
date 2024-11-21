@@ -2,28 +2,44 @@
     <!-- Add Storage Permissions -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
     
     <application
         android:label="HPP Apps"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:requestLegacyExternalStorage="true">
+        <!-- Konfigurasi Dynamic Links Domain -->
+        <meta-data
+            android:name="com.google.firebase.dynamiclinks.firebase_domain"
+            android:value="https://hpptaxcenter.page.link" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
-            android:theme="@style/Theme.App.Transparent"
+            android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+              android:name="io.flutter.embedding.android.NormalTheme" 
+              android:resource="@style/NormalTheme" 
+              /> <!-- Theme setelah splash screen -->
+            <!-- Intent Filter untuk Launch -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            
+            <!-- Intent Filter untuk Dynamic Links -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:host="hpptaxcenter.page.link"
+                    android:scheme="https"/>
             </intent-filter>
         </activity>
         <meta-data

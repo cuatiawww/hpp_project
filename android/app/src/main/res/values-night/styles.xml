@@ -4,12 +4,13 @@
     <style name="LaunchTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Set to transparent to remove the splash screen background -->
         <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
     </style>
 
     <!-- Theme applied to the Android Window as soon as the process has started in dark mode -->
-    <style name="Theme.App.Transparent" parent="Theme.AppCompat.Light.NoActionBar">
-        <item name="android:windowIsTranslucent">true</item>
+    <style name="NormalTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowNoTitle">true</item>
-        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowFullscreen">false</item>
     </style>
 </resources>
