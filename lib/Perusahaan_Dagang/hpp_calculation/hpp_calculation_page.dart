@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_model.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_widgets.dart';
 import 'package:hpp_project/service/database.dart';
@@ -9,6 +13,7 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 
+
 class HPPCalculationPage extends StatefulWidget {
   const HPPCalculationPage({super.key});
 
@@ -17,6 +22,7 @@ class HPPCalculationPage extends StatefulWidget {
 }
 
 class _HPPCalculationPageState extends State<HPPCalculationPage> {
+  late final DataUsahaController dataUsahaC;  
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   late HPPData _hppData = HPPData.empty();
   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
@@ -36,11 +42,17 @@ class _HPPCalculationPageState extends State<HPPCalculationPage> {
   );
 
   @override
-  void initState() {
-    super.initState();
-    _generateMonths();
-    _calculateHPP();
-  }
+void initState() {
+  super.initState();
+  dataUsahaC = Get.put(DataUsahaController(uid: DatabaseMethods().currentUserId));
+  _loadInitialData();
+}
+
+Future<void> _loadInitialData() async {
+  await dataUsahaC.fetchDataUsaha(DatabaseMethods().currentUserId); // Tambahkan ini
+  _generateMonths();
+  _calculateHPP();
+}
 
   void _generateMonths() {
     final now = DateTime.now();
@@ -55,6 +67,8 @@ class _HPPCalculationPageState extends State<HPPCalculationPage> {
     final endDate = DateTime(startDate.year, startDate.month + 1, 0);
     return '${DateFormat('d MMMM').format(startDate)} - ${DateFormat('d MMMM yyyy').format(endDate)}';
   }
+
+  
 
 Future<Map<String, dynamic>> _calculateStockValue(String startDate, String endDate) async {
   try {
@@ -593,102 +607,681 @@ Future<void> _calculateHPP() async {
     );
   }
 
-  Future<void> _generateAndPrintPDF() async {
-    try {
-      final pdf = pw.Document();
+Future<void> _generateAndPrintPDF() async {
+  try {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.nunitoRegular();
+    final fontBold = await PdfGoogleFonts.nunitoBold();
+    final userId = DatabaseMethods().currentUserId;
 
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          build: (context) {
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Header(
-                  level: 0,
-                  child: pw.Text(
-                    'Laporan Perhitungan HPP',
-                    style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Periode: ${DateFormat('MMMM yyyy').format(DateTime.parse(_hppData.startDate))}',
-                  style: const pw.TextStyle(fontSize: 16),
-                ),
-                pw.Text(
-                  'Tanggal: ${DateFormat('d MMMM').format(DateTime.parse(_hppData.startDate))} - ${DateFormat('d MMMM yyyy').format(DateTime.parse(_hppData.endDate))}',
-                  style: const pw.TextStyle(fontSize: 16),
-                ),
-                pw.SizedBox(height: 20),
-                _buildPDFContent(),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  'Dicetak pada: ${DateFormat('dd MMMM yyyy HH:mm').format(DateTime.now())}',
-                  style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey),
-                ),
-              ],
-            );
-          },
+    // Get data for start and end of month
+    final startDate = _hppData.startDate;
+    final endDate = _hppData.endDate;
+
+    // Fetch data dari Firebase
+    final barangSnapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Barang")
+        .get();
+
+    final pembelianSnapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
+        .where('Tanggal', isGreaterThanOrEqualTo: startDate)
+        .where('Tanggal', isLessThanOrEqualTo: endDate)
+        .get();
+
+    final penjualanSnapshot = await _db
+        .collection("Users")
+        .doc(userId)
+        .collection("Penjualan")
+        .where('tanggal', isGreaterThanOrEqualTo: startDate)
+        .where('tanggal', isLessThanOrEqualTo: endDate)
+        .get();
+
+    // Page 1 - Persediaan Awal dan Pembelian
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.all(40),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPDFHeader(font, fontBold),
+              pw.SizedBox(height: 20),
+              // Persediaan Awal
+              _buildDetailTable(
+                'Persediaan Awal',
+                barangSnapshot.docs,
+                font,
+                (data) => data['isFromPembelian'] != true,
+              ),
+              pw.SizedBox(height: 20),
+              // Pembelian
+              _buildDetailTable(
+                'Pembelian',
+                pembelianSnapshot.docs,
+                font,
+                (data) => true,
+                isPembelian: true,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Page 2 - Penjualan dan Persediaan Akhir
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.all(40),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPDFHeader(font, fontBold),
+              pw.SizedBox(height: 20),
+              // Penjualan
+              _buildDetailTable(
+                'Penjualan',
+                penjualanSnapshot.docs,
+                font,
+                (data) => true,
+                isPenjualan: true,
+              ),
+              pw.SizedBox(height: 20),
+              // Persediaan Akhir
+              _buildDetailTable(
+                'Persediaan Akhir',
+                barangSnapshot.docs,
+                font,
+                (data) => true,
+                includeEndingStock: true,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    // Page 3 - Ringkasan HPP
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.all(40),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPDFHeader(font, fontBold),
+              pw.SizedBox(height: 20),
+              _buildPDFContent(),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (format) => pdf.save(),
+    );
+  } catch (e) {
+    print('Error generating PDF: $e');
+    _showError('Gagal mencetak PDF: $e');
+  }
+}
+
+pw.Widget _buildDetailTable(
+  String title,
+  List<QueryDocumentSnapshot> docs,
+  pw.Font font,
+  bool Function(Map<String, dynamic>) filter, {
+  bool isPembelian = false,
+  bool isPenjualan = false,
+  bool includeEndingStock = false,
+}) {
+  return pw.Container(
+    decoration: pw.BoxDecoration(
+      border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+    ),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+      children: [
+        // Table Header Section
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey100,
+            borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(10)),
+          ),
+          child: pw.Text(
+            title,
+            style: pw.TextStyle(
+              font: font,
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColor.fromHex('#080C67'),
+            ),
+          ),
         ),
-      );
+        
+        // Table Content
+        pw.Container(
+          padding: const pw.EdgeInsets.all(16),
+          child: _buildTableContent(docs, font, filter, isPembelian, isPenjualan),
+        ),
+      ],
+    ),
+  );
+}
 
-      await Printing.layoutPdf(
-        onLayout: (format) => pdf.save(),
-      );
-    } catch (e) {
-      _showError('Gagal mencetak PDF: $e');
+pw.Widget _buildTableContent(
+  List<QueryDocumentSnapshot> docs,
+  pw.Font font,
+  bool Function(Map<String, dynamic>) filter,
+  bool isPembelian,
+  bool isPenjualan,
+) {
+  final rows = <pw.TableRow>[];
+  double total = 0;
+
+  // Column Headers with improved design
+  rows.add(pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: PdfColor.fromHex('#EEF2FF'),
+      border: pw.Border(
+        bottom: pw.BorderSide(
+          color: PdfColor.fromHex('#080C67'),
+          width: 1,
+        ),
+      ),
+    ),
+    children: [
+      'Nama Barang',
+      'Jenis',
+      'Unit',
+      'Harga',
+      'Total',
+    ].map((text) => pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: font,
+          fontSize: 10,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColor.fromHex('#080C67'),
+        ),
+        textAlign: text == 'Unit' || text == 'Harga' || text == 'Total' 
+            ? pw.TextAlign.right 
+            : pw.TextAlign.left,
+      ),
+    )).toList(),
+  ));
+
+  // Data Rows with alternating colors
+  int index = 0;
+  for (var doc in docs) {
+    final data = doc.data() as Map<String, dynamic>;
+    if (filter(data)) {
+      rows.add(_buildDataRow(
+        data, 
+        font, 
+        isPembelian, 
+        isPenjualan,
+        index % 2 == 0 ? PdfColors.white : PdfColor.fromHex('#F8FAFC'),
+      ));
+      total += _calculateRowTotal(data, isPenjualan);
+      index++;
     }
   }
 
-  pw.Widget _buildPDFContent() {
-    return pw.Table(
-      border: pw.TableBorder.all(),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(3),
-        1: const pw.FlexColumnWidth(2),
-      },
-      children: [
-        _buildPDFHeader(),
-        _buildPDFRow('1. Persediaan Barang Dagang (awal)', _hppData.persediaanAwal),
-        _buildPDFRow('2. Pembelian', _hppData.pembelian),
-        _buildPDFRow('3. Beban Angkut Pembelian', _hppData.bebanAngkut),
-        _buildPDFRow('4. Retur Pembelian', _hppData.returPembelian, isNegative: true),
-        _buildPDFRow('5. Potongan Pembelian', _hppData.potonganPembelian, isNegative: true),
-        _buildPDFRow('6. Pembelian Bersih', _hppData.pembelianBersih, isSubtotal: true),
-        _buildPDFRow('   Barang Tersedia untuk Dijual', _hppData.barangTersedia, isSubtotal: true),
-        _buildPDFRow('7. Persediaan Barang Dagang Akhir', _hppData.persediaanAkhir, isNegative: true),
-        _buildPDFRow('8. Harga Pokok Penjualan', _hppData.hpp, isTotal: true),
-      ],
-    );
-  }
+  // Total Row with bold border and background
+  rows.add(pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: PdfColor.fromHex('#EEF2FF'),
+      border: pw.Border(
+        top: pw.BorderSide(color: PdfColor.fromHex('#080C67'), width: 1),
+      ),
+    ),
+    children: [
+      _buildCell(
+        'TOTAL',
+        font,
+        fontWeight: pw.FontWeight.bold,
+        colspan: 4,
+        color: PdfColor.fromHex('#080C67'),
+        alignment: pw.TextAlign.center,
+      ),
+      _buildCell(
+        _formatCurrency(total),
+        font,
+        alignment: pw.TextAlign.right,
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColor.fromHex('#080C67'),
+      ),
+    ],
+  ));
 
-  pw.TableRow _buildPDFHeader() {
-    return pw.TableRow(
-      decoration: pw.BoxDecoration(color: PdfColors.grey300),
+  return pw.Table(
+    border: pw.TableBorder(
+      left: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+      right: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+      bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+      horizontalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+      verticalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+    ),
+    columnWidths: {
+      0: const pw.FlexColumnWidth(3), // Nama Barang
+      1: const pw.FlexColumnWidth(2), // Jenis
+      2: const pw.FlexColumnWidth(1), // Unit
+      3: const pw.FlexColumnWidth(2), // Harga
+      4: const pw.FlexColumnWidth(2), // Total
+    },
+    children: rows,
+  );
+}
+
+
+pw.TableRow _buildTableHeader(pw.Font font) {
+  return pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: PdfColor.fromHex('#EEF2FF'),
+    ),
+    children: [
+      'Nama Barang',
+      'Jenis',
+      'Unit',
+      'Harga',
+      'Total',
+    ].map((text) => pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: font,
+          fontSize: 10,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColor.fromHex('#080C67'),
+        ),
+      ),
+    )).toList(),
+  );
+}
+
+
+
+// Helper function to build header row
+pw.TableRow _buildHeaderRow(pw.Font font) {
+  return pw.TableRow(
+    children: [
+      'Deskripsi',
+      'Harga',
+    ].map((text) => pw.Container(
+      padding: pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: font,
+          fontSize: 10,
+        ),
+      ),
+    )).toList(),
+  );
+}
+
+// Helper function to build data row
+pw.TableRow _buildDataRow(
+  Map<String, dynamic> data,
+  pw.Font font,
+  bool isPembelian,
+  bool isPenjualan,
+  PdfColor backgroundColor,
+) {
+  final name = isPenjualan ? data['namaBarang'] : data['Name'];
+  final type = isPenjualan ? data['tipe'] : (isPembelian ? data['Type'] : data['Tipe']);
+  final unit = isPenjualan ? data['jumlah'] : data['Jumlah'];
+  final price = isPenjualan ? data['hargaJual'] : data['Price'];
+  final total = (unit as num) * (price as num);
+
+  return pw.TableRow(
+    decoration: pw.BoxDecoration(color: backgroundColor),
+    children: [
+      _buildCell(name ?? '', font),
+      _buildCell(type ?? '', font),
+      _buildCell(
+        unit.toString(), 
+        font, 
+        alignment: pw.TextAlign.right
+      ),
+      _buildCell(
+        _formatCurrency(price), 
+        font, 
+        alignment: pw.TextAlign.right
+      ),
+      _buildCell(
+        _formatCurrency(total), 
+        font, 
+        alignment: pw.TextAlign.right
+      ),
+    ],
+  );
+}
+
+pw.TableRow _buildTotalRow(double total, pw.Font font) {
+  return pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: PdfColor.fromHex('#EEF2FF'),
+    ),
+    children: [
+      _buildCell('TOTAL', font, 
+        fontWeight: pw.FontWeight.bold,
+        colspan: 4,
+        color: PdfColor.fromHex('#080C67'),
+      ),
+      _buildCell(
+        _formatCurrency(total),
+        font,
+        alignment: pw.TextAlign.right,
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColor.fromHex('#080C67'),
+      ),
+    ],
+  );
+}
+
+pw.Widget _buildCell(
+  String text,
+  pw.Font font, {
+  pw.TextAlign alignment = pw.TextAlign.left,
+  pw.FontWeight fontWeight = pw.FontWeight.normal,
+  PdfColor? color,
+  int colspan = 1,
+}) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+    child: colspan > 1
+        ? pw.Center(
+            child: pw.Text(
+              text,
+              style: pw.TextStyle(
+                font: font,
+                fontSize: 10,
+                fontWeight: fontWeight,
+                color: color ?? PdfColors.grey800,
+              ),
+              textAlign: alignment,
+            ),
+          )
+        : pw.Text(
+            text,
+            style: pw.TextStyle(
+              font: font,
+              fontSize: 10,
+              fontWeight: fontWeight,
+              color: color ?? PdfColors.grey800,
+            ),
+            textAlign: alignment,
+          ),
+  );
+}
+
+String _formatCurrency(num value) {
+  return NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  ).format(value);
+}
+
+double _calculateRowTotal(Map<String, dynamic> data, bool isPenjualan) {
+  final unit = isPenjualan ? data['jumlah'] : data['Jumlah'];
+  final price = isPenjualan ? data['hargaJual'] : data['Price'];
+  return (unit as num) * (price as num).toDouble();
+}
+
+pw.Widget _buildTableCell(String text, pw.Font font, {
+  bool isHeader = false,
+  bool isRight = false,
+  PdfColor? backgroundColor,
+}) {
+  return pw.Container(
+    padding: pw.EdgeInsets.all(8),
+    color: backgroundColor,
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(
+        font: font,
+        fontSize: 10,
+        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+      ),
+      textAlign: isRight ? pw.TextAlign.right : pw.TextAlign.left,
+    ),
+  );
+}
+
+pw.TableRow _buildTableRow(
+  String description,
+  String unit,
+  double value,
+  pw.Font font, {
+  bool isSubtotal = false,
+  bool isTotal = false,
+  String keterangan = '',
+}) {
+  final backgroundColor = isTotal
+      ? PdfColor.fromHex('#EEF2FF')
+      : isSubtotal
+          ? PdfColor.fromHex('#F8FAFC')
+          : null;
+
+  return pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: backgroundColor,
+    ),
+    children: [
+      _buildTableCell(description, font),
+      _buildTableCell(unit, font),
+      _buildTableCell(_currencyFormat.format(value), font, isRight: true),
+      _buildTableCell(keterangan, font),
+    ],
+  );
+}
+
+pw.Widget _buildPDFContent() {
+  return pw.Container(
+    decoration: pw.BoxDecoration(
+      border: pw.Border.all(color: PdfColors.grey300),
+      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+    ),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(
-            'Keterangan',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        pw.Container(
+          padding: const pw.EdgeInsets.all(16),
+          child: pw.Table(
+            columnWidths: {
+              0: const pw.FlexColumnWidth(4),
+              1: const pw.FlexColumnWidth(2),
+            },
+            border: pw.TableBorder(
+              horizontalInside: pw.BorderSide(
+                color: PdfColors.grey300,
+                width: 0.5,
+              ),
+            ),
+            children: [
+              _buildHeaderRowNew(),
+              _buildDataRowNew('1. Persediaan Barang Dagang (awal)', _hppData.persediaanAwal),
+              _buildDataRowNew('2. Pembelian', _hppData.pembelian),
+              _buildDataRowNew('3. Beban Angkut Pembelian', _hppData.bebanAngkut),
+              _buildDataRowNew('4. Retur Pembelian', _hppData.returPembelian, isNegative: true),
+              _buildDataRowNew('5. Potongan Pembelian', _hppData.potonganPembelian, isNegative: true),
+              _buildDataRowNew('6. Pembelian Bersih', _hppData.pembelianBersih, isSubtotal: true),
+              _buildDataRowNew('   Barang Tersedia untuk Dijual', _hppData.barangTersedia, isSubtotal: true),
+              _buildDataRowNew('7. Persediaan Barang Dagang Akhir', _hppData.persediaanAkhir, isNegative: true),
+              _buildDataRowNew('8. Harga Pokok Penjualan', _hppData.hpp, isTotal: true),
+            ],
           ),
         ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(
-            'Jumlah',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      ],
+    ),
+  );
+}
+
+pw.TableRow _buildHeaderRowNew() {
+  return pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: PdfColor.fromHex('#EEF2FF'),
+      border: pw.Border(
+        bottom: pw.BorderSide(
+          color: PdfColor.fromHex('#080C67'),
+          width: 1,
+        ),
+      ),
+    ),
+    children: [
+      pw.Container(
+        padding: const pw.EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
+        ),
+        child: pw.Text(
+          'Keterangan',
+          style: pw.TextStyle(
+            fontSize: 11,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColor.fromHex('#080C67'),
           ),
         ),
-      ],
-    );
-  }
+      ),
+      pw.Container(
+        padding: const pw.EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
+        ),
+        child: pw.Text(
+          'Jumlah',
+          style: pw.TextStyle(
+            fontSize: 11,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColor.fromHex('#080C67'),
+          ),
+          textAlign: pw.TextAlign.right,
+        ),
+      ),
+    ],
+  );
+}
 
-  pw.TableRow _buildPDFRow(String title, double value, {
+pw.TableRow _buildDataRowNew(
+  String title, 
+  double value, {
+  bool isSubtotal = false,
+  bool isTotal = false,
+  bool isNegative = false,
+}) {
+  final backgroundColor = isTotal 
+      ? PdfColor.fromHex('#EEF2FF')
+      : isSubtotal 
+          ? PdfColor.fromHex('#F8FAFC') 
+          : PdfColors.white;
+
+  final textColor = isTotal || isSubtotal
+      ? PdfColor.fromHex('#080C67')
+      : PdfColors.grey800;
+
+  final fontWeight = isTotal || isSubtotal
+      ? pw.FontWeight.bold
+      : pw.FontWeight.normal;
+
+  return pw.TableRow(
+    decoration: pw.BoxDecoration(
+      color: backgroundColor,
+      border: isTotal ? pw.Border(
+        top: pw.BorderSide(color: PdfColor.fromHex('#080C67'), width: 1),
+      ) : null,
+    ),
+    children: [
+      // Title Column
+      pw.Container(
+        padding: const pw.EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
+        ),
+        child: pw.Text(
+          title,
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: fontWeight,
+            color: textColor,
+          ),
+        ),
+      ),
+      // Value Column
+      pw.Container(
+        padding: const pw.EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
+        ),
+        child: pw.Text(
+          isNegative 
+              ? '-${_currencyFormat.format(value)}'
+              : _currencyFormat.format(value),
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: fontWeight,
+            color: textColor,
+          ),
+          textAlign: pw.TextAlign.right,
+        ),
+      ),
+    ],
+  );
+}
+
+pw.Widget _buildPDFHeader(pw.Font font, pw.Font fontBold) {
+  return pw.Center(
+    child: pw.Column(
+      children: [
+        pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(
+                text: 'Laporan ',
+                style: pw.TextStyle(font: fontBold, fontSize: 24),
+              ),
+              pw.TextSpan(
+                text: 'HPP',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 24,
+                  color: PdfColor.fromHex('#4F46E5'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          dataUsahaC.namaUsaha.value, // Menggunakan nama usaha dari controller
+          style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey800),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'Dari ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.startDate))} sampai ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.endDate))}',
+          style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600),
+        ),
+      ],
+    ),
+  );
+}
+pw.TableRow _buildPDFRow(String title, double value, {
     bool isSubtotal = false,
     bool isTotal = false,
     bool isNegative = false,

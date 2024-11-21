@@ -110,6 +110,7 @@ flutter:
     - assets/images/logo-apps.png
     - assets/images/shop.png
     - assets/images/location.png
+    - assets/images/watermark.png
   # Icons:
     - assets/icons/edit.svg
     - assets/icons/shop.svg
