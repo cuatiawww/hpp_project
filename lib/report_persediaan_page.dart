@@ -930,9 +930,8 @@ Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
       var penjualan = penjualanData[key] ?? {'jumlah': 0, 'price': 0};
 
       // Hitung saldo akhir
-      int remainingStock = (persAwal['jumlah'] ?? 0) + 
-                         (pembelian['jumlah'] ?? 0) - 
-                         (penjualan['jumlah'] ?? 0);
+      int remainingStock = (persAwal['jumlah'] ?? 0) +
+                         (pembelian['jumlah'] ?? 0);
       
       // Hitung harga rata-rata tertimbang hanya jika ada stok awal atau pembelian
       double weightedAvgPrice;
