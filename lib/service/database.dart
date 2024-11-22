@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
 class DatabaseMethods {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -8,72 +9,50 @@ class DatabaseMethods {
   String get currentUserId => _auth.currentUser?.uid ?? '';
 
   // Modifikasi method addBarang
-  Future<void> addBarang(Map<String, dynamic> barangInfoMap, String id) async {
+Future<void> addBarang(Map<String, dynamic> barangInfoMap, String id) async {
     String userId = currentUserId;
     
-    // Tambahkan userId dan timestamp
+    if (!barangInfoMap.containsKey('Tanggal')) {
+      barangInfoMap['Tanggal'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    }
+
     final barangData = {
       ...barangInfoMap,
       'userId': userId,
+      'isInitialInventory': true,
       'createdAt': FieldValue.serverTimestamp(),
     };
 
-    // Simpan ke collection Barang dengan userId
     await _db.collection("Users")
         .doc(userId)
         .collection("Barang")
         .doc(id)
         .set(barangData);
-    
-    // Update PersediaanTotal dengan userId
-    await _db.collection("Users")
-        .doc(userId)
-        .collection("PersediaanTotal")
-        .doc(id)
-        .set({
-      'Name': barangData['Name'],
-      'Tipe': barangData['Tipe'],
-      'Jumlah': barangData['Jumlah'],
-      'Price': barangData['Price'],
-      'Satuan': barangData['Satuan'],
-      'Tanggal': barangData['Tanggal'],
-      'LastUpdated': FieldValue.serverTimestamp(),
-    });
-
-    // Add to Riwayat dengan userId
-    await _db.collection("Users")
-        .doc(userId)
-        .collection("Riwayat")
-        .add({
-      'type': 'Persediaan Awal',
-      'name': barangData['Name'],
-      'tipe': barangData['Tipe'],
-      'jumlah': barangData['Jumlah'],
-      'price': barangData['Price'],
-      'satuan': barangData['Satuan'],
-      'tanggal': barangData['Tanggal'],
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-  }
+}
 
   // Modifikasi method untuk mendapatkan barang
-  Stream<QuerySnapshot> getBarangDetails() {
+ Stream<QuerySnapshot> getBarangDetails() {
     String userId = currentUserId;
     return _db.collection("Users")
         .doc(userId)
         .collection("Barang")
+        .where('isInitialInventory', isEqualTo: true)  // Only get initial inventory items
         .snapshots();
-  }
+}
 
   // Modifikasi method addPembelian
- Future<void> addPembelian(Map<String, dynamic> pembelianData) async {
+Future<void> addPembelian(Map<String, dynamic> pembelianData) async {
     String userId = currentUserId;
     
     try {
-      // 1. Mulai transaction/batch
-      WriteBatch batch = _db.batch();
+      // Gunakan tanggal hari ini jika tidak ada tanggal yang diberikan
+      if (!pembelianData.containsKey('Tanggal')) {
+        pembelianData['Tanggal'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      }
 
-      // 2. Simpan data pembelian
+      WriteBatch batch = _db.batch();
+      
+      // Simpan pembelian
       DocumentReference pembelianRef = _db
           .collection("Users")
           .doc(userId)
@@ -86,25 +65,22 @@ class DatabaseMethods {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 3. Update stok di collection Barang
+      // Update atau buat barang baru
       DocumentReference barangRef = _db
           .collection("Users")
           .doc(userId)
           .collection("Barang")
           .doc(pembelianData['BarangId']);
 
-      // Cek apakah barang sudah ada
       DocumentSnapshot barangDoc = await barangRef.get();
       
       if (barangDoc.exists) {
-        // Update stok jika barang sudah ada
         batch.update(barangRef, {
           'Jumlah': FieldValue.increment(pembelianData['Jumlah'] as int),
-          'Price': pembelianData['Price'], // Update harga dengan harga terbaru
+          'Price': pembelianData['Price'],
           'LastUpdated': FieldValue.serverTimestamp(),
         });
       } else {
-        // Buat dokumen baru jika barang belum ada
         batch.set(barangRef, {
           'Name': pembelianData['Name'],
           'Tipe': pembelianData['Type'],
@@ -116,34 +92,12 @@ class DatabaseMethods {
         });
       }
 
-      // 4. Add to Riwayat
-      DocumentReference riwayatRef = _db
-          .collection("Users")
-          .doc(userId)
-          .collection("Riwayat")
-          .doc();
-          
-      batch.set(riwayatRef, {
-        'type': 'Pembelian',
-        'name': pembelianData['Name'],
-        'tipe': pembelianData['Type'],
-        'jumlah': pembelianData['Jumlah'],
-        'price': pembelianData['Price'],
-        'satuan': pembelianData['Satuan'],
-        'tanggal': pembelianData['Tanggal'],
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // 5. Commit batch operation
       await batch.commit();
-      
     } catch (e) {
       print("Error in addPembelian: $e");
       throw e;
     }
 }
-
-
   // Modifikasi method untuk mendapatkan pembelian
   Future<int> getTotalStok(String barangId) async {
     String userId = currentUserId;
@@ -189,6 +143,96 @@ Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async 
     }
 }
 
+    Future<Map<String, Map<String, dynamic>>> getPersediaanAkhir(String selectedMonth) async {
+    final userId = currentUserId;
+    final Map<String, Map<String, dynamic>> result = {};
+    
+    try {
+      final selectedDate = DateTime.parse('$selectedMonth-01');
+      final lastDayOfMonth = DateTime(selectedDate.year, selectedDate.month + 1, 0);
+      final selectedMonthEnd = DateFormat('yyyy-MM-dd').format(lastDayOfMonth);
+      
+      // 1. Get initial inventory (Persediaan Awal)
+      final barangSnapshot = await _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Barang")
+          .where('isInitialInventory', isEqualTo: true)
+          .get();
+
+      // Process initial inventory
+      for (var doc in barangSnapshot.docs) {
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Tipe']}';
+        result[key] = {
+          'id': doc.id,
+          'Name': data['Name'],
+          'Tipe': data['Tipe'],
+          'Jumlah': data['Jumlah'] ?? 0,
+          'Price': data['Price'],
+          'Satuan': data['Satuan'],
+          'Tanggal': data['Tanggal'],
+        };
+      }
+
+      // 2. Add purchases
+      final pembelianSnapshot = await _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Pembelian")
+          .where('Tanggal', isLessThanOrEqualTo: selectedMonthEnd)
+          .get();
+
+      for (var doc in pembelianSnapshot.docs) {
+        var data = doc.data();
+        String key = '${data['Name']}_${data['Type']}';
+        
+        if (result.containsKey(key)) {
+          result[key]!['Jumlah'] = (result[key]!['Jumlah'] as int) + (data['Jumlah'] as int);
+          if (data['Tanggal'].compareTo(result[key]!['Tanggal']) > 0) {
+            result[key]!['Price'] = data['Price'];
+            result[key]!['Tanggal'] = data['Tanggal'];
+          }
+        } else {
+          result[key] = {
+            'id': data['BarangId'],
+            'Name': data['Name'],
+            'Tipe': data['Type'],
+            'Jumlah': data['Jumlah'] ?? 0,
+            'Price': data['Price'],
+            'Satuan': data['Satuan'],
+            'Tanggal': data['Tanggal'],
+          };
+        }
+      }
+
+      // 3. Subtract sales
+      final penjualanSnapshot = await _db
+          .collection("Users")
+          .doc(userId)
+          .collection("Penjualan")
+          .where('tanggal', isLessThanOrEqualTo: selectedMonthEnd)
+          .get();
+
+      for (var doc in penjualanSnapshot.docs) {
+        var data = doc.data();
+        String key = '${data['namaBarang']}_${data['tipe']}';
+        
+        if (result.containsKey(key)) {
+          int newJumlah = (result[key]!['Jumlah'] as int) - (data['jumlah'] as int);
+          result[key]!['Jumlah'] = newJumlah;
+        }
+      }
+
+      // Remove items with zero or negative stock
+      result.removeWhere((key, value) => (value['Jumlah'] as int) <= 0);
+
+      return result;
+    } catch (e) {
+      print('Error in getPersediaanAkhir: $e');
+      throw e;
+    }
+  }
 
   Stream<QuerySnapshot> getPersediaanTotal() {
     String userId = currentUserId;
@@ -243,30 +287,28 @@ Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPenjualanStream(
         .snapshots();
   }
   
-  Future<void> addPenjualan(Map<String, dynamic> penjualanData) async {
+ Future<void> addPenjualan(Map<String, dynamic> penjualanData) async {
     String userId = currentUserId;
-    print("Adding penjualan for userId: $userId"); // Debug print
     
     try {
-      // Simpan ke collection Penjualan
-      DocumentReference penjualanRef = await _db
+      WriteBatch batch = _db.batch();
+      
+      // Add to Penjualan collection
+      DocumentReference penjualanRef = _db
           .collection("Users")
           .doc(userId)
           .collection("Penjualan")
-          .add({
+          .doc();
+
+      batch.set(penjualanRef, {
         ...penjualanData,
         'userId': userId,
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      print("Penjualan saved with ID: ${penjualanRef.id}"); // Debug print
-
-      // Update stok barang
-      await updateStokAfterPenjualan(
-        penjualanData['barangId'], 
-        penjualanData['jumlah']
-      );
-
+      // TIDAK PERLU update stok barang di collection Barang
+      // Karena itu adalah Persediaan Awal yang harus tetap
+      
       // Add to Riwayat
       await _db
           .collection("Users")
@@ -283,34 +325,59 @@ Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPenjualanStream(
         'tanggal': penjualanData['tanggal'],
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      await batch.commit();
     } catch (e) {
-      print("Error in addPenjualan: $e"); // Debug print
+      print("Error in addPenjualan: $e");
       throw e;
     }
   }
-
+  
+  //GENERATEMONTHS
+    List<String> generateMonthRange() {
+    final now = DateTime.now();
+    final List<String> months = [];
+    
+    // 6 bulan sebelumnya
+    for (int i = 6; i >= 1; i--) {
+      final month = DateTime(now.year, now.month - i, 1);
+      months.add(DateFormat('yyyy-MM').format(month));
+    }
+    
+    // Bulan sekarang
+    months.add(DateFormat('yyyy-MM').format(now));
+    
+    // 6 bulan kedepan
+    for (int i = 1; i <= 6; i++) {
+      final month = DateTime(now.year, now.month + i, 1);
+      months.add(DateFormat('yyyy-MM').format(month));
+    }
+    
+    return months;
+  }
 
   //PENJUALAN
-  Future<Map<String, Map<String, dynamic>>> getAvailableStock() async {
-    String userId = currentUserId;
+Future<Map<String, Map<String, dynamic>>> getAvailableStock() async {
+  String userId = currentUserId;
+  
+  try {
+    final results = await Future.wait([
+      _db.collection("Users").doc(userId).collection("Barang").get(),
+      _db.collection("Users").doc(userId).collection("Pembelian").get(),
+      _db.collection("Users").doc(userId).collection("Penjualan").get(),
+    ]);
+
+    final barangDocs = results[0];
+    final pembelianDocs = results[1];
+    final penjualanDocs = results[2];
     
-    try {
-      // 1. Ambil data dari collection Barang dan Pembelian
-      final results = await Future.wait([
-        _db.collection("Users").doc(userId).collection("Barang").get(),
-        _db.collection("Users").doc(userId).collection("Pembelian").get(),
-      ]);
+    Map<String, Map<String, dynamic>> stockMap = {};
 
-      final barangDocs = results[0];
-      final pembelianDocs = results[1];
-      
-      Map<String, Map<String, dynamic>> stockMap = {};
-
-      // Proses data barang
-      for (var doc in barangDocs.docs) {
-        var data = doc.data();
-        String key = '${data['Name']}_${data['Tipe']}'; // Gunakan kombinasi nama dan tipe sebagai key
-        
+    // 1. Proses Persediaan Awal
+    for (var doc in barangDocs.docs) {
+      var data = doc.data();
+      if (data['isInitialInventory'] == true) { // Hanya ambil persediaan awal
+        String key = '${data['Name']}_${data['Tipe']}';
         stockMap[key] = {
           'id': doc.id,
           'name': data['Name'],
@@ -320,37 +387,64 @@ Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPenjualanStream(
           'satuan': data['Satuan'],
         };
       }
-
-      // Proses data pembelian
-      for (var doc in pembelianDocs.docs) {
-        var data = doc.data();
-        String key = '${data['Name']}_${data['Type']}';
-        
-        if (stockMap.containsKey(key)) {
-          // Update existing entry
-          stockMap[key]!['jumlah'] = (stockMap[key]!['jumlah'] as int) + (data['Jumlah'] ?? 0);
-          // Update price with the latest price from purchase
-          stockMap[key]!['price'] = data['Price'] ?? stockMap[key]!['price'];
-        } else {
-          // Create new entry
-          stockMap[key] = {
-            'id': data['BarangId'],
-            'name': data['Name'],
-            'tipe': data['Type'],
-            'jumlah': data['Jumlah'] ?? 0,
-            'price': data['Price'] ?? 0,
-            'satuan': data['Satuan'],
-          };
-        }
-      }
-
-      return stockMap;
-    } catch (e) {
-      print("Error getting available stock: $e");
-      throw e;
     }
+
+    // 2. Proses Pembelian (tambah ke stok)
+    Map<String, int> pembelianTotal = {};
+    for (var doc in pembelianDocs.docs) {
+      var data = doc.data();
+      String key = '${data['Name']}_${data['Type']}';
+      
+      // Tambahkan jumlah pembelian ke map total
+      pembelianTotal[key] = (pembelianTotal[key] ?? 0) + (data['Jumlah'] as int);
+      
+      // Jika barang belum ada di stockMap, tambahkan
+      if (!stockMap.containsKey(key)) {
+        stockMap[key] = {
+          'id': data['BarangId'],
+          'name': data['Name'],
+          'tipe': data['Type'],
+          'jumlah': 0, // Mulai dari 0
+          'price': data['Price'],
+          'satuan': data['Satuan'],
+        };
+      }
+    }
+
+    // Update stok dengan total pembelian
+    pembelianTotal.forEach((key, totalPembelian) {
+      if (stockMap.containsKey(key)) {
+        stockMap[key]!['jumlah'] = (stockMap[key]!['jumlah'] as int) + totalPembelian;
+      }
+    });
+
+    // 3. Proses Penjualan (kurangi dari stok)
+    Map<String, int> penjualanTotal = {};
+    for (var doc in penjualanDocs.docs) {
+      var data = doc.data();
+      String key = '${data['namaBarang']}_${data['tipe']}';
+      
+      // Tambahkan jumlah penjualan ke map total
+      penjualanTotal[key] = (penjualanTotal[key] ?? 0) + (data['jumlah'] as int);
+    }
+
+    // Update stok dengan total penjualan
+    penjualanTotal.forEach((key, totalPenjualan) {
+      if (stockMap.containsKey(key)) {
+        stockMap[key]!['jumlah'] = (stockMap[key]!['jumlah'] as int) - totalPenjualan;
+      }
+    });
+
+    // Hapus item dengan stok <= 0
+    stockMap.removeWhere((key, value) => (value['jumlah'] as int) <= 0);
+
+    return stockMap;
+  } catch (e) {
+    print("Error getting available stock: $e");
+    throw e;
+  }
 }
-  
+
   Future<void> updateStokAfterPenjualan(String barangId, int jumlahTerjual) async {
     String userId = currentUserId;
     final barangRef = _db

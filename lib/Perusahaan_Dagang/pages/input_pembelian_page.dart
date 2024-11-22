@@ -22,6 +22,7 @@ class _InputPembelianPageState extends State<InputPembelianPage> {
   final TextEditingController _satuanCustomController = TextEditingController();
   final TextEditingController _tipeCustomController = TextEditingController();
   
+  
   // Variables
   String _selectedUnit = 'Pcs';
   bool _isOtherSelected = false;
@@ -44,151 +45,155 @@ class _InputPembelianPageState extends State<InputPembelianPage> {
     _loadExistingItems();
   }
 
- Future<void> _loadExistingItems() async {
-  try {
-    final userId = DatabaseMethods().currentUserId;
-    final snapshot = await FirebaseFirestore.instance
-        .collection("Users")
-        .doc(userId)
-        .collection("Barang")
-        // Hapus filter isFromPembelian
-        .get();
-    
-    setState(() {
-      _existingItems = snapshot.docs;
-      _isLoadingData = false;
-    });
-  } catch (e) {
-    _showError("Gagal memuat data barang: $e");
-    setState(() => _isLoadingData = false);
+  Future<void> _loadExistingItems() async {
+    try {
+      final userId = DatabaseMethods().currentUserId;
+      final snapshot = await FirebaseFirestore.instance
+          .collection("Users")
+          .doc(userId)
+          .collection("Barang")
+          .get();
+      
+      setState(() {
+        _existingItems = snapshot.docs;
+        _isLoadingData = false;
+      });
+    } catch (e) {
+      _showError("Gagal memuat data barang: $e");
+      setState(() => _isLoadingData = false);
+    }
   }
-}
 
   void _resetForm() {
     _namaBarangController.clear();
     _hargaController.clear();
     _jumlahController.clear();
     _tipeController.clear();
-    _selectedUnit = 'Pcs';
-    _isOtherSelected = false;
-    _selectedItem = null;
-    _selectedType = 'Makanan';
-  _isOtherTypeSelected = false;
-  _tipeCustomController.clear();
-  }
-
-  void _onExistingItemSelected(DocumentSnapshot? item) {
-  if (item == null) {
-    _resetForm();
+    _satuanCustomController.clear();
+    _tipeCustomController.clear();
     setState(() {
-      _isNewItem = true;
+      _selectedUnit = 'Pcs';
+      _isOtherSelected = false;
+      _selectedType = 'Makanan';
+      _isOtherTypeSelected = false;
       _selectedItem = null;
     });
-    return;
+  }
+void _onExistingItemSelected(DocumentSnapshot? item) {
+    if (item == null) {
+      _resetForm();
+      return;
+    }
+
+    try {
+      final data = item.data() as Map<String, dynamic>;
+      setState(() {
+        _selectedItem = item;
+        _namaBarangController.text = data['Name'] ?? '';
+        
+        // Set tipe from existing data
+        final existingType = data['Tipe'] ?? data['Type'] ?? 'Makanan';
+        _selectedType = existingType;
+        
+        // Set satuan from existing data
+        final existingSatuan = data['Satuan'] ?? 'Pcs';
+        _selectedUnit = existingSatuan;
+        
+        _hargaController.text = data['Price']?.toString() ?? '0';
+        _jumlahController.clear();
+      });
+    } catch (e) {
+      print('Error selecting item: $e');
+      _showError('Terjadi kesalahan saat memilih barang');
+    }
   }
 
-  try {
-    final data = item.data() as Map<String, dynamic>;
-    setState(() {
-      _selectedItem = item;
-      _isNewItem = false;
-      _namaBarangController.text = data['Name'] ?? '';
-      _tipeController.text = data['Tipe'] ?? '';
-      _selectedUnit = data['Satuan'] ?? 'Pcs';
-      _hargaController.text = (data['Price']?.toString() ?? '0');
-      _jumlahController.clear(); // Reset jumlah for new purchase
-    });
-  } catch (e) {
-    print('Error selecting item: $e');
-    _showError('Terjadi kesalahan saat memilih barang');
-  }
-}
-  Future<void> _saveItem() async {
-  if (!_validateInput()) return;
-  
-  setState(() => _isLoading = true);
-  
-  try {
-    final userId = DatabaseMethods().currentUserId;
+ Future<void> _saveItem() async {
+    if (!_validateInput()) return;
     
-    if (!_isNewItem && _selectedItem != null) {
-      final pembelianData = {
-        "BarangId": _selectedItem!.id,
-        "Name": _namaBarangController.text,
-        "Jumlah": int.parse(_jumlahController.text),
-        "Price": int.parse(_hargaController.text),
-        "Type": _isOtherTypeSelected ? _tipeCustomController.text : _selectedType,
-        "Satuan": _selectedUnit,
-        "Timestamp": FieldValue.serverTimestamp(),
-        "Tanggal": _tanggalController.text,
-      };
-
+    setState(() => _isLoading = true);
+    
+    try {
+      final userId = DatabaseMethods().currentUserId;
+      final now = DateTime.now();
+      
+      if (!_isNewItem && _selectedItem != null) {
+        // Untuk barang yang sudah ada
+        final existingData = _selectedItem!.data() as Map<String, dynamic>;
+        
+        // PERUBAHAN: Tidak perlu update jumlah di Barang/Persediaan Awal
+        // Hanya buat record pembelian baru
         await FirebaseFirestore.instance
             .collection("Users")
             .doc(userId)
             .collection("Pembelian")
-            .add(pembelianData);
+            .add({
+          "BarangId": _selectedItem!.id,
+          "Name": existingData['Name'],
+          "Jumlah": int.parse(_jumlahController.text),
+          "Price": existingData['Price'],
+          "Type": existingData['Tipe'] ?? existingData['Type'],
+          "Satuan": existingData['Satuan'],
+          "Tanggal": _tanggalController.text,
+          "CreatedAt": FieldValue.serverTimestamp(),
+        });
 
       } else {
-        // Save new item
+        // Untuk barang baru
         final String barangId = randomAlphaNumeric(10);
+        final String finalType = _isOtherTypeSelected ? _tipeCustomController.text : _selectedType;
+        final String finalSatuan = _isOtherSelected ? _satuanCustomController.text : _selectedUnit;
         
-        final Map<String, dynamic> barangData = {
-  "Name": _namaBarangController.text,
-  "Tipe": _isOtherTypeSelected ? _tipeCustomController.text : _selectedType, // Perbaiki ini
-  "Satuan": _isOtherSelected ? _satuanCustomController.text : _selectedUnit,
-  "Price": int.parse(_hargaController.text),
-  "Jumlah": 0,
-  "Id": barangId,
-  "Tanggal": _tanggalController.text,
-  "isFromPembelian": true,
-  "userId": userId,
-  "createdAt": FieldValue.serverTimestamp(),
-};
-
+        // Create new Barang
         await FirebaseFirestore.instance
             .collection("Users")
             .doc(userId)
             .collection("Barang")
             .doc(barangId)
-            .set(barangData);
-        
-       final Map<String, dynamic> pembelianData = {
-  "BarangId": barangId,
-  "Name": _namaBarangController.text,
-  "Jumlah": int.parse(_jumlahController.text),
-  "Price": int.parse(_hargaController.text),
-  "Type": _isOtherTypeSelected ? _tipeCustomController.text : _selectedType, // Perbaiki ini
-  "Satuan": _isOtherSelected ? _satuanCustomController.text : _selectedUnit,
-  "Timestamp": FieldValue.serverTimestamp(),
-  "Tanggal": _tanggalController.text,
-};
+            .set({
+          "Name": _namaBarangController.text,
+          "Tipe": finalType,
+          "Satuan": finalSatuan,
+          "Price": int.parse(_hargaController.text),
+          "Jumlah": int.parse(_jumlahController.text),
+          "Tanggal": _tanggalController.text,
+          "CreatedAt": FieldValue.serverTimestamp(),
+        });
 
+        // Create Pembelian record
         await FirebaseFirestore.instance
             .collection("Users")
             .doc(userId)
             .collection("Pembelian")
-            .add(pembelianData);
+            .add({
+          "BarangId": barangId,
+          "Name": _namaBarangController.text,
+          "Jumlah": int.parse(_jumlahController.text),
+          "Price": int.parse(_hargaController.text),
+          "Type": finalType,
+          "Satuan": finalSatuan,
+          "Tanggal": _tanggalController.text,
+          "CreatedAt": FieldValue.serverTimestamp(),
+        });
       }
 
-      // Add notification
       await addPembelianNotification(
         namaBarang: _namaBarangController.text,
         jumlah: int.parse(_jumlahController.text),
         satuan: _isOtherSelected ? _satuanCustomController.text : _selectedUnit,
-        type: _tipeController.text,
+        type: _selectedType,
       );
 
       _showSuccess("Pembelian berhasil ditambahkan");
       Navigator.pop(context, true);
-      
     } catch (e) {
-      _showError("Gagal menambahkan pembelian: $e");
+      print("Error saving purchase: $e");
+      _showError("Gagal menyimpan pembelian: $e");
     } finally {
       setState(() => _isLoading = false);
     }
   }
-
+  
 Widget _buildTypeDropdown() {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,

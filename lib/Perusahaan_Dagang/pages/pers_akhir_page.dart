@@ -15,18 +15,23 @@
     Stream<QuerySnapshot>? _barangStream;
     Stream<QuerySnapshot>? _pembelianStream;
     String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
-    final List<String> _months = [];
+  List<String> _months = [];
+  bool _isLoading = true;
+  Map<String, Map<String, dynamic>> _persediaanData = {};
     // Add a key for forcing refresh
     final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
     // Add state to force rebuild
     bool _forceRebuild = false;
 
     @override
-    void initState() {
-      super.initState();
-      _generateMonths();
-      _loadInitialData();
-    }
+  void initState() {
+    super.initState();
+    _generateMonths();
+    _loadData();
+  }
+  void _generateMonths() {
+    _months = DatabaseMethods().generateMonthRange();
+  }
 
     void _loadInitialData() {
       setState(() {
@@ -38,16 +43,24 @@
       });
     }
 
-    void _generateMonths() {
-      final now = DateTime.now();
-      for (int i = 0; i < 12; i++) {
-        final month = DateTime(now.year, now.month - i, 1);
-        _months.add(DateFormat('yyyy-MM').format(month));
-      }
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await DatabaseMethods().getPersediaanAkhir(_selectedMonth);
+      setState(() {
+        _persediaanData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading data: $e');
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error memuat data: $e')),
+      );
     }
-
-    Widget _buildMonthFilter() {
-      return Container(
+  }
+     Widget _buildMonthFilter() {
+    return Container(
       margin: EdgeInsets.all(16),
       padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
@@ -77,55 +90,38 @@
             ),
           ),
           SizedBox(width: 12),
-          Text(
-            "Filter Bulan:",
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-              color: Color(0xFF080C67),
-            ),
-          ),
-          SizedBox(width: 12),
           Expanded(
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value: _selectedMonth,
-                  icon: Icon(
-                    Icons.keyboard_arrow_down_rounded, 
-                    color: Color(0xFF080C67)
+            child: DropdownButtonFormField<String>(
+              value: _selectedMonth,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: Colors.grey.withOpacity(0.2),
                   ),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[800],
-                  ),
-                  items: _months.map((String month) {
-                    return DropdownMenuItem<String>(
-                      value: month,
-                      child: Text(
-                        DateFormat('MMMM yyyy').format(DateTime.parse('$month-01')),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      setState(() => _selectedMonth = newValue);
-                    }
-                  },
                 ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12),
               ),
+              items: _months.map((month) {
+                return DropdownMenuItem<String>(
+                  value: month,
+                  child: Text(
+                    DateFormat('MMMM yyyy').format(DateTime.parse('$month-01')),
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedMonth = value);
+                  _loadData();
+                }
+              },
             ),
           ),
         ],
       ),
     );
-    }
+  }
     Future<void> _refreshData() async {
       // Clear existing streams
       setState(() {
@@ -140,87 +136,65 @@
       _loadInitialData();
     }
 
-    Widget _buildDataTable(Map<String, Map<String, dynamic>> combinedData) {
-      return Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 0,
-              blurRadius: 20,
-              offset: Offset(0, 4),
-            ),
-          ],
+   Widget _buildDataTable() {
+  return Container(
+    margin: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 20,
+          offset: Offset(0, 4),
         ),
-        margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                "Data Persediaan",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF080C67),
-                ),
-              ),
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
-                headingTextStyle: TextStyle(
-                  color: Color(0xFF080C67),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-                columns: const [
-                  DataColumn(label: Text("Nama Barang")),
-                  DataColumn(label: Text("Tipe")),
-                  DataColumn(label: Text("Jumlah")),
-                  DataColumn(label: Text("Satuan")),
-                  DataColumn(label: Text("Harga")),
-                  DataColumn(label: Text("Total")),
-                  DataColumn(label: Text("Actions")),
-                ],
-                rows: _buildTableRows(combinedData),
-              ),
-            ),
-          ],
-        ),
-      );
-  }
-    List<DataRow> _buildTableRows(Map<String, Map<String, dynamic>> combinedData) {
-      return combinedData.entries.map((entry) {
-        final data = entry.value;
-        final total = (data["Jumlah"] as int) * (data["Price"] as int);
+      ],
+    ),
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
+        columns: const [
+          DataColumn(label: Text('Nama Barang')),
+          DataColumn(label: Text('Tipe')),
+          DataColumn(label: Text('Stok Tersedia')),
+          DataColumn(label: Text('Satuan')),
+          DataColumn(label: Text('Harga Terakhir')),
+          DataColumn(label: Text('Total Nilai')),
+        ],
+        rows: _buildTableRows(_persediaanData), // Gunakan _persediaanData langsung
+      ),
+    ),
+  );
+}
 
-        return DataRow(
-          cells: [
-            DataCell(Text(data["Name"])),
-            DataCell(Text(data["Tipe"].toString())),
-            DataCell(Text(data["Jumlah"].toString())),
-            DataCell(Text(data["Satuan"])),
-            DataCell(Text(NumberFormat.currency(
-              locale: 'id',
-              symbol: 'Rp ',
-              decimalDigits: 0,
-            ).format(data["Price"]))),
-            DataCell(Text(NumberFormat.currency(
-              locale: 'id',
-              symbol: 'Rp ',
-              decimalDigits: 0,
-            ).format(total))),
-            DataCell(_buildActionButtons(data, entry.key)),
-          ],
-        );
-      }).toList();
-    }
+// Update method _buildTableRows untuk menggunakan data yang ada
+List<DataRow> _buildTableRows(Map<String, Map<String, dynamic>> data) {
+  return data.entries.map((entry) {
+    final data = entry.value;
+    final total = (data["Jumlah"] as int) * (data["Price"] as int);
 
+    return DataRow(
+      cells: [
+        DataCell(Text(data["Name"])),
+        DataCell(Text(data["Tipe"].toString())),
+        DataCell(Text(data["Jumlah"].toString())),
+        DataCell(Text(data["Satuan"])),
+        DataCell(Text(NumberFormat.currency(
+          locale: 'id',
+          symbol: 'Rp ',
+          decimalDigits: 0,
+        ).format(data["Price"]))),
+        DataCell(Text(NumberFormat.currency(
+          locale: 'id',
+          symbol: 'Rp ',
+          decimalDigits: 0,
+        ).format(total))),
+      ],
+    );
+  }).toList();
+}
     Widget _buildActionButtons(Map<String, dynamic> data, String key) {
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -239,65 +213,64 @@
       );
   }
 
-    Widget _buildMainContent() {
+  Widget _buildMainContent() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: DatabaseMethods().getBarangDetails(),
+    builder: (context, barangSnapshot) {
+      if (!barangSnapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      final barangReference = _processBarangReference(barangSnapshot.data!.docs);
+
       return StreamBuilder<QuerySnapshot>(
-        stream: DatabaseMethods().getBarangDetails(),
-        builder: (context, barangSnapshot) {
-          if (!barangSnapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+        key: ValueKey(_forceRebuild),
+        stream: _pembelianStream,
+        builder: (context, pembelianSnapshot) {
+          if (_pembelianStream == null || !pembelianSnapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+              ),
+            );
           }
 
-          final barangReference = _processBarangReference(barangSnapshot.data!.docs);
+          final combinedData = _processCombinedData(
+            barangSnapshot.data!.docs,
+            pembelianSnapshot.data!.docs,
+            barangReference,
+          );
 
-        return StreamBuilder<QuerySnapshot>(
-            key: ValueKey(_forceRebuild),
-            stream: _pembelianStream,
-            builder: (context, pembelianSnapshot) {
-              if (_pembelianStream == null || !pembelianSnapshot.hasData) {
-                return const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
-                  ),
-                );
-              }
-
-              final combinedData = _processCombinedData(
-                barangSnapshot.data!.docs,
-                pembelianSnapshot.data!.docs,
-                barangReference,
-              );
-
-              if (combinedData.isEmpty) {
-                return Column(
-                  children: [
-                    _buildMonthFilter(),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          "Tidak ada data untuk bulan yang dipilih.",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
+          if (combinedData.isEmpty) {
+            return Column(
+              children: [
+                _buildMonthFilter(),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      "Tidak ada data untuk bulan yang dipilih.",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF6B7280),
                       ),
                     ),
-                  ],
-                );
-              }
+                  ),
+                ),
+              ],
+            );
+          }
 
-              return Column(
-                children: [
-                  _buildMonthFilter(),
-                  Expanded(child: _buildDataTable(combinedData)),
-                ],
-              );
-            },
+          return Column(
+            children: [
+              _buildMonthFilter(),
+              Expanded(child: _buildDataTable()), // Tidak perlu parameter
+            ],
           );
         },
       );
-    }
-
+    },
+  );
+}
 
     Map<String, Map<String, dynamic>> _processBarangReference(
       List<QueryDocumentSnapshot> docs,
@@ -314,17 +287,21 @@
       return result;
     }
 
-  Map<String, Map<String, dynamic>> _processCombinedData(
+Map<String, Map<String, dynamic>> _processCombinedData(
   List<QueryDocumentSnapshot> barangDocs,
   List<QueryDocumentSnapshot> pembelianDocs,
   Map<String, Map<String, dynamic>> barangReference,
 ) {
   final combinedData = <String, Map<String, dynamic>>{};
+  final selectedDate = DateTime.parse('${_selectedMonth}-01');
   
   // 1. Proses data persediaan awal (Barang)
   for (var doc in barangDocs) {
     final data = doc.data() as Map<String, dynamic>;
-    if (_isDocInSelectedMonth(data)) {
+    final createdAt = DateTime.parse(data["CreatedAt"] ?? "2099-12-31"); // Default future date if not found
+    
+    // Hanya tambahkan barang jika tanggal pembuatannya sebelum atau sama dengan bulan yang dipilih
+    if (!createdAt.isAfter(selectedDate)) {
       final key = '${doc.id}_${data["Tipe"] ?? "Default"}';
       combinedData[key] = _createBarangEntry(doc.id, data);
     }
@@ -333,12 +310,19 @@
   // 2. Proses pembelian (menambah stok)
   for (var doc in pembelianDocs) {
     final data = doc.data() as Map<String, dynamic>;
-    if (_isDocInSelectedMonth(data)) {
+    final purchaseDate = DateTime.parse(data["Tanggal"]);
+    
+    // Hanya proses pembelian yang terjadi sebelum atau pada bulan yang dipilih
+    if (!purchaseDate.isAfter(selectedDate)) {
       final barangId = data["BarangId"];
       final key = '${barangId}_${data["Type"]}';
       
       if (combinedData.containsKey(key)) {
         combinedData[key]!["Jumlah"] = (combinedData[key]!["Jumlah"] as int) + (data["Jumlah"] as int);
+        // Update harga jika pembelian ini adalah yang terbaru
+        if (data["Price"] != null) {
+          combinedData[key]!["Price"] = data["Price"];
+        }
       } else {
         combinedData[key] = {
           "id": barangId,
@@ -354,28 +338,39 @@
     }
   }
 
-  // 3. Proses penjualan (mengurangi stok) - Perbaikan utama di sini
-  FirebaseFirestore.instance
+  // 3. Proses penjualan (mengurangi stok)
+  Future<void> processPenjualan() async {
+    final penjualanSnapshot = await FirebaseFirestore.instance
       .collection("Users")
       .doc(DatabaseMethods().currentUserId)
       .collection("Penjualan")
-      .where('tanggal', isGreaterThanOrEqualTo: '${_selectedMonth}-01')
-      .where('tanggal', isLessThan: '${_getNextMonthString()}')
-      .get()
-      .then((penjualanSnapshot) {
-        for (var doc in penjualanSnapshot.docs) {
-          final data = doc.data();
-          final barangId = data["barangId"];
-          final tipe = data["tipe"];
-          final key = '${barangId}_$tipe';
-          
-          if (combinedData.containsKey(key)) {
-            final currentStock = combinedData[key]!["Jumlah"] as int;
-            final soldAmount = data["jumlah"] as int;
-            combinedData[key]!["Jumlah"] = currentStock - soldAmount;
-          }
+      .where('tanggal', isLessThanOrEqualTo: '${_selectedMonth}-31')
+      .get();
+
+    for (var doc in penjualanSnapshot.docs) {
+      final data = doc.data();
+      final saleDate = DateTime.parse(data["tanggal"]);
+      
+      // Hanya proses penjualan yang terjadi sebelum atau pada bulan yang dipilih
+      if (!saleDate.isAfter(selectedDate)) {
+        final barangId = data["barangId"];
+        final tipe = data["tipe"];
+        final key = '${barangId}_$tipe';
+        
+        if (combinedData.containsKey(key)) {
+          final currentStock = combinedData[key]!["Jumlah"] as int;
+          final soldAmount = data["jumlah"] as int;
+          combinedData[key]!["Jumlah"] = currentStock - soldAmount;
         }
-      });
+      }
+    }
+  }
+
+  // Panggil processPenjualan
+  processPenjualan();
+
+  // Filter out items with zero or negative stock
+  combinedData.removeWhere((key, value) => (value["Jumlah"] as int) <= 0);
 
   return combinedData;
 }
@@ -761,39 +756,66 @@ String _getNextMonthString() {
     );
   }
   @override
-  Widget build(BuildContext context) {
+Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          centerTitle: true,
-          elevation: 0,
-          title: const Text(
-            'Persediaan Akhir',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 24,
+        centerTitle: true,
+        elevation: 0,
+        title: const Text(
+          'Persediaan Akhir',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 24,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFF080C67),
+                Color(0xFF1E23A7),
+              ],
             ),
           ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Color(0xFF080C67),
-                  Color(0xFF1E23A7),
-                ],
-              ),
-            ),  
-          ),
         ),
+      ),
       body: RefreshIndicator(
-          key: _refreshIndicatorKey,
-          onRefresh: _refreshData, // Use the new refresh method
-          child: _buildMainContent(),
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              _buildMonthFilter(),
+              if (_isLoading)
+                Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+                  ),
+                )
+              else if (_persediaanData.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'Tidak ada data persediaan untuk bulan ini',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                _buildDataTable(),
+            ],
+          ),
         ),
+      ),
     );
   }
-  }
+}

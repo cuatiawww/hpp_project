@@ -17,8 +17,8 @@ class PersAwal extends StatefulWidget {
 
 class _PersAwalState extends State<PersAwal> {
   Stream<QuerySnapshot>? _persAwalStream;
-  String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
-  final List<String> _months = [];
+   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
+  List<String> _months = [];
   bool _isLoading = true;
 
   @override
@@ -27,7 +27,7 @@ class _PersAwalState extends State<PersAwal> {
     _initializeData();
   }
 
-  Future<void> _initializeData() async {
+   Future<void> _initializeData() async {
     setState(() => _isLoading = true);
     _generateMonths();
     await _loadData();
@@ -36,8 +36,20 @@ class _PersAwalState extends State<PersAwal> {
 
   void _generateMonths() {
     final now = DateTime.now();
-    for (int i = 0; i < 12; i++) {
+    _months = [];
+    
+    // 6 bulan sebelumnya
+    for (int i = 6; i >= 1; i--) {
       final month = DateTime(now.year, now.month - i, 1);
+      _months.add(DateFormat('yyyy-MM').format(month));
+    }
+    
+    // Bulan sekarang
+    _months.add(DateFormat('yyyy-MM').format(now));
+    
+    // 6 bulan kedepan
+    for (int i = 1; i <= 6; i++) {
+      final month = DateTime(now.year, now.month + i, 1);
       _months.add(DateFormat('yyyy-MM').format(month));
     }
   }
@@ -47,191 +59,197 @@ class _PersAwalState extends State<PersAwal> {
   }
 
 Widget _buildTable() {
-  return StreamBuilder<QuerySnapshot>(
-    stream: DatabaseMethods().getBarangDetails(),
-    builder: (context, snapshot) {
-      if (!snapshot.hasData) {
-        return Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
-          ),
-        );
-      }
-
-      if (snapshot.data!.docs.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.inventory_2_rounded,
-                size: 64,
-                color: Colors.grey[400],
-              ),
-              SizedBox(height: 16),
-              Text(
-                "Tidak ada data barang yang ditemukan.",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      // Filter documents berdasarkan bulan yang dipilih dan bukan dari pembelian
-      Map<String, DocumentSnapshot> filteredEntries = {};
-      
-      for (var doc in snapshot.data!.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        
-        // Skip jika data berasal dari pembelian
-        if (data['isFromPembelian'] == true) {
-          continue;
+    return StreamBuilder<QuerySnapshot>(
+      stream: _persAwalStream,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+            ),
+          );
         }
+
+        if (snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inventory_2_rounded,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                SizedBox(height: 16),
+                Text(
+                  "Tidak ada data barang yang ditemukan.",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Filter documents berdasarkan bulan yang dipilih
+         Map<String, DocumentSnapshot> filteredEntries = {};
         
-        if (data.containsKey("Tanggal")) {
-          String docDate = data["Tanggal"];
-          String docMonth = docDate.substring(0, 7);
+        for (var doc in snapshot.data!.docs) {
+          var data = doc.data() as Map<String, dynamic>;
           
-          if (docMonth == _selectedMonth) {
-            String itemKey = "${data['Name']}_${data['Tipe']}";
+          if (data.containsKey("Tanggal")) {
+            String docDate = data["Tanggal"];
+            String docMonth = docDate.substring(0, 7);
             
-            if (!filteredEntries.containsKey(itemKey)) {
+            if (docMonth == _selectedMonth) {
+              String itemKey = "${data['Name']}_${data['Tipe']}";
               filteredEntries[itemKey] = doc;
-            } else {
-              DateTime currentDate = DateTime.parse(docDate);
-              DateTime existingDate = DateTime.parse(
-                (filteredEntries[itemKey]!.data() as Map<String, dynamic>)['Tanggal']
-              );
-              
-              if (currentDate.isBefore(existingDate)) {
-                filteredEntries[itemKey] = doc;
-              }
             }
           }
         }
-      }
 
-      List<DocumentSnapshot> filteredDocs = filteredEntries.values.toList();
+        List<DocumentSnapshot> filteredDocs = filteredEntries.values.toList();
+        
+        // for (var doc in snapshot.data!.docs) {
+        //   var data = doc.data() as Map<String, dynamic>;
+          
+        //   // Skip jika data berasal dari pembelian
+        //   if (data['isFromPembelian'] == true) {
+        //     continue;
+        //   }
+          
+        //   if (data.containsKey("Tanggal")) {
+        //     String docDate = data["Tanggal"];
+        //     String docMonth = docDate.substring(0, 7);
+            
+        //     if (docMonth == _selectedMonth) {
+        //       String itemKey = "${data['Name']}_${data['Tipe']}";
+              
+        //       if (!filteredEntries.containsKey(itemKey)) {
+        //         filteredEntries[itemKey] = doc;
+        //       } else {
+        //         DateTime currentDate = DateTime.parse(docDate);
+        //         DateTime existingDate = DateTime.parse(
+        //           (filteredEntries[itemKey]!.data() as Map<String, dynamic>)['Tanggal']
+        //         );
+                
+        //         if (currentDate.isBefore(existingDate)) {
+        //           filteredEntries[itemKey] = doc;
+        //         }
+        //       }
+        //     }
+        //   }
+        // }
 
-      if (filteredDocs.isEmpty) {
+        // List<DocumentSnapshot> filteredDocs = filteredEntries.values.toList();
+
+        if (filteredDocs.isEmpty) {
+          return Column(
+            children: [
+              _buildMonthDropdown(),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        "Tidak ada data untuk bulan yang dipilih.",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
         return Column(
           children: [
             _buildMonthDropdown(),
             Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      "Tidak ada data untuk bulan yang dipilih.",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
+              child: Container(
+                margin: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 0,
+                      blurRadius: 20,
+                      offset: Offset(0, 4),
                     ),
                   ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(16),
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: MaterialStateProperty.all(
+                        Color(0xFFEEF2FF),
+                      ),
+                      columns: const [
+                        DataColumn(label: Text("Nama Barang")),
+                        DataColumn(label: Text("Tipe")),
+                        DataColumn(label: Text("Jumlah Awal")),
+                        DataColumn(label: Text("Satuan")),
+                        DataColumn(label: Text("Harga")),
+                        DataColumn(label: Text("Total")),
+                        DataColumn(label: Text("Actions")),
+                      ],
+                      rows: filteredDocs.map((doc) {
+                        var data = doc.data() as Map<String, dynamic>;
+                        return DataRow(
+                          cells: [
+                            DataCell(Text(data["Name"] ?? "Nama tidak ada")),
+                            DataCell(Text(data["Tipe"] ?? "Tipe tidak ada")),
+                            DataCell(Text(data["Jumlah"]?.toString() ?? "0")),
+                            DataCell(Text(data["Satuan"] ?? "Satuan tidak ada")),
+                            DataCell(Text(
+                              NumberFormat.currency(
+                                locale: 'id',
+                                symbol: 'Rp ',
+                                decimalDigits: 0,
+                              ).format(data["Price"] ?? 0),
+                            )),
+                            DataCell(Text(
+                              NumberFormat.currency(
+                                locale: 'id',
+                                symbol: 'Rp ',
+                                decimalDigits: 0,
+                              ).format((data["Jumlah"] ?? 0) * (data["Price"] ?? 0)),
+                            )),
+                            DataCell(_buildActionButtons(doc)),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
               ),
             ),
           ],
         );
-      }
+      },
+    );
+  }
 
-      return Column(
-        children: [
-          _buildMonthDropdown(),
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 0,
-                    blurRadius: 20,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(16),
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                       headingRowColor: MaterialStateProperty.all(
-                      Color(0xFFEEF2FF),
-                    ),
-                    headingTextStyle: TextStyle(
-                      color: Color(0xFF080C67),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                    dataTextStyle: TextStyle(
-                      color: Colors.grey[800],
-                      fontSize: 14,
-                    ),
-                    columnSpacing: 20,
-                    horizontalMargin: 16,
-                    columns: const [
-                      DataColumn(label: Text("Nama Barang")),
-                      DataColumn(label: Text("Tipe")),
-                      DataColumn(label: Text("Jumlah Awal")),
-                      DataColumn(label: Text("Satuan")),
-                      DataColumn(label: Text("Harga")),
-                      DataColumn(label: Text("Total")),
-                      DataColumn(label: Text("Actions")),
-                    ],
-                    rows: filteredDocs.map((doc) {
-                      var data = doc.data() as Map<String, dynamic>;
-                      return DataRow(
-                        cells: [
-                          DataCell(Text(data["Name"] ?? "Nama tidak ada")),
-                          DataCell(Text(data["Tipe"] ?? "Tipe tidak ada")),
-                          DataCell(Text(data["Jumlah"]?.toString() ?? "0")),
-                          DataCell(Text(data["Satuan"] ?? "Satuan tidak ada")),
-                          DataCell(Text(
-                            NumberFormat.currency(
-                              locale: 'id',
-                              symbol: 'Rp ',
-                              decimalDigits: 0,
-                            ).format(data["Price"] ?? 0),
-                          )),
-                          DataCell(Text(
-                            NumberFormat.currency(
-                              locale: 'id',
-                              symbol: 'Rp ',
-                              decimalDigits: 0,
-                            ).format((data["Jumlah"] ?? 0) * (data["Price"] ?? 0)),
-                          )),
-                          DataCell(_buildActionButtons(doc)),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
 
 Widget _buildActionButtons(DocumentSnapshot doc) {
   return Row(

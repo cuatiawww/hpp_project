@@ -671,21 +671,10 @@ Future<void> _submitPenjualan() async {
     // Mulai batch operation
     final batch = _db.batch();
     
-    // Update stok di Barang jika ada
-    final barangDoc = await _db
-        .collection("Users")
-        .doc(userId)
-        .collection("Barang")
-        .doc(selectedStock['id'])
-        .get();
-
-    if (barangDoc.exists) {
-      batch.update(barangDoc.reference, {
-        'Jumlah': FieldValue.increment(-jumlahJual)
-      });
-    }
-
-    // Tambah data penjualan
+    // PENTING: Tidak perlu update jumlah di collection Barang!
+    // Karena itu adalah Persediaan Awal yang harus tetap
+    
+    // Tambah data penjualan saja
     final penjualanRef = _db
         .collection("Users")
         .doc(userId)
@@ -734,7 +723,7 @@ Future<void> _submitPenjualan() async {
     setState(() => _isLoading = false);
   }
 }
-  
+
   @override
   void dispose() {
     _unitController.dispose();
