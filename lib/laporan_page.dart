@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hpp_project/profit_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:hpp_project/service/database.dart';
 
@@ -29,38 +30,48 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
     _initializeData();
   }
 
-  void _initializeData() {
+ void _initializeData() {
+  if (!mounted) return;
+  
+  final startDate = '$_selectedMonth-01';
+  final date = DateTime.parse(startDate);
+  final endDate = DateTime(date.year, date.month + 1, 0);
+  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+
+  setState(() {
+    _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
+    _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
+  });
+  
+  _loadInitialData();
+}
+
+ void _loadInitialData() async {
+  try {
     final startDate = '$_selectedMonth-01';
     final date = DateTime.parse(startDate);
     final endDate = DateTime(date.year, date.month + 1, 0);
     final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
-    _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
-    _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
-    _loadInitialData();
-  }
+    // Reset the values before loading new data
+    _totalPenjualan.value = 0;
+    _totalPembelian.value = 0;
+    _totalBarangTerjual.value = 0;
 
-  void _loadInitialData() async {
-    try {
-      final startDate = '$_selectedMonth-01';
-      final date = DateTime.parse(startDate);
-      final endDate = DateTime(date.year, date.month + 1, 0);
-      final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
-
-      final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDateStr).first;
-      if (penjualanDocs.docs.isNotEmpty) {
-        _calculatePenjualanStats(penjualanDocs.docs);
-      }
-
-      final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDateStr).first;
-      if (pembelianDocs.docs.isNotEmpty) {
-        _calculatePembelianStats(pembelianDocs.docs);
-      }
-    } catch (e) {
-      print('Error loading initial data: $e');
+    final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDateStr).first;
+    if (penjualanDocs.docs.isNotEmpty) {
+      _calculatePenjualanStats(penjualanDocs.docs);
     }
-  }
 
+    final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDateStr).first;
+    if (pembelianDocs.docs.isNotEmpty) {
+      _calculatePembelianStats(pembelianDocs.docs);
+    }
+  } catch (e) {
+    print('Error loading initial data: $e');
+  }
+}
+ 
   void _initializeStreams() {
     if (!mounted) return;
     
@@ -77,25 +88,38 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
     _loadInitialData();
   }
 
-  void _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
-    if (!mounted) return;
+ void _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+  if (!mounted) return;
     
-    double tempTotalPenjualan = 0;
-    int tempTotalBarangTerjual = 0;
+  double tempTotalPenjualan = 0;
+  int tempTotalBarangTerjual = 0;
 
-    for (var doc in docs) {
-      final data = doc.data();
-      if (data['tanggal'] != null && data['tanggal'].startsWith(_selectedMonth)) {
-        final hargaJual = (data['hargaJual'] as num?)?.toDouble() ?? 0;
-        final jumlah = (data['jumlah'] as num?)?.toInt() ?? 0;
-        tempTotalPenjualan += (hargaJual * jumlah);
-        tempTotalBarangTerjual += jumlah;
-      }
+  for (var doc in docs) {
+    final data = doc.data();
+    // Make sure we're checking for the correct date format and field
+    if (data['tanggal'] != null && data['tanggal'].toString().startsWith(_selectedMonth)) {
+      final hargaJual = (data['hargaJual'] as num?)?.toDouble() ?? 0;
+      final jumlah = (data['jumlah'] as num?)?.toInt() ?? 0;
+      
+      // Update both values
+      tempTotalPenjualan += (hargaJual * jumlah);
+      tempTotalBarangTerjual += jumlah;  // Make sure this line executes
+      
+      // Add debug print to verify calculations
+      print('Processing sale: Price: $hargaJual, Quantity: $jumlah');
+      print('Running totals - Sales: $tempTotalPenjualan, Items: $tempTotalBarangTerjual');
     }
+  }
 
+  // Update the ValueNotifiers
+  if (mounted) {
     _totalPenjualan.value = tempTotalPenjualan;
     _totalBarangTerjual.value = tempTotalBarangTerjual;
+    
+    // Add debug print to verify final values
+    print('Final values - Total Sales: ${_totalPenjualan.value}, Total Items: ${_totalBarangTerjual.value}');
   }
+}
 
   void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
     if (!mounted) return;
@@ -128,52 +152,125 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
     });
   }
 
-  void _onMonthChanged(String? newValue) {
-    if (newValue != null && mounted) {
-      setState(() {
-        _selectedMonth = newValue;
-        _initializeStreams();
-      });
-    }
+   void _onMonthChanged(String? newValue) {
+  if (newValue != null && mounted) {
+    setState(() {
+      _selectedMonth = newValue;
+      _initializeData();  // Ini akan memperbarui stream
+      
+      // Reset values
+      _totalPenjualan.value = 0;
+      _totalPembelian.value = 0;
+      _totalBarangTerjual.value = 0;
+    });
   }
-
+}
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
+Widget build(BuildContext context) {
+  final screenHeight = MediaQuery.of(context).size.height;
+  
+  return Scaffold(
+    backgroundColor: Color(0xFFF8FAFC),
+    body: SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: Column(
               children: [
                 _buildHeader(constraints),
-                _buildTabBar(),
-                Expanded(
-                  child: _buildTabBarView(constraints),
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: screenHeight * 0.25, // 25% dari tinggi layar
+                        child: _buildStatisticsCards(constraints),
+                      ),
+                      SizedBox(height: 16),
+                      if (_penjualanStream != null && _pembelianStream != null)
+                        Container(
+                          height: screenHeight * 0.4, // 40% dari tinggi layar
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                spreadRadius: 0,
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: ProfitReportWidget(
+                            penjualanStream: _penjualanStream!,
+                            pembelianStream: _pembelianStream!,
+                            selectedMonth: _selectedMonth,
+                          ),
+                        ),
+                      SizedBox(height: 16),
+                      Container(
+                        height: screenHeight * 0.35, // 35% dari tinggi layar
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 0,
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            _buildTabBar(),
+                            Expanded(
+                              child: _buildTabBarView(constraints),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget _buildHeader(BoxConstraints constraints) {
-    final isWideScreen = constraints.maxWidth > 600;
-    final padding = isWideScreen ? 24.0 : 16.0;
-
-    return Container(
-      padding: EdgeInsets.all(padding),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildTitleAndDatePicker(isWideScreen),
-          SizedBox(height: isWideScreen ? 24 : 16),
-          _buildStatisticsCards(constraints),
-        ],
+  return Container(
+    padding: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.only(
+        bottomLeft: Radius.circular(16),
+        bottomRight: Radius.circular(16),
       ),
-    );
-  }
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 10,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTitleAndDatePicker(constraints.maxWidth > 600),
+      ],
+    ),
+  );
+}
 
   Widget _buildTitleAndDatePicker(bool isWideScreen) {
     return Row(
@@ -234,41 +331,70 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
     final crossAxisCount = constraints.maxWidth > 900 ? 4 : 2;
     final childAspectRatio = isWideScreen ? 1.8 : 1.5;
 
-    return GridView.count(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      crossAxisCount: crossAxisCount,
-      crossAxisSpacing: isWideScreen ? 24 : 16,
-      mainAxisSpacing: isWideScreen ? 24 : 16,
-      childAspectRatio: childAspectRatio,
-      children: [
-        _buildStatCard(
-          'Total\nPenjualan',
-          _totalPenjualan,
-          Icons.arrow_upward_rounded,
-          Color(0xFF4CAF50),
-          [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
-          isWideScreen: isWideScreen,
-        ),
-        _buildStatCard(
-          'Total\nPembelian',
-          _totalPembelian,
-          Icons.arrow_downward_rounded,
-          Color(0xFFE53935),
-          [Color(0xFFFFEBEE), Color(0xFFFFCDD2)],
-          isWideScreen: isWideScreen,
-        ),
-        _buildStatCard(
-          'Jumlah\nTerjual',
-          ValueNotifier(_totalBarangTerjual.value.toDouble()),
-          Icons.inventory_2_rounded,
-          Color(0xFF1976D2),
-          [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
-          isCount: true,
-          isWideScreen: isWideScreen,
-        ),
-        _buildProfitCard(isWideScreen),
-      ],
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: _penjualanStream,
+      builder: (context, penjualanSnapshot) {
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: _pembelianStream,
+          builder: (context, pembelianSnapshot) {
+            // Update statistics when either stream updates
+            if (penjualanSnapshot.hasData) {
+              final docs = penjualanSnapshot.data!.docs.where((doc) {
+                final data = doc.data();
+                return data['tanggal'] != null && 
+                       data['tanggal'].startsWith(_selectedMonth);
+              }).toList();
+              _calculatePenjualanStats(docs);
+            }
+
+            if (pembelianSnapshot.hasData) {
+              final docs = pembelianSnapshot.data!.docs.where((doc) {
+                final data = doc.data();
+                return data['Tanggal'] != null && 
+                       data['Tanggal'].startsWith(_selectedMonth);
+              }).toList();
+              _calculatePembelianStats(docs);
+            }
+
+            return GridView.count(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: isWideScreen ? 24 : 16,
+              mainAxisSpacing: isWideScreen ? 24 : 16,
+              childAspectRatio: childAspectRatio,
+              children: [
+                _buildStatCard(
+                  'Total\nPenjualan',
+                  _totalPenjualan,
+                  Icons.arrow_upward_rounded,
+                  Color(0xFF4CAF50),
+                  [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                  isWideScreen: isWideScreen,
+                ),
+                _buildStatCard(
+                  'Total\nPembelian',
+                  _totalPembelian,
+                  Icons.arrow_downward_rounded,
+                  Color(0xFFE53935),
+                  [Color(0xFFFFEBEE), Color(0xFFFFCDD2)],
+                  isWideScreen: isWideScreen,
+                ),
+                _buildStatCard(
+                  'Jumlah\nTerjual',
+                  ValueNotifier(_totalBarangTerjual.value.toDouble()),
+                  Icons.inventory_2_rounded,
+                  Color(0xFF1976D2),
+                  [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+                  isCount: true,
+                  isWideScreen: isWideScreen,
+                ),
+                _buildProfitCard(isWideScreen),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -394,27 +520,49 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildTabBar() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
+Widget _buildTabBar() {
+  return Container(
+    padding: EdgeInsets.symmetric(vertical: 8),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(color: Colors.grey.shade200),
+      ),
+    ),
+    child: TabBar(
+      controller: _tabController,
+      labelColor: const Color(0xFF080C67),
+      unselectedLabelColor: Colors.grey,
+      indicatorColor: const Color(0xFF080C67),
+      indicatorWeight: 3,
+      labelStyle: TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 12, // Ukuran font lebih kecil
+      ),
+      tabs: const [
+        Tab(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.arrow_upward_rounded, size: 16),
+              SizedBox(width: 4),
+              Text('Penjualan'),
+            ],
+          ),
         ),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        labelColor: const Color(0xFF080C67),
-        unselectedLabelColor: Colors.grey,
-        indicatorColor: const Color(0xFF080C67),
-        indicatorWeight: 3,
-        labelStyle: TextStyle(fontWeight: FontWeight.w600),
-        tabs: const [
-          Tab(text: 'Report Penjualan'),
-          Tab(text: 'Report Pembelian'),
-        ],
-      ),
-    );
-  }
+        Tab(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.arrow_downward_rounded, size: 16),
+              SizedBox(width: 4),
+              Text('Pembelian'),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 Widget _buildTabBarView(BoxConstraints constraints) {
     return TabBarView(
@@ -426,7 +574,7 @@ Widget _buildTabBarView(BoxConstraints constraints) {
     );
   }
 
-  Widget _buildTransactionTab(
+   Widget _buildTransactionTab(
     Stream<QuerySnapshot<Map<String, dynamic>>>? stream,
     bool isPenjualan,
     BoxConstraints constraints,
@@ -456,6 +604,17 @@ Widget _buildTabBarView(BoxConstraints constraints) {
           return data[dateField] != null && 
                  data[dateField].startsWith(_selectedMonth);
         }).toList();
+
+        // Update statistics when data changes
+        if (isPenjualan) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _calculatePenjualanStats(docs);
+          });
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _calculatePembelianStats(docs);
+          });
+        }
 
         if (docs.isEmpty) {
           return Center(
@@ -520,10 +679,10 @@ Widget _buildTabBarView(BoxConstraints constraints) {
 
     return Container(
       margin: EdgeInsets.symmetric(
-        vertical: isWideScreen ? 12 : 8,
-        horizontal: isWideScreen ? 24 : 16
+        vertical: 6,
+      horizontal: 8,
       ),
-      padding: EdgeInsets.all(isWideScreen ? 20 : 16),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -546,7 +705,7 @@ Widget _buildTabBarView(BoxConstraints constraints) {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(isWideScreen ? 12 : 10),
+                padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: typeGradient,

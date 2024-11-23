@@ -825,19 +825,41 @@ Future<Map<String, Map<String, dynamic>>> _fetchPenjualan(String startDate, Stri
         String key = '${data['namaBarang']}_${data['tipe']}';
         
         if (result.containsKey(key)) {
-            result[key]!['jumlah'] = (result[key]!['jumlah'] as int) + (data['jumlah'] ?? 0);
+            // Hitung harga rata-rata tertimbang
+            int currentJumlah = result[key]!['jumlah'] as int;
+            double currentPrice = result[key]!['price'] as double;
+            int newJumlah = data['jumlah'] as int;
+            double newPrice = data['hargaJual'].toDouble();
+            
+            // Total nilai saat ini
+            double currentTotal = currentJumlah * currentPrice;
+            // Total nilai dari penjualan baru
+            double newTotal = newJumlah * newPrice;
+            
+            // Update jumlah total
+            int totalJumlah = currentJumlah + newJumlah;
+            
+            // Hitung harga rata-rata tertimbang baru
+            double averagePrice = (currentTotal + newTotal) / totalJumlah;
+            
+            // Update data
+            result[key]!['jumlah'] = totalJumlah;
+            result[key]!['price'] = averagePrice;
+            result[key]!['total_nilai'] = currentTotal + newTotal;
         } else {
             result[key] = {
                 'name': data['namaBarang'],
                 'tipe': data['tipe'],
                 'jumlah': data['jumlah'] ?? 0,
-                'price': data['hargaJual'] ?? 0,
+                'price': data['hargaJual'].toDouble(),
+                'total_nilai': (data['jumlah'] ?? 0) * data['hargaJual'],
             };
         }
     }
 
     return result;
 }
+
 
 Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
     Map<String, Map<String, dynamic>> persAwalData,
@@ -856,49 +878,42 @@ Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
         var pembelian = pembelianData[key] ?? {'jumlah': 0, 'price': 0};
         var penjualan = penjualanData[key] ?? {'jumlah': 0, 'price': 0};
 
-        // Convert ke int untuk jumlah
+        // Convert ke double untuk semua nilai numerik
         int persAwalJumlah = (persAwal['jumlah'] ?? 0).toInt();
         int pembelianJumlah = (pembelian['jumlah'] ?? 0).toInt();
         int penjualanJumlah = (penjualan['jumlah'] ?? 0).toInt();
-
-        // Convert ke double untuk harga
+        
         double persAwalPrice = (persAwal['price'] ?? 0).toDouble();
         double pembelianPrice = (pembelian['price'] ?? 0).toDouble();
+        double penjualanPrice = (penjualan['price'] ?? 0).toDouble();
 
         // Hitung total persediaan
-        int totalPersediaan = persAwalJumlah + pembelianJumlah;
-        
-        // Hitung persediaan akhir
-        int persediaanAkhir = totalPersediaan - penjualanJumlah;
+        int totalPersediaan = persAwalJumlah + pembelianJumlah - penjualanJumlah;
 
-        // Hitung harga rata-rata tertimbang
-        double finalPrice = persAwalPrice; // Default ke harga persediaan awal
-
-        if (pembelianJumlah > 0) {
-            // Hitung total nilai menggunakan double
-            double totalNilai = (persAwalJumlah * persAwalPrice) +
-                              (pembelianJumlah * pembelianPrice);
+        if (totalPersediaan > 0) {
+            // Hitung total nilai dari semua sumber
+            double totalNilaiPersAwal = persAwalJumlah * persAwalPrice;
+            double totalNilaiPembelian = pembelianJumlah * pembelianPrice;
+            double totalNilaiPenjualan = penjualanJumlah * penjualanPrice;
             
-            // Hitung harga rata-rata jika ada total persediaan
-            if (totalPersediaan > 0) {
-                finalPrice = totalNilai / totalPersediaan;
-            }
-        }
-
-        // Masukkan ke hasil jika masih ada stok
-        if (persediaanAkhir > 0) {
+            // Hitung total nilai keseluruhan
+            double totalNilai = totalNilaiPersAwal + totalNilaiPembelian;
+            
+            // Hitung harga rata-rata tertimbang
+            double averagePrice = totalNilai / (persAwalJumlah + pembelianJumlah);
+            
             result[key] = {
                 'name': persAwal['name'] ?? pembelian['name'],
                 'tipe': persAwal['tipe'] ?? pembelian['tipe'],
-                'jumlah': persediaanAkhir,
-                'price': finalPrice.round(), // Convert ke integer untuk display
+                'jumlah': totalPersediaan,
+                'price': averagePrice,
+                'total_nilai': totalPersediaan * averagePrice,
             };
         }
     }
 
     return result;
 }
-  
   
   String _formatCurrency(num value) {
     return NumberFormat.currency(

@@ -40,6 +40,7 @@ dependencies:
   excel: ^2.1.0
   path_provider: ^2.1.1
   permission_handler: ^11.0.1
+  fl_chart: ^0.65.0
   
   # ASKAL
   url_launcher: ^6.3.0
