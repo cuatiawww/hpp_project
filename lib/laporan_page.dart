@@ -24,13 +24,14 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   Stream<QuerySnapshot<Map<String, dynamic>>>? _pembelianStream;
 
   @override
-  void initState() {
+   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _initializeData();
+    // Delay inisialisasi data untuk mengurangi beban awal
+    Future.microtask(() => _initializeData());
   }
 
- void _initializeData() {
+void _initializeData() {
   if (!mounted) return;
   
   final startDate = '$_selectedMonth-01';
@@ -39,8 +40,26 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
   setState(() {
-    _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
-    _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
+    // Gunakan where clause di query Firestore langsung untuk filtering
+    _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr)
+      .map((snapshot) {
+        final filteredDocs = snapshot.docs.where((doc) {
+          final data = doc.data();
+          return data['tanggal'] != null && 
+                 data['tanggal'].toString().startsWith(_selectedMonth);
+        }).toList();
+        return snapshot;
+      });
+    
+    _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr)
+      .map((snapshot) {
+        final filteredDocs = snapshot.docs.where((doc) {
+          final data = doc.data();
+          return data['Tanggal'] != null && 
+                 data['Tanggal'].toString().startsWith(_selectedMonth);
+        }).toList();
+        return snapshot;
+      });
   });
   
   _loadInitialData();
@@ -72,22 +91,6 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   }
 }
  
-  void _initializeStreams() {
-    if (!mounted) return;
-    
-    final startDate = '$_selectedMonth-01';
-    final date = DateTime.parse(startDate);
-    final endDate = DateTime(date.year, date.month + 1, 0);
-    final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
-
-    setState(() {
-      _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
-      _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
-    });
-
-    _loadInitialData();
-  }
-
  void _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
   if (!mounted) return;
     
@@ -166,159 +169,105 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   }
 }
   @override
-Widget build(BuildContext context) {
-  final screenHeight = MediaQuery.of(context).size.height;
-  
-  return Scaffold(
-    backgroundColor: Color(0xFFF8FAFC),
-    body: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildHeader(constraints),
-                Container(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Column(
+ Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF080C67), Color(0xFF1A237E)],
+            stops: [0.0, 0.3],
+          ),
+        ),
+        child: SafeArea(
+          child: CustomScrollView(
+            slivers: [
+              // Modern App Bar
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      SizedBox(
-                        height: screenHeight * 0.25, // 25% dari tinggi layar
-                        child: _buildStatisticsCards(constraints),
-                      ),
-                      SizedBox(height: 16),
-                      if (_penjualanStream != null && _pembelianStream != null)
-                        Container(
-                          height: screenHeight * 0.4, // 40% dari tinggi layar
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
-                                spreadRadius: 0,
-                                blurRadius: 10,
-                                offset: Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: ProfitReportWidget(
-                            penjualanStream: _penjualanStream!,
-                            pembelianStream: _pembelianStream!,
-                            selectedMonth: _selectedMonth,
-                          ),
-                        ),
-                      SizedBox(height: 16),
-                      Container(
-                        height: screenHeight * 0.35, // 35% dari tinggi layar
-                        decoration: BoxDecoration(
+                      const Text(
+                        'Laporan',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 0,
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            _buildTabBar(),
-                            Expanded(
-                              child: _buildTabBarView(constraints),
-                            ),
-                          ],
+                          letterSpacing: -0.5,
                         ),
                       ),
+                      _buildModernMonthPicker(),
                     ],
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
-    ),
-  );
-}
+              ),
 
-
-  Widget _buildHeader(BoxConstraints constraints) {
-  return Container(
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.only(
-        bottomLeft: Radius.circular(16),
-        bottomRight: Radius.circular(16),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.1),
-          spreadRadius: 0,
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildTitleAndDatePicker(constraints.maxWidth > 600),
-      ],
-    ),
-  );
-}
-
-  Widget _buildTitleAndDatePicker(bool isWideScreen) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Laporan',
-          style: TextStyle(
-            fontSize: isWideScreen ? 28 : 24,
-            fontWeight: FontWeight.bold,
+              // Main Content
+              SliverToBoxAdapter(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(32),
+                      topRight: Radius.circular(32),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      _buildModernStatisticsCards(),
+                      const SizedBox(height: 24),
+                      _buildProfitSection(),
+                      const SizedBox(height: 24), 
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        _buildMonthPicker(isWideScreen),
-      ],
+      ),
     );
   }
 
-  Widget _buildMonthPicker(bool isWideScreen) {
+   Widget _buildModernMonthPicker() {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isWideScreen ? 16 : 12,
-        vertical: isWideScreen ? 8 : 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.calendar_today, size: isWideScreen ? 24 : 20),
-          SizedBox(width: 8),
-          DropdownButton<String>(
-            value: _selectedMonth,
-            underline: Container(),
-            items: _buildMonthDropdownItems(),
-            onChanged: _onMonthChanged,
-            style: TextStyle(
-              fontSize: isWideScreen ? 16 : 14,
-              color: Colors.black87,
+          const Icon(
+            Icons.calendar_today_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Theme(
+            data: Theme.of(context).copyWith(
+              canvasColor: const Color(0xFF080C67),
+            ),
+            child: DropdownButton<String>(
+              value: _selectedMonth,
+              underline: Container(),
+              icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.white),
+              items: _buildMonthDropdownItems(),
+              onChanged: _onMonthChanged,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -326,376 +275,97 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _buildStatisticsCards(BoxConstraints constraints) {
-    final isWideScreen = constraints.maxWidth > 600;
-    final crossAxisCount = constraints.maxWidth > 900 ? 4 : 2;
-    final childAspectRatio = isWideScreen ? 1.8 : 1.5;
+  Widget _buildModernStatisticsCards() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _penjualanStream,
+            builder: (context, penjualanSnapshot) {
+              return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: _pembelianStream,
+                builder: (context, pembelianSnapshot) {
+                  // Update statistics
+                  if (penjualanSnapshot.hasData) {
+                    _calculatePenjualanStats(penjualanSnapshot.data!.docs);
+                  }
+                  if (pembelianSnapshot.hasData) {
+                    _calculatePembelianStats(pembelianSnapshot.data!.docs);
+                  }
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _penjualanStream,
-      builder: (context, penjualanSnapshot) {
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _pembelianStream,
-          builder: (context, pembelianSnapshot) {
-            // Update statistics when either stream updates
-            if (penjualanSnapshot.hasData) {
-              final docs = penjualanSnapshot.data!.docs.where((doc) {
-                final data = doc.data();
-                return data['tanggal'] != null && 
-                       data['tanggal'].startsWith(_selectedMonth);
-              }).toList();
-              _calculatePenjualanStats(docs);
-            }
-
-            if (pembelianSnapshot.hasData) {
-              final docs = pembelianSnapshot.data!.docs.where((doc) {
-                final data = doc.data();
-                return data['Tanggal'] != null && 
-                       data['Tanggal'].startsWith(_selectedMonth);
-              }).toList();
-              _calculatePembelianStats(docs);
-            }
-
-            return GridView.count(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: isWideScreen ? 24 : 16,
-              mainAxisSpacing: isWideScreen ? 24 : 16,
-              childAspectRatio: childAspectRatio,
-              children: [
-                _buildStatCard(
-                  'Total\nPenjualan',
-                  _totalPenjualan,
-                  Icons.arrow_upward_rounded,
-                  Color(0xFF4CAF50),
-                  [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
-                  isWideScreen: isWideScreen,
-                ),
-                _buildStatCard(
-                  'Total\nPembelian',
-                  _totalPembelian,
-                  Icons.arrow_downward_rounded,
-                  Color(0xFFE53935),
-                  [Color(0xFFFFEBEE), Color(0xFFFFCDD2)],
-                  isWideScreen: isWideScreen,
-                ),
-                _buildStatCard(
-                  'Jumlah\nTerjual',
-                  ValueNotifier(_totalBarangTerjual.value.toDouble()),
-                  Icons.inventory_2_rounded,
-                  Color(0xFF1976D2),
-                  [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
-                  isCount: true,
-                  isWideScreen: isWideScreen,
-                ),
-                _buildProfitCard(isWideScreen),
-              ],
-            );
-          },
-        );
-      },
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildModernStatCard(
+                              'Total Penjualan',
+                              _totalPenjualan,
+                              Icons.trending_up_rounded,
+                              const Color(0xFF4CAF50),
+                              isPositive: true,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildModernStatCard(
+                              'Total Pembelian',
+                              _totalPembelian,
+                              Icons.trending_down_rounded,
+                              const Color(0xFFE53935),
+                              isPositive: false,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildModernStatCard(
+                              'Jumlah Terjual',
+                              ValueNotifier(_totalBarangTerjual.value.toDouble()),
+                              Icons.inventory_2_rounded,
+                              const Color(0xFF1976D2),
+                              isCount: true,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildProfitStatCard(),
+                          ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildProfitCard(bool isWideScreen) {
-    return ValueListenableBuilder<double>(
-      valueListenable: _totalPenjualan,
-      builder: (context, penjualan, _) {
-        return ValueListenableBuilder<double>(
-          valueListenable: _totalPembelian,
-          builder: (context, pembelian, _) {
-            final profit = penjualan - pembelian;
-            return _buildStatCard(
-              'Profit',
-              ValueNotifier(profit),
-              profit >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-              profit >= 0 ? Color(0xFF9C27B0) : Color(0xFFFF7043),
-              profit >= 0 
-                  ? [Color(0xFFF3E5F5), Color(0xFFE1BEE7)]
-                  : [Color(0xFFFBE9E7), Color(0xFFFFCCBC)],
-              isWideScreen: isWideScreen,
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildStatCard(
+  Widget _buildModernStatCard(
     String title,
     ValueNotifier<double> value,
     IconData icon,
-    Color iconColor,
-    List<Color> gradientColors, {
+    Color color, {
     bool isCount = false,
-    required bool isWideScreen,
+    bool isPositive = true,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
-        borderRadius: BorderRadius.circular(isWideScreen ? 20 : 16),
-        boxShadow: [
-          BoxShadow(
-            color: gradientColors[0].withOpacity(0.5),
-            blurRadius: isWideScreen ? 15 : 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(isWideScreen ? 20 : 16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(isWideScreen ? 20 : 16),
-          onTap: () {},
-          child: Padding(
-            padding: EdgeInsets.all(isWideScreen ? 24 : 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildStatCardHeader(title, icon, iconColor, isWideScreen),
-                ValueListenableBuilder<double>(
-                  valueListenable: value,
-                  builder: (context, val, _) => 
-                      _buildStatCardValue(val, isCount, isWideScreen),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCardHeader(String title, IconData icon, Color iconColor, bool isWideScreen) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: Colors.black87,
-            fontSize: isWideScreen ? 16 : 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Container(
-          padding: EdgeInsets.all(isWideScreen ? 10 : 8),
-          decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(isWideScreen ? 14 : 12),
-          ),
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: isWideScreen ? 24 : 20,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCardValue(double value, bool isCount, bool isWideScreen) {
-    return Text(
-      isCount
-          ? value.toInt().toString()
-          : NumberFormat.currency(
-              locale: 'id',
-              symbol: 'Rp ',
-              decimalDigits: 0,
-            ).format(value),
-      style: TextStyle(
-        color: Colors.black,
-        fontSize: isWideScreen ? 24 : 20,
-        fontWeight: FontWeight.bold,
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-Widget _buildTabBar() {
-  return Container(
-    padding: EdgeInsets.symmetric(vertical: 8),
-    decoration: BoxDecoration(
-      border: Border(
-        bottom: BorderSide(color: Colors.grey.shade200),
-      ),
-    ),
-    child: TabBar(
-      controller: _tabController,
-      labelColor: const Color(0xFF080C67),
-      unselectedLabelColor: Colors.grey,
-      indicatorColor: const Color(0xFF080C67),
-      indicatorWeight: 3,
-      labelStyle: TextStyle(
-        fontWeight: FontWeight.w600,
-        fontSize: 12, // Ukuran font lebih kecil
-      ),
-      tabs: const [
-        Tab(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.arrow_upward_rounded, size: 16),
-              SizedBox(width: 4),
-              Text('Penjualan'),
-            ],
-          ),
-        ),
-        Tab(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.arrow_downward_rounded, size: 16),
-              SizedBox(width: 4),
-              Text('Pembelian'),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildTabBarView(BoxConstraints constraints) {
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildTransactionTab(_penjualanStream, true, constraints),
-        _buildTransactionTab(_pembelianStream, false, constraints),
-      ],
-    );
-  }
-
-   Widget _buildTransactionTab(
-    Stream<QuerySnapshot<Map<String, dynamic>>>? stream,
-    bool isPenjualan,
-    BoxConstraints constraints,
-  ) {
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: stream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Text(
-              'Tidak ada data untuk bulan ini',
-              style: TextStyle(
-                fontSize: constraints.maxWidth > 600 ? 16 : 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          );
-        }
-
-        final docs = snapshot.data!.docs.where((doc) {
-          final data = doc.data();
-          final dateField = isPenjualan ? 'tanggal' : 'Tanggal';
-          return data[dateField] != null && 
-                 data[dateField].startsWith(_selectedMonth);
-        }).toList();
-
-        // Update statistics when data changes
-        if (isPenjualan) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _calculatePenjualanStats(docs);
-          });
-        } else {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _calculatePembelianStats(docs);
-          });
-        }
-
-        if (docs.isEmpty) {
-          return Center(
-            child: Text(
-              'Tidak ada data untuk bulan ini',
-              style: TextStyle(
-                fontSize: constraints.maxWidth > 600 ? 16 : 14,
-                color: Colors.grey[600],
-              ),
-            ),
-          );
-        }
-
-        return _buildTransactionList(docs, isPenjualan, constraints);
-      },
-    );
-  }
-
-  Widget _buildTransactionList(
-    List<QueryDocumentSnapshot<Map<String, dynamic>>> documents,
-    bool isPenjualan,
-    BoxConstraints constraints,
-  ) {
-    final isWideScreen = constraints.maxWidth > 600;
-    final padding = isWideScreen ? 24.0 : 16.0;
-
-    return ListView.builder(
-      padding: EdgeInsets.all(padding),
-      itemCount: documents.length,
-      itemBuilder: (context, index) => 
-          _buildTransactionCard(documents[index], isPenjualan, isWideScreen),
-    );
-  }
-
-  Widget _buildTransactionCard(
-    QueryDocumentSnapshot<Map<String, dynamic>> document,
-    bool isPenjualan,
-    bool isWideScreen,
-  ) {
-    final data = document.data();
-    
-    // Data processing
-    final String title = isPenjualan ? data['namaBarang'] ?? '' : data['Name'] ?? '';
-    final int quantity = isPenjualan ? data['jumlah'] ?? 0 : data['Jumlah'] ?? 0;
-    final String unit = data['satuan'] ?? '';
-    final double price = isPenjualan 
-        ? (data['hargaJual']?.toDouble() ?? 0)
-        : (data['Price']?.toDouble() ?? 0);
-    final double total = isPenjualan 
-        ? (data['total']?.toDouble() ?? 0)
-        : ((data['Jumlah'] ?? 0) * (data['Price'] ?? 0)).toDouble();
-    final String date = isPenjualan ? data['tanggal'] ?? '' : data['Tanggal'] ?? '';
-    
-    // Gradient colors based on transaction type
-    List<Color> typeGradient = isPenjualan 
-        ? [Color(0xFF00B07D), Color(0xFF00CA8E)]  // Green gradient for sales
-        : [Color(0xFFFF6B6B), Color(0xFFFF8E8E)]; // Red gradient for purchases
-        
-    IconData typeIcon = isPenjualan 
-        ? Icons.trending_up_rounded
-        : Icons.trending_down_rounded;
-
-    return Container(
-      margin: EdgeInsets.symmetric(
-        vertical: 6,
-      horizontal: 8,
-      ),
-      padding: EdgeInsets.all(12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
-          width: 1,
-        ),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            spreadRadius: 0,
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: color.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -705,106 +375,163 @@ Widget _buildTabBarView(BoxConstraints constraints) {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: typeGradient,
-                  ),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  typeIcon,
-                  color: Colors.white,
-                  size: isWideScreen ? 24 : 20,
-                ),
+                child: Icon(icon, color: color, size: 20),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: isWideScreen ? 18 : 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      date,
-                      style: TextStyle(
-                        fontSize: isWideScreen ? 14 : 12,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isWideScreen ? 16 : 12,
-                  vertical: isWideScreen ? 8 : 6
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: typeGradient.map((c) => c.withOpacity(0.15)).toList(),
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
                 child: Text(
-                  isPenjualan ? 'Penjualan' : 'Pembelian',
+                  title,
                   style: TextStyle(
-                    color: typeGradient[0],
-                    fontSize: isWideScreen ? 14 : 12,
-                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ],
           ),
-          SizedBox(height: isWideScreen ? 16 : 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  '$quantity $unit - ${NumberFormat.currency(
-                    locale: 'id',
-                    symbol: 'Rp ',
-                    decimalDigits: 0,
-                  ).format(price)}',
-                  style: TextStyle(
-                    fontSize: isWideScreen ? 16 : 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
+          const SizedBox(height: 16),
+          ValueListenableBuilder<double>(
+            valueListenable: value,
+            builder: (context, val, _) => Text(
+              isCount
+                  ? val.toInt().toString()
+                  : NumberFormat.currency(
+                      locale: 'id',
+                      symbol: 'Rp ',
+                      decimalDigits: 0,
+                    ).format(val),
+              style: TextStyle(
+                color: Colors.grey[900],
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-              ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: typeGradient,
-                ).createShader(bounds),
-                child: Text(
-                  NumberFormat.currency(
-                    locale: 'id',
-                    symbol: 'Rp ',
-                    decimalDigits: 0,
-                  ).format(total),
-                  style: TextStyle(
-                    fontSize: isWideScreen ? 18 : 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
+          if (!isCount) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  isPositive
+                      ? Icons.arrow_upward_rounded
+                      : Icons.arrow_downward_rounded,
+                  color: color,
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  isPositive ? '+2.5%' : '-1.8%',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+   
+   Widget _buildProfitStatCard() {
+    return ValueListenableBuilder<double>(
+      valueListenable: _totalPenjualan,
+      builder: (context, penjualan, _) {
+        return ValueListenableBuilder<double>(
+          valueListenable: _totalPembelian,
+          builder: (context, pembelian, _) {
+            final profit = penjualan - pembelian;
+            final isPositive = profit >= 0;
+            final color = isPositive ? const Color(0xFF9C27B0) : const Color(0xFFFF7043);
+            
+            return _buildModernStatCard(
+              'Profit',
+              ValueNotifier(profit.abs()),
+              isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+              color,
+              isPositive: isPositive,
+            );
+          },
+        );
+      },
+    );
+  }
 
+ Widget _buildProfitSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Profit Overview',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF080C67),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF080C67).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Monthly',
+                      style: TextStyle(
+                        color: Color(0xFF080C67),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_penjualanStream != null && _pembelianStream != null)
+              SizedBox(
+                height: 300,
+                child: ProfitReportWidget(
+                  penjualanStream: _penjualanStream!,
+                  pembelianStream: _pembelianStream!,
+                  selectedMonth: _selectedMonth,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+ 
   @override
   void dispose() {
     _tabController.dispose();
