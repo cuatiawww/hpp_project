@@ -143,7 +143,7 @@ Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async 
     }
 }
 
-    Future<Map<String, Map<String, dynamic>>> getPersediaanAkhir(String selectedMonth) async {
+Future<Map<String, Map<String, dynamic>>> getPersediaanAkhir(String selectedMonth) async {
     final userId = currentUserId;
     final Map<String, Map<String, dynamic>> result = {};
     
@@ -152,7 +152,7 @@ Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async 
       final lastDayOfMonth = DateTime(selectedDate.year, selectedDate.month + 1, 0);
       final selectedMonthEnd = DateFormat('yyyy-MM-dd').format(lastDayOfMonth);
       
-      // 1. Get initial inventory (Persediaan Awal)
+      // 1. Get initial inventory (Persediaan Awal) with date filtering
       final barangSnapshot = await _db
           .collection("Users")
           .doc(userId)
@@ -160,9 +160,16 @@ Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async 
           .where('isInitialInventory', isEqualTo: true)
           .get();
 
-      // Process initial inventory
+      // Process initial inventory with date check
       for (var doc in barangSnapshot.docs) {
         var data = doc.data();
+        
+        // Check if the item was created before or during the selected month
+        String tanggal = data['Tanggal'] ?? '';
+        if (tanggal.isEmpty || tanggal.compareTo(selectedMonthEnd) > 0) {
+          continue; // Skip this item if it was created after the selected month
+        }
+
         String key = '${data['Name']}_${data['Tipe']}';
         result[key] = {
           'id': doc.id,
@@ -175,7 +182,7 @@ Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async 
         };
       }
 
-      // 2. Add purchases
+      // 2. Add purchases with date filtering
       final pembelianSnapshot = await _db
           .collection("Users")
           .doc(userId)
@@ -194,19 +201,22 @@ Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async 
             result[key]!['Tanggal'] = data['Tanggal'];
           }
         } else {
-          result[key] = {
-            'id': data['BarangId'],
-            'Name': data['Name'],
-            'Tipe': data['Type'],
-            'Jumlah': data['Jumlah'] ?? 0,
-            'Price': data['Price'],
-            'Satuan': data['Satuan'],
-            'Tanggal': data['Tanggal'],
-          };
+          // Only add purchase if it's in the selected month or before
+          if (data['Tanggal'].compareTo(selectedMonthEnd) <= 0) {
+            result[key] = {
+              'id': data['BarangId'],
+              'Name': data['Name'],
+              'Tipe': data['Type'],
+              'Jumlah': data['Jumlah'] ?? 0,
+              'Price': data['Price'],
+              'Satuan': data['Satuan'],
+              'Tanggal': data['Tanggal'],
+            };
+          }
         }
       }
 
-      // 3. Subtract sales
+      // 3. Subtract sales with date filtering
       final penjualanSnapshot = await _db
           .collection("Users")
           .doc(userId)
@@ -233,7 +243,6 @@ Future<void> updateStok(String barangId, Map<String, dynamic> updateData) async 
       throw e;
     }
   }
-
   Stream<QuerySnapshot> getPersediaanTotal() {
     String userId = currentUserId;
     return _db.collection("Users")
