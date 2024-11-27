@@ -217,70 +217,9 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
   }
-
-  Widget _buildEditableTextField(String label, TextEditingController controller, {
-    bool isDatePicker = false,
-    bool isDropdown = false,
-    bool isReadOnly = false,
-    bool isNumeric = false,
-    bool isNPWP = false,
-  }) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey[200],
-      ),
-      child: isDropdown ? 
-        DropdownButtonFormField<String>(
-          value: controller.text.isNotEmpty ? controller.text : null,
-          decoration: InputDecoration(
-            labelText: label,
-            border: InputBorder.none,
-          ),
-          items: jenisKelaminOptions.map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: isEditing ? (String? newValue) {
-            setState(() {
-              controller.text = newValue!;
-            });
-          } : null,
-        )
-        : TextFormField(
-          controller: controller,
-          enabled: isEditing && !isReadOnly,
-          readOnly: isDatePicker || isReadOnly,
-          keyboardType: (isNumeric || isNPWP) ? TextInputType.number : TextInputType.text,
-          inputFormatters: [
-            if (isNumeric) FilteringTextInputFormatter.digitsOnly,
-            if (isNPWP) npwpFormatter,
-          ],
-          decoration: InputDecoration(
-            labelText: label,
-            border: InputBorder.none,
-            suffixIcon: isDatePicker && isEditing ? 
-              IconButton(
-                icon: Icon(Icons.calendar_today),
-                onPressed: () => _selectDate(context),
-              ) : null,
-            hintText: isNPWP ? 'XX.XXX.XXX.X-XXX.XXX' : null,
-          ),
-          onTap: isDatePicker && isEditing ? 
-            () => _selectDate(context) : null,
-        ),
-    );
-  }
-
-  @override
+@override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBody: true,
-      extendBodyBehindAppBar: true,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -294,154 +233,363 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: GestureDetector(
-                      onTap: isEditing 
-                      ? _pickAndSaveAvatar
-                      : null,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundImage: avatarBase64 != null
-                            ? MemoryImage(base64Decode(avatarBase64!))
-                            : AssetImage('assets/images/default_avatar.png') as ImageProvider, // Avatar Default
-                          ),
-                        if (isEditing)
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: CircleAvatar(
-                              radius: 16,
-                              backgroundColor: Colors.white,
-                              child: Icon(
-                                Icons.camera_alt,
-                                color: Colors.grey[800],
-                                size: 18,
+            child: Column(
+              children: [
+                // Header Section
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Profil',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 24,
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      // Profile Picture Section
+                      GestureDetector(
+                        onTap: isEditing ? _pickAndSaveAvatar : null,
+                        child: Stack(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.1),
+                              ),
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundImage: avatarBase64 != null
+                                    ? MemoryImage(base64Decode(avatarBase64!))
+                                    : AssetImage('assets/images/default_avatar.png') as ImageProvider,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Center(
-                    child: Obx(() => Text(
-                      dataPribadiC.namaLengkap.value,
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )),
-                  ),
-                  SizedBox(height: 8),
-                  Center(
-                    child: Text(
-                      FirebaseAuth.instance.currentUser?.email ?? '',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: isSaving 
-                        ? null
-                        : () {
-                          setState(() {
-                            if (isEditing) {
-                              _saveProfile();
-                            } else {
-                              isEditing = true;
-                            }
-                          });
-                        },
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Color(0xFF080C67),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                            if (isEditing)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: Color(0xFF080C67),
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 36, vertical: 13),
                       ),
-                      child: isSaving
-                        ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                        : Text(
-                          isEditing ? 'Simpan' : 'Edit Akun',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600
-                          ),
+                      SizedBox(height: 16),
+                      Obx(() => Text(
+                        dataPribadiC.namaLengkap.value,
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  Text(
-                    'Informasi Pribadi',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  _buildEditableTextField('Nama Lengkap', namaLengkapController),
-                  SizedBox(height: 16),
-                  _buildEditableTextField('NPWP', npwpController, isNPWP: true),
-                  SizedBox(height: 16),
-                  _buildEditableTextField('Tanggal Lahir', tanggalLahirController, isDatePicker: true),
-                  SizedBox(height: 16),
-                  _buildEditableTextField('Jenis Kelamin', jenisKelaminController, isDropdown: true),
-                  SizedBox(height: 24),
-                  Text(
-                    'Informasi Usaha',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  _buildEditableTextField('Nama Usaha', namaUsahaController),
-                  SizedBox(height: 16),
-                  _buildEditableTextField('Tipe Usaha', tipeUsahaController, isReadOnly: true),
-                  SizedBox(height: 16),
-                  _buildEditableTextField('Nomor Telepon', nomorTeleponController, isNumeric: true),
-                  SizedBox(height: 40),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () => authC.logout(),
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.red,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                      )),
+                      SizedBox(height: 4),
+                      Text(
+                        FirebaseAuth.instance.currentUser?.email ?? '',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white.withOpacity(0.9),
                         ),
-                        padding: EdgeInsets.symmetric(horizontal: 70, vertical: 13),
                       ),
-                      child: Text('LOGOUT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ),
+                      SizedBox(height: 16),
+                      _buildEditButton(),
+                    ],
                   ),
-                  SizedBox(height: 20), // Tambahan padding bawah untuk bottom navbar
-                ],
-              ),
+                ),
+                
+                // Content Section
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionHeader('Informasi Pribadi', Icons.person_rounded),
+                      SizedBox(height: 16),
+                      _buildContentCard([
+                        _buildField('Nama Lengkap', namaLengkapController),
+                        _buildDivider(),
+                        _buildField('NPWP', npwpController, isNPWP: true),
+                        _buildDivider(),
+                        _buildField('Tanggal Lahir', tanggalLahirController, isDatePicker: true),
+                        _buildDivider(),
+                        _buildField('Jenis Kelamin', jenisKelaminController, isDropdown: true),
+                      ]),
+                      
+                      SizedBox(height: 24),
+                      _buildSectionHeader('Informasi Usaha', Icons.business_rounded),
+                      SizedBox(height: 16),
+                      _buildContentCard([
+                        _buildField('Nama Usaha', namaUsahaController),
+                        _buildDivider(),
+                        _buildField('Tipe Usaha', tipeUsahaController, isReadOnly: true),
+                        _buildDivider(),
+                        _buildField('Nomor Telepon', nomorTeleponController, isNumeric: true),
+                      ]),
+                      
+                      SizedBox(height: 32),
+                      _buildLogoutButton(),
+                      SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditButton() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: isSaving ? null : () {
+            setState(() {
+              if (isEditing) {
+                _saveProfile();
+              } else {
+                isEditing = true;
+              }
+            });
+          },
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isEditing ? Icons.save_rounded : Icons.edit_rounded,
+                  color: Color(0xFF080C67),
+                  size: 20,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  isEditing ? 'Simpan' : 'Edit Profil',
+                  style: TextStyle(
+                    color: Color(0xFF080C67),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+        SizedBox(width: 12),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContentCard(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildField(String label, TextEditingController controller, {
+    bool isDatePicker = false,
+    bool isDropdown = false,
+    bool isReadOnly = false,
+    bool isNumeric = false,
+    bool isNPWP = false,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 8),
+          if (isDropdown)
+            _buildDropdown(controller)
+          else
+            _buildInput(controller, isDatePicker, isReadOnly, isNumeric, isNPWP),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInput(
+    TextEditingController controller,
+    bool isDatePicker,
+    bool isReadOnly,
+    bool isNumeric,
+    bool isNPWP,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+        ),
+      ),
+      child: TextFormField(
+        controller: controller,
+        enabled: isEditing && !isReadOnly,
+        readOnly: isDatePicker || isReadOnly,
+        keyboardType: (isNumeric || isNPWP) ? TextInputType.number : TextInputType.text,
+        inputFormatters: [
+          if (isNumeric) FilteringTextInputFormatter.digitsOnly,
+          if (isNPWP) npwpFormatter,
+        ],
+        style: TextStyle(
+          fontSize: 16,
+          color: Colors.white,
+        ),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          suffixIcon: isDatePicker && isEditing
+              ? IconButton(
+                  icon: Icon(Icons.calendar_today_rounded, color: Colors.white, size: 20),
+                  onPressed: () => _selectDate(context),
+                )
+              : null,
+          hintText: isNPWP ? 'XX.XXX.XXX.X-XXX.XXX' : null,
+          hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+        ),
+        onTap: isDatePicker && isEditing ? () => _selectDate(context) : null,
+      ),
+    );
+  }
+
+  Widget _buildDropdown(TextEditingController controller) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+        ),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: controller.text.isNotEmpty ? controller.text : null,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        ),
+        dropdownColor: Color(0xFF080C67),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+        ),
+        icon: Icon(Icons.arrow_drop_down, color: Colors.white),
+        items: jenisKelaminOptions.map((String value) {
+          return DropdownMenuItem<String>(
+            value: value,
+            child: Text(value),
+          );
+        }).toList(),
+        onChanged: isEditing ? (String? newValue) {
+          setState(() {
+            controller.text = newValue!;
+          });
+        } : null,
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Divider(
+      color: Colors.white.withOpacity(0.1),
+      height: 1,
+      thickness: 1,
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Material(
+        color: Colors.red,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => authC.logout(),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.logout_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Keluar',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
