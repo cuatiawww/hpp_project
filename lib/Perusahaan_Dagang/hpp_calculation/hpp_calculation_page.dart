@@ -28,7 +28,7 @@ class _HPPCalculationPageState extends State<HPPCalculationPage> {
   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
   final List<String> _months = [];
   bool _isLoading = false;
-  Timer? _debounceTimer;
+
   
   // Controllers
   final _bebanAngkutController = TextEditingController(text: '0');
@@ -77,7 +77,7 @@ Future<Map<String, dynamic>> _calculateStockValue(String startDate, String endDa
     double totalPembelian = 0;
     double persediaanAkhir = 0;
 
-    final targetDate = DateTime.parse(startDate);
+    // final targetDate = DateTime.parse(startDate);
     
     print('\n=== Debug Info ===');
     print('Period Start: $startDate');
@@ -888,52 +888,6 @@ pw.Widget _buildTableContent(
 }
 
 
-pw.TableRow _buildTableHeader(pw.Font font) {
-  return pw.TableRow(
-    decoration: pw.BoxDecoration(
-      color: PdfColor.fromHex('#EEF2FF'),
-    ),
-    children: [
-      'Nama Barang',
-      'Jenis',
-      'Unit',
-      'Harga',
-      'Total',
-    ].map((text) => pw.Container(
-      padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          font: font,
-          fontSize: 10,
-          fontWeight: pw.FontWeight.bold,
-          color: PdfColor.fromHex('#080C67'),
-        ),
-      ),
-    )).toList(),
-  );
-}
-
-
-
-// Helper function to build header row
-pw.TableRow _buildHeaderRow(pw.Font font) {
-  return pw.TableRow(
-    children: [
-      'Deskripsi',
-      'Harga',
-    ].map((text) => pw.Container(
-      padding: pw.EdgeInsets.all(8),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          font: font,
-          fontSize: 10,
-        ),
-      ),
-    )).toList(),
-  );
-}
 
 // Helper function to build data row
 pw.TableRow _buildDataRow(
@@ -972,29 +926,6 @@ pw.TableRow _buildDataRow(
     ],
   );
 }
-
-pw.TableRow _buildTotalRow(double total, pw.Font font) {
-  return pw.TableRow(
-    decoration: pw.BoxDecoration(
-      color: PdfColor.fromHex('#EEF2FF'),
-    ),
-    children: [
-      _buildCell('TOTAL', font, 
-        fontWeight: pw.FontWeight.bold,
-        colspan: 4,
-        color: PdfColor.fromHex('#080C67'),
-      ),
-      _buildCell(
-        _formatCurrency(total),
-        font,
-        alignment: pw.TextAlign.right,
-        fontWeight: pw.FontWeight.bold,
-        color: PdfColor.fromHex('#080C67'),
-      ),
-    ],
-  );
-}
-
 pw.Widget _buildCell(
   String text,
   pw.Font font, {
@@ -1043,54 +974,6 @@ double _calculateRowTotal(Map<String, dynamic> data, bool isPenjualan) {
   final unit = isPenjualan ? data['jumlah'] : data['Jumlah'];
   final price = isPenjualan ? data['hargaJual'] : data['Price'];
   return (unit as num) * (price as num).toDouble();
-}
-
-pw.Widget _buildTableCell(String text, pw.Font font, {
-  bool isHeader = false,
-  bool isRight = false,
-  PdfColor? backgroundColor,
-}) {
-  return pw.Container(
-    padding: pw.EdgeInsets.all(8),
-    color: backgroundColor,
-    child: pw.Text(
-      text,
-      style: pw.TextStyle(
-        font: font,
-        fontSize: 10,
-        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
-      ),
-      textAlign: isRight ? pw.TextAlign.right : pw.TextAlign.left,
-    ),
-  );
-}
-
-pw.TableRow _buildTableRow(
-  String description,
-  String unit,
-  double value,
-  pw.Font font, {
-  bool isSubtotal = false,
-  bool isTotal = false,
-  String keterangan = '',
-}) {
-  final backgroundColor = isTotal
-      ? PdfColor.fromHex('#EEF2FF')
-      : isSubtotal
-          ? PdfColor.fromHex('#F8FAFC')
-          : null;
-
-  return pw.TableRow(
-    decoration: pw.BoxDecoration(
-      color: backgroundColor,
-    ),
-    children: [
-      _buildTableCell(description, font),
-      _buildTableCell(unit, font),
-      _buildTableCell(_currencyFormat.format(value), font, isRight: true),
-      _buildTableCell(keterangan, font),
-    ],
-  );
 }
 
 pw.Widget _buildPDFContent() {
@@ -1281,33 +1164,6 @@ pw.Widget _buildPDFHeader(pw.Font font, pw.Font fontBold) {
     ),
   );
 }
-pw.TableRow _buildPDFRow(String title, double value, {
-    bool isSubtotal = false,
-    bool isTotal = false,
-    bool isNegative = false,
-  }) {
-    final style = isTotal ? pw.TextStyle(fontWeight: pw.FontWeight.bold) : const pw.TextStyle();
-    final bgColor = isSubtotal ? PdfColors.grey100 : isTotal ? PdfColors.grey200 : PdfColors.white;
-
-    return pw.TableRow(
-      decoration: pw.BoxDecoration(color: bgColor),
-      children: [
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(title, style: style),
-        ),
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(8),
-          child: pw.Text(
-            isNegative ? '-${_currencyFormat.format(value)}' : _currencyFormat.format(value),
-            style: style,
-            textAlign: pw.TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
  Widget build(BuildContext context) {
     return Scaffold(

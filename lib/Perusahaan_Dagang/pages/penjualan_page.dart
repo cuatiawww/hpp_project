@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get_rx/src/rx_types/rx_types.dart';
-import 'package:hpp_project/Perusahaan_Dagang/notification/service/notification_service.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/invoice_detail.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
@@ -390,25 +388,40 @@ class _PenjualanPageState extends State<PenjualanPage> {
     );
   }
 
- Widget _buildBarangDropdown() {
+Widget _buildBarangDropdown() {
   return FutureBuilder<Map<String, Map<String, dynamic>>>(
     future: DatabaseMethods().getAvailableStock(),
     builder: (context, snapshot) {
       if (!snapshot.hasData) {
-        return CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+        return SizedBox(
+          height: 48,
+          child: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+            ),
+          ),
         );
       }
 
       var availableStock = snapshot.data!;
-
-      // Filter hanya barang yang memiliki stok
       var stockWithInventory = availableStock.entries
           .where((entry) => entry.value['jumlah'] > 0)
-          .map((entry) => DropdownMenuItem(
-                value: '${entry.value['name']}_${entry.value['tipe']}', // Use composite key
-                child: Text(
-                  '${entry.value['name']} (${entry.value['tipe']}) - Stok: ${entry.value['jumlah']} ${entry.value['satuan']}',
+          .map((entry) => DropdownMenuItem<String>(
+                value: '${entry.value['name']}_${entry.value['tipe']}',
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.6),
+                  child: RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      style: TextStyle(fontSize: 13, color: Colors.black87),
+                      children: [
+                        TextSpan(text: entry.value['name']),
+                        TextSpan(text: ' (${entry.value['tipe']})'),
+                        TextSpan(text: ' - ${entry.value['jumlah']} ${entry.value['satuan']}'),
+                      ],
+                    ),
+                  ),
                 ),
               ))
           .toList();
@@ -416,7 +429,7 @@ class _PenjualanPageState extends State<PenjualanPage> {
       return _buildDropdownField(
         label: 'Pilih Barang',
         icon: Icons.inventory_2_rounded,
-        child: DropdownButtonFormField<String>(
+        child: DropdownButton<String>(
           value: _selectedBarang,
           items: stockWithInventory,
           onChanged: (value) {
@@ -431,24 +444,32 @@ class _PenjualanPageState extends State<PenjualanPage> {
                       .toList();
                 }
               });
-            } else {
-              setState(() {
-                _selectedBarang = null;
-                _selectedTipe = null;
-                _tipeList = [];
-              });
             }
           },
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.symmetric(horizontal: 16),
-          ),
+          isExpanded: true,
+          underline: Container(),
+          icon: Icon(Icons.arrow_drop_down, size: 24),
+          selectedItemBuilder: (BuildContext context) {
+            return stockWithInventory.map<Widget>((item) {
+              final value = item.value!.split('_');
+              return Container(
+                alignment: Alignment.centerLeft,
+                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.6),
+                child: Text(
+                  value[0], // Hanya tampilkan nama barang saat terpilih
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+              );
+            }).toList();
+          },
         ),
       );
     },
   );
 }
- 
+
 // Update _buildTipeDropdown untuk menangani kasus ketika hanya ada satu tipe
 Widget _buildTipeDropdown() {
   return _buildDropdownField(
@@ -459,7 +480,17 @@ Widget _buildTipeDropdown() {
       items: _tipeList.map((String tipe) {
         return DropdownMenuItem(
           value: tipe,
-          child: Text(tipe),
+          child: Container(
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.5),
+            child: Text(
+              tipe,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+              ),
+            ),
+          ),
         );
       }).toList(),
       onChanged: _tipeList.isEmpty ? null : (value) {
@@ -469,13 +500,35 @@ Widget _buildTipeDropdown() {
       },
       decoration: InputDecoration(
         border: InputBorder.none,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16),
-        // Tambahkan hint ketika tidak ada tipe yang tersedia
+        contentPadding: EdgeInsets.symmetric(horizontal: 8),
         hintText: _tipeList.isEmpty ? 'Pilih barang terlebih dahulu' : null,
+        hintStyle: TextStyle(
+          fontSize: 13,
+          color: Colors.grey[600],
+        ),
       ),
+      isExpanded: true,
+      icon: Icon(Icons.arrow_drop_down, size: 24),
+      selectedItemBuilder: (BuildContext context) {
+        return _tipeList.map<Widget>((String tipe) {
+          return Container(
+            alignment: Alignment.centerLeft,
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.5),
+            child: Text(
+              tipe,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+              ),
+            ),
+          );
+        }).toList();
+      },
     ),
   );
 }
+  
   Widget _buildInputField({
     required String label,
     required TextEditingController controller,
@@ -541,56 +594,53 @@ Widget _buildTipeDropdown() {
     );
   }
 
-  Widget _buildDropdownField({
-    required String label,
-    required IconData icon,
-    required Widget child,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Color(0xFF080C67),
+Widget _buildDropdownField({
+  required String label,
+  required IconData icon,
+  required Widget child,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+          color: Color(0xFF080C67),
+        ),
+      ),
+      SizedBox(height: 8),
+      Container(
+        height: 48, // Fixed height untuk dropdown container
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.withOpacity(0.2),
           ),
         ),
-        SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.grey.withOpacity(0.2),
+        child: Row(
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Icon(
+                icon,
+                color: Color(0xFF080C67),
+                size: 20,
+              ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.05),
-                spreadRadius: 0,
-                blurRadius: 8,
-                offset: Offset(0, 2),
+            Expanded(
+              child: DropdownButtonHideUnderline(
+                child: child,
               ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Padding(
-                padding: EdgeInsets.only(left: 12),
-                child: Icon(
-                  icon,
-                  color: Color(0xFF080C67),
-                  size: 20,
-                ),
-              ),
-              Expanded(child: child),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   void _showInvoiceDetail(Map<String, dynamic> data) {
     showDialog(
@@ -607,38 +657,7 @@ Widget _buildTipeDropdown() {
     }
   }
 
-  void _updateTipeList(String barangId) async {
-    final userId = DatabaseMethods().currentUserId;
-    try {
-      final barangDoc = await _db
-          .collection('Users')
-          .doc(userId)
-          .collection('Barang')
-          .doc(barangId)
-          .get();
-
-      if (!barangDoc.exists) {
-        throw 'Barang tidak ditemukan';
-      }
-
-      final data = barangDoc.data()!;
-      
-      setState(() {
-        _tipeList = [data['Tipe']];
-        _selectedTipe = data['Tipe'];
-      });
-
-    } catch (e) {
-      print('Error loading tipe: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error memuat tipe barang'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-}
-
+ 
 Future<void> _submitPenjualan() async {
   if (_selectedBarang == null || 
       _selectedTipe == null ||  
