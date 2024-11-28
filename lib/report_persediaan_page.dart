@@ -730,7 +730,9 @@ Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate)
     final previousMonth = DateTime(targetDate.year, targetDate.month - 1, 1);
     final formattedPreviousMonth = DateFormat('yyyy-MM-dd').format(previousMonth);
     
-    // 1. Ambil data stok dari bulan sebelumnya di StokBulanan
+    Map<String, Map<String, dynamic>> result = {};
+
+    // 1. Coba ambil data dari StokBulanan bulan sebelumnya
     final snapshotStokBulanan = await _db
         .collection("Users")
         .doc(userId)
@@ -738,10 +740,8 @@ Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate)
         .where('tanggal', isEqualTo: formattedPreviousMonth)
         .get();
 
-    Map<String, Map<String, dynamic>> result = {};
-
-    // Jika ada data di StokBulanan bulan sebelumnya, gunakan itu
     if (snapshotStokBulanan.docs.isNotEmpty) {
+        // Jika ada data di StokBulanan, gunakan itu
         for (var doc in snapshotStokBulanan.docs) {
             var data = doc.data();
             String key = '${data['Name']}_${data['Tipe']}';
@@ -753,15 +753,23 @@ Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate)
             };
         }
     } else {
-        // Jika tidak ada data di StokBulanan, ambil dari collection Barang
+        // 2. Jika tidak ada di StokBulanan, ambil dari Barang dengan filter tanggal
         final snapshotBarang = await _db
             .collection("Users")
             .doc(userId)
             .collection("Barang")
+            .where('isInitialInventory', isEqualTo: true)
             .get();
             
         for (var doc in snapshotBarang.docs) {
             var data = doc.data();
+            
+            // Check if the item was created before the target month
+            String itemDate = data['Tanggal'] ?? '';
+            if (itemDate.isEmpty || itemDate.compareTo(startDate) >= 0) {
+                continue; // Skip items created in or after the target month
+            }
+
             String key = '${data['Name']}_${data['Tipe']}';
             result[key] = {
                 'name': data['Name'],
@@ -774,7 +782,6 @@ Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate)
 
     return result;
 }
-
 
 // Perbaiki juga method fetching pembelian untuk konsistensi
 Future<Map<String, Map<String, dynamic>>> _fetchPembelian(String startDate, String endDate) async {

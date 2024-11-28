@@ -657,15 +657,169 @@ Widget _buildDropdownField({
     }
   }
 
- 
+  void _showError(String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      padding: EdgeInsets.zero,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      content: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFC0392B),
+              Color(0xFFE74C3C),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.3),
+              spreadRadius: 0,
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.error_outline,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Error!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close, color: Colors.white),
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ],
+        ),
+      ),
+      duration: Duration(seconds: 4),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+void _showSuccess(String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      padding: EdgeInsets.zero,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      content: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF1E8449),
+              Color(0xFF27AE60),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withOpacity(0.3),
+              spreadRadius: 0,
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.check_circle_outline,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Berhasil!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close, color: Colors.white),
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ],
+        ),
+      ),
+      duration: Duration(seconds: 4),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
 Future<void> _submitPenjualan() async {
   if (_selectedBarang == null || 
       _selectedTipe == null ||  
       _unitController.text.isEmpty || 
       _priceController.text.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Mohon lengkapi semua field')),
-    );
+    _showError('Mohon lengkapi semua field');
     return;
   }
 
@@ -690,10 +844,7 @@ Future<void> _submitPenjualan() async {
     // Mulai batch operation
     final batch = _db.batch();
     
-    // PENTING: Tidak perlu update jumlah di collection Barang!
-    // Karena itu adalah Persediaan Awal yang harus tetap
-    
-    // Tambah data penjualan saja
+    // Tambah data penjualan
     final penjualanRef = _db
         .collection("Users")
         .doc(userId)
@@ -714,7 +865,7 @@ Future<void> _submitPenjualan() async {
 
     await batch.commit();
 
-    // Reset form dan tampilkan pesan sukses
+    // Reset form
     setState(() {
       _selectedBarang = null;
       _selectedTipe = null;
@@ -725,24 +876,13 @@ Future<void> _submitPenjualan() async {
       _tanggalController.text = DateFormat('yyyy-MM-dd').format(_selectedDate);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Penjualan berhasil disimpan'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    _showSuccess('Barang berhasil terjual');
   } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Error: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    _showError('Error: $e');
   } finally {
     setState(() => _isLoading = false);
   }
 }
-
   @override
   void dispose() {
     _unitController.dispose();
