@@ -64,46 +64,52 @@ class _InfoScreenState extends State<InfoScreen> {
   }
 
   Future<void> saveData() async {
+  try {
     String? uid = FirebaseAuth.instance.currentUser?.uid;
-
     if (uid != null) {
-      // Simpan data pribadi
-      await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(uid)
-          .collection('PersonalData')
-          .doc('dataPribadi')
-          .set({
-        'Nama Lengkap': namaLengkap.text,
-        'NPWP': npwp.text,
-        'Tanggal Lahir': tanggalLahir.text,
-        'Jenis Kelamin': jenisKelamin,
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // Save personal data
+        final personalRef = FirebaseFirestore.instance
+            .collection('Users')
+            .doc(uid)
+            .collection('PersonalData')
+            .doc('dataPribadi');
+            
+        transaction.set(personalRef, {
+          'Nama Lengkap': namaLengkap.text,
+          'NPWP': npwp.text,
+          'Tanggal Lahir': tanggalLahir.text,
+          'Jenis Kelamin': jenisKelamin,
+        });
+
+        // Save business data
+        final businessRef = FirebaseFirestore.instance
+            .collection('Users')
+            .doc(uid)
+            .collection('BusinessData')
+            .doc('dataUsaha');
+            
+        transaction.set(businessRef, {
+          'Nama Usaha': namaUsaha.text,
+          'Tipe Usaha': tipeUsaha,
+          'Nomor Telepon': nomorTelepon.text,
+        });
       });
 
-      // Simpan data usaha
-      await FirebaseFirestore.instance
-          .collection('Users')
-          .doc(uid)
-          .collection('BusinessData')
-          .doc('dataUsaha')
-          .set({
-        'Nama Usaha': namaUsaha.text,
-        'Tipe Usaha': tipeUsaha,
-        'Nomor Telepon': nomorTelepon.text,
-      });
-
-      // Tambahkan notifikasi
       await addNotification(
-        title: 'Pendaftaran Akun Berhasil',
-        message: 'Selamat! Anda berhasil mendaftarkan akun.',
+        title: 'Pendaftaran Berhasil',
+        message: 'Data pribadi dan usaha Anda telah tersimpan.',
       );
 
-      // Navigasi ke halaman utama
       Get.offAllNamed(Routes.home);
-    } else {
-      print('UID pengguna tidak ditemukan.');
     }
+  } catch (e) {
+    print('Error saving data: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Gagal menyimpan data')),
+    );
   }
+}
 
   String getTitle() {
     if (currentStep == 0) {

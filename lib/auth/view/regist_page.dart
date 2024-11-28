@@ -18,7 +18,7 @@ class _RegistPageState extends State<RegistPage> {
   final passController = TextEditingController(); //text: "123123"
 
   // Obsecure Password
-  var _isObscured;  
+  var _isObscured;
 
   // Set Obsecure Password
   @override

@@ -240,15 +240,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   padding: EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Text(
-                        'Profil',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 24,
-                        ),
-                      ),
-                      SizedBox(height: 24),
+                      SizedBox(height: 2),
                       // Profile Picture Section
                       GestureDetector(
                         onTap: isEditing ? _pickAndSaveAvatar : null,

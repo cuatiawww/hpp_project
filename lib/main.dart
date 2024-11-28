@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hpp_project/auth/view/verify_email.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:hpp_project/Perusahaan_Dagang/notification/notif.dart';
@@ -78,7 +79,7 @@ class MyApp extends StatelessWidget {
           GetPage(name: Routes.login, page: () => LoginPage()),
           GetPage(name: Routes.regist, page: () => RegistPage()),
           GetPage(name: Routes.forgot, page: () => ForgotPage()),
-          GetPage(name: Routes.otp, page: () => Otp()),
+          // GetPage(name: Routes.otp, page: () => Otp()),
           GetPage(name: Routes.otpSuccess, page: () => OtpSuccess()),
           GetPage(name: Routes.reset, page: () => ResetPage()),
           GetPage(name: Routes.home, page: () => HomePage()),
@@ -87,6 +88,7 @@ class MyApp extends StatelessWidget {
           GetPage(name: Routes.persAkhir, page: () => PersAkhirPage()),
           GetPage(name: Routes.infoScreen, page: () => InfoScreen()),
           GetPage(name: Routes.notif, page: () => NotificationPage()),
+          GetPage(name: Routes.verifyEmail, page: () => VerifyEmailPage()),
           GetPage(
             name: Routes.splashScreen, 
             page: () => SplashScreen(

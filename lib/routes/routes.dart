@@ -16,4 +16,5 @@ class Routes {
   static const String testFirestore = '/test-firestore';
   static const String notif = '/notif_page';
   static const String splashScreen = '/splash_screen';
+  static const String verifyEmail = '/verify_email';
 }
