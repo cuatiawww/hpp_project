@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -15,14 +14,36 @@ class AuthController extends GetxController {
   Timer? emailVerificationTimer;
   final isEmailVerified = false.obs;
 
+  User? get currentUser => _auth.currentUser;
   String? get currentUserId => _auth.currentUser?.uid;
   Stream<User?> get streamAuthStatus => _auth.authStateChanges();
 
    @override
   void onInit() {
     super.onInit();
-    // Check if user is already verified when app starts
-    checkEmailVerificationStatus();
+    // Cek status otentikasi saat aplikasi dimulai
+    checkInitialAuthState();
+  }
+
+  Future<void> checkInitialAuthState() async {
+    final user = _auth.currentUser;
+    
+    if (user != null) {
+      await user.reload();
+
+      if (!user.emailVerified) { // Jika email belum diverifikasi
+        Get.offAllNamed(Routes.verifyEmail);
+        startEmailVerificationTimer();
+        return;
+      }
+
+      final hasProfile = await checkProfileCompletion(user.uid); // Jika email sudah diverifikasi, cek apakah sudah mengisi info
+      if (!hasProfile) {
+        Get.offAllNamed(Routes.infoScreen);
+      } else {
+        Get.offAllNamed(Routes.home);
+      }
+    }
   }
 
   Future<void> signup(String email, String password) async {
@@ -73,11 +94,8 @@ class AuthController extends GetxController {
   }
 
   void startEmailVerificationTimer() {
-    // Cancel any existing timer
-    emailVerificationTimer?.cancel();
-    
-    // Check every 3 seconds
-    emailVerificationTimer = Timer.periodic(
+    emailVerificationTimer?.cancel(); // Cancel jika ada timer sebelumnya
+    emailVerificationTimer = Timer.periodic( // Cek status email setiap 3 detik
       const Duration(seconds: 3),
       (_) => checkEmailVerificationStatus(),
     );
@@ -87,20 +105,19 @@ class AuthController extends GetxController {
     final user = _auth.currentUser;
     
     if (user != null) {
-      // Reload user to get latest status
-      await user.reload();
+      await user.reload(); // Reload user untuk memeriksa status verifikasi terbaru
       
-      if (user.emailVerified) {
+      if (user.emailVerified && !isEmailVerified.value) {
         isEmailVerified.value = true;
         emailVerificationTimer?.cancel();
         
-        // Update Firestore
-        await _firestore.collection('Users').doc(user.uid).update({
+        await _firestore.collection('Users').doc(user.uid).update({ // Update Firestore
           'isEmailVerified': true,
         });
+
+        showSnackBar('Email Anda berhasil diverifikasi!', isError: false);
         
-        // Navigate to info screen after verification
-        Get.offAllNamed(Routes.infoScreen);
+        Get.offAllNamed(Routes.infoScreen); // Navigasi ke InfoScreen
       }
     }
   }
@@ -108,8 +125,10 @@ class AuthController extends GetxController {
   Future<void> sendVerificationEmail() async {
     try {
       final user = _auth.currentUser;
-      await user?.sendEmailVerification();
-      showSnackBar('Email verifikasi telah dikirim ulang!', isError: false);
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        showSnackBar('Email verifikasi telah dikirim ulang ke ${user.email}', isError: false);
+      }
     } catch (e) {
       showSnackBar('Gagal mengirim email verifikasi', isError: true);
     }
@@ -122,19 +141,30 @@ class AuthController extends GetxController {
         password: password,
       );
 
-      if (!userCredential.user!.emailVerified) {
+      final user = userCredential.user;
+      if (user == null) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'User tidak ditemukan',
+        );
+      }
+
+      await user.reload(); // Reload user untuk mendapatkan status terbaru
+
+      if (!user.emailVerified) {
+        await sendVerificationEmail();
+        Get.offAllNamed(Routes.verifyEmail);
+        startEmailVerificationTimer();
         showSnackBar('Silakan verifikasi email Anda terlebih dahulu', isError: true);
-        await _auth.signOut();
         return;
       }
 
-      // Check if profile is completed
-      final hasProfile = await checkProfileCompletion(userCredential.user!.uid);
-
+      // Cek status verifikasi email
+      final hasProfile = await checkProfileCompletion(user.uid);
       if (!hasProfile) {
-      Get.offAllNamed(Routes.home);
-      } else {
         Get.offAllNamed(Routes.infoScreen);
+      } else {
+        Get.offAllNamed(Routes.home);
       }
       
       await addNotification(
@@ -143,19 +173,17 @@ class AuthController extends GetxController {
       );
       showSnackBar('Login berhasil', isError: false);
     } on FirebaseAuthException catch (e) {
-      String errorMessage;
+      String errorMessage = 'Gagal login. Silakan coba lagi.';
       switch (e.code) {
+        case 'invalid-email':
+          errorMessage = 'Format email tidak valid';
+          break;
         case 'user-not-found':
           errorMessage = 'Email tidak terdaftar';
           break;
         case 'wrong-password':
-          errorMessage = 'Password salah';
+          errorMessage = 'Password yang anda masukkan salah';
           break;
-        case 'invalid-email':
-          errorMessage = 'Format email tidak valid';
-          break;
-        default:
-          errorMessage = 'Gagal login. Silakan coba lagi.';
       }
       showSnackBar(errorMessage, isError: true);
     }
@@ -185,7 +213,7 @@ class AuthController extends GetxController {
 
   Future<void> resetPassword(String email) async {
     try {
-      if (EmailValidator.validate(email)) {
+      if (!EmailValidator.validate(email)) {
         throw FirebaseAuthException(
           code: 'invalid-email',
           message: 'Format email tidak valid',
