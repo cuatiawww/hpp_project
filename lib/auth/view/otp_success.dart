@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hpp_project/auth/view/login.dart';
 import 'package:hpp_project/routes/routes.dart';
 
 class OtpSuccess extends StatelessWidget {

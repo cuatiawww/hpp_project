@@ -16,11 +16,9 @@ import 'package:hpp_project/onboarding/onboarding_view.dart';
 
 import 'package:hpp_project/routes/routes.dart';
 import 'package:hpp_project/auth/controllers/auth_controller.dart';
-import 'package:hpp_project/utils/loading.dart';
 
 import 'package:hpp_project/auth/view/login.dart';
 import 'package:hpp_project/auth/view/forgot.dart';
-import 'package:hpp_project/auth/view/otp.dart';
 import 'package:hpp_project/auth/view/reset.dart';
 import 'package:hpp_project/auth/view/regist_page.dart';
 import 'package:hpp_project/auth/view/otp_success.dart';

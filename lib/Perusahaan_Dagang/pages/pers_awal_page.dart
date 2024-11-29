@@ -201,7 +201,7 @@ Widget _buildTable() {
                     padding: EdgeInsets.all(16),
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
-                      headingRowColor: MaterialStateProperty.all(
+                      headingRowColor: WidgetStateProperty.all(
                         Color(0xFFEEF2FF),
                       ),
                       columns: const [

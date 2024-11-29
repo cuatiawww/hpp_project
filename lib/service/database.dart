@@ -365,7 +365,7 @@ Stream<QuerySnapshot<Map<String, dynamic>>> getLaporanPenjualanStream(
     return months;
   }
 
-  //PENJUALAN
+//PENJUALAN
 Future<Map<String, Map<String, dynamic>>> getAvailableStock() async {
   String userId = currentUserId;
   

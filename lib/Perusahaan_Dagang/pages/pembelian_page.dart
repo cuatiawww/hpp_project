@@ -352,7 +352,7 @@ class _PembelianPageState extends State<PembelianPage> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
+              headingRowColor: WidgetStateProperty.all(Color(0xFFEEF2FF)),
               columns: const [
                 DataColumn(label: Text("Nama Barang")),
                 DataColumn(label: Text("Jumlah")),
