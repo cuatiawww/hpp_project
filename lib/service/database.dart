@@ -8,7 +8,7 @@ class DatabaseMethods {
 
   String get currentUserId => _auth.currentUser?.uid ?? '';
 
-  // Modifikasi method addBarang
+// Modifikasi method addBarang
 Future<void> addBarang(Map<String, dynamic> barangInfoMap, String id) async {
     String userId = currentUserId;
     
