@@ -19,6 +19,9 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   final ValueNotifier<double> _totalPenjualan = ValueNotifier(0);
   final ValueNotifier<double> _totalPembelian = ValueNotifier(0);
   final ValueNotifier<int> _totalBarangTerjual = ValueNotifier(0);
+   final ValueNotifier<double> _penjualanPercentage = ValueNotifier(0);
+  final ValueNotifier<double> _pembelianPercentage = ValueNotifier(0);
+  final ValueNotifier<double> _profitPercentage = ValueNotifier(0);
   
   Stream<QuerySnapshot<Map<String, dynamic>>>? _penjualanStream;
   Stream<QuerySnapshot<Map<String, dynamic>>>? _pembelianStream;
@@ -90,41 +93,84 @@ void _initializeData() {
     print('Error loading initial data: $e');
   }
 }
- 
- void _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
-  if (!mounted) return;
-    
-  double tempTotalPenjualan = 0;
-  int tempTotalBarangTerjual = 0;
 
-  for (var doc in docs) {
-    final data = doc.data();
-    // Make sure we're checking for the correct date format and field
-    if (data['tanggal'] != null && data['tanggal'].toString().startsWith(_selectedMonth)) {
-      final hargaJual = (data['hargaJual'] as num?)?.toDouble() ?? 0;
-      final jumlah = (data['jumlah'] as num?)?.toInt() ?? 0;
-      
-      // Update both values
-      tempTotalPenjualan += (hargaJual * jumlah);
-      tempTotalBarangTerjual += jumlah;  // Make sure this line executes
-      
-      // Add debug print to verify calculations
-      print('Processing sale: Price: $hargaJual, Quantity: $jumlah');
-      print('Running totals - Sales: $tempTotalPenjualan, Items: $tempTotalBarangTerjual');
+  Future<Map<String, double>> _getPreviousMonthData(String currentMonth) async {
+    final currentDate = DateTime.parse('$currentMonth-01');
+    final previousMonth = DateTime(currentDate.year, currentDate.month - 1);
+    final previousMonthStr = DateFormat('yyyy-MM').format(previousMonth);
+    
+    final startDate = '$previousMonthStr-01';
+    final endDate = DateTime(previousMonth.year, previousMonth.month + 1, 0);
+    final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+
+    double previousPenjualan = 0;
+    double previousPembelian = 0;
+
+    try {
+      final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDateStr).first;
+      final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDateStr).first;
+
+      for (var doc in penjualanDocs.docs) {
+        final data = doc.data();
+        if (data['tanggal'] != null && data['tanggal'].toString().startsWith(previousMonthStr)) {
+          final hargaJual = (data['hargaJual'] as num?)?.toDouble() ?? 0;
+          final jumlah = (data['jumlah'] as num?)?.toInt() ?? 0;
+          previousPenjualan += (hargaJual * jumlah);
+        }
+      }
+
+      for (var doc in pembelianDocs.docs) {
+        final data = doc.data();
+        if (data['Tanggal'] != null && data['Tanggal'].startsWith(previousMonthStr)) {
+          final harga = (data['Price'] as num?)?.toDouble() ?? 0;
+          final jumlah = (data['Jumlah'] as num?)?.toInt() ?? 0;
+          previousPembelian += (harga * jumlah);
+        }
+      }
+    } catch (e) {
+      print('Error getting previous month data: $e');
+    }
+
+    return {
+      'penjualan': previousPenjualan,
+      'pembelian': previousPembelian,
+    };
+  }
+ 
+  void _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
+    if (!mounted) return;
+    
+    double tempTotalPenjualan = 0;
+    int tempTotalBarangTerjual = 0;
+
+    for (var doc in docs) {
+      final data = doc.data();
+      if (data['tanggal'] != null && data['tanggal'].toString().startsWith(_selectedMonth)) {
+        final hargaJual = (data['hargaJual'] as num?)?.toDouble() ?? 0;
+        final jumlah = (data['jumlah'] as num?)?.toInt() ?? 0;
+        tempTotalPenjualan += (hargaJual * jumlah);
+        tempTotalBarangTerjual += jumlah;
+      }
+    }
+
+    // Get previous month's data for comparison
+    final previousData = await _getPreviousMonthData(_selectedMonth);
+    final previousPenjualan = previousData['penjualan'] ?? 0;
+    
+    // Calculate percentage change
+    double percentageChange = 0;
+    if (previousPenjualan > 0) {
+      percentageChange = ((tempTotalPenjualan - previousPenjualan) / previousPenjualan) * 100;
+    }
+
+    if (mounted) {
+      _totalPenjualan.value = tempTotalPenjualan;
+      _totalBarangTerjual.value = tempTotalBarangTerjual;
+      _penjualanPercentage.value = percentageChange;
     }
   }
 
-  // Update the ValueNotifiers
-  if (mounted) {
-    _totalPenjualan.value = tempTotalPenjualan;
-    _totalBarangTerjual.value = tempTotalBarangTerjual;
-    
-    // Add debug print to verify final values
-    print('Final values - Total Sales: ${_totalPenjualan.value}, Total Items: ${_totalBarangTerjual.value}');
-  }
-}
-
-  void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+  void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
     if (!mounted) return;
     
     double tempTotalPembelian = 0;
@@ -138,9 +184,22 @@ void _initializeData() {
       }
     }
 
-    _totalPembelian.value = tempTotalPembelian;
-  }
+    // Get previous month's data for comparison
+    final previousData = await _getPreviousMonthData(_selectedMonth);
+    final previousPembelian = previousData['pembelian'] ?? 0;
+    
+    // Calculate percentage change
+    double percentageChange = 0;
+    if (previousPembelian > 0) {
+      percentageChange = ((tempTotalPembelian - previousPembelian) / previousPembelian) * 100;
+    }
 
+    if (mounted) {
+      _totalPembelian.value = tempTotalPembelian;
+      _pembelianPercentage.value = percentageChange;
+    }
+  }
+  
   List<DropdownMenuItem<String>> _buildMonthDropdownItems() {
     return List.generate(12, (index) {
       final date = DateTime.now().subtract(Duration(days: 30 * index));
@@ -286,7 +345,6 @@ void _initializeData() {
               return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: _pembelianStream,
                 builder: (context, pembelianSnapshot) {
-                  // Update statistics
                   if (penjualanSnapshot.hasData) {
                     _calculatePenjualanStats(penjualanSnapshot.data!.docs);
                   }
@@ -305,6 +363,7 @@ void _initializeData() {
                               Icons.trending_up_rounded,
                               const Color(0xFF4CAF50),
                               isPositive: true,
+                              percentageNotifier: _penjualanPercentage,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -315,10 +374,11 @@ void _initializeData() {
                               Icons.trending_down_rounded,
                               const Color(0xFFE53935),
                               isPositive: false,
+                              percentageNotifier: _pembelianPercentage,
                             ),
                           ),
                         ],
-                      ),
+                      ),  
                       const SizedBox(height: 16),
                       Row(
                         children: [
@@ -348,13 +408,14 @@ void _initializeData() {
     );
   }
 
-  Widget _buildModernStatCard(
+ Widget _buildModernStatCard(
     String title,
     ValueNotifier<double> value,
     IconData icon,
     Color color, {
     bool isCount = false,
     bool isPositive = true,
+    ValueNotifier<double>? percentageNotifier, // Tambah parameter untuk persentase
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -413,34 +474,44 @@ void _initializeData() {
               ),
             ),
           ),
-          if (!isCount) ...[
+          if (!isCount && percentageNotifier != null) ...[
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  isPositive
-                      ? Icons.arrow_upward_rounded
-                      : Icons.arrow_downward_rounded,
-                  color: color,
-                  size: 16,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isPositive ? '+2.5%' : '-1.8%',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+            ValueListenableBuilder<double>(
+              valueListenable: percentageNotifier,
+              builder: (context, percentage, _) {
+                final isPositiveChange = percentage >= 0;
+                final displayColor = isPositiveChange 
+                    ? const Color(0xFF4CAF50)  // Warna hijau untuk positif
+                    : const Color(0xFFE53935);  // Warna merah untuk negatif
+                    
+                return Row(
+                  children: [
+                    Icon(
+                      isPositiveChange
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      color: displayColor,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      // Tambah tanda + untuk nilai positif
+                      '${isPositiveChange ? "+" : ""}${percentage.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        color: displayColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ],
       ),
     );
   }
-   
    Widget _buildProfitStatCard() {
     return ValueListenableBuilder<double>(
       valueListenable: _totalPenjualan,
