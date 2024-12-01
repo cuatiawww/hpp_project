@@ -43,10 +43,8 @@ class _PersAwalState extends State<PersAwal> {
       final month = DateTime(now.year, now.month - i, 1);
       _months.add(DateFormat('yyyy-MM').format(month));
     }
-    
     // Bulan sekarang
     _months.add(DateFormat('yyyy-MM').format(now));
-    
     // 6 bulan kedepan
     for (int i = 1; i <= 6; i++) {
       final month = DateTime(now.year, now.month + i, 1);
@@ -752,28 +750,36 @@ Widget _buildEditField(
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    appBar: AppBar(
-      centerTitle: true,
-      elevation: 0,
-      title: const Text(
-        'Persediaan Awal',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 24,
-        ),
-      ),
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      flexibleSpace: Container(
+    appBar: PreferredSize(
+      preferredSize: Size.fromHeight(kToolbarHeight),
+      child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
               Color(0xFF080C67),
               Color(0xFF1E23A7),
             ],
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+          ),
+        ),
+        child: AppBar(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent, // Make AppBar transparent to show gradient
+          title: const Text(
+            'Persediaan Awal',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 24,
+            ),
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
       ),

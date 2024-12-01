@@ -562,31 +562,37 @@ void _showMonthPicker() {
     ),
   );
 }
-
-// Update the build method to maintain consistent styling
 @override
 Widget build(BuildContext context) {
   return Scaffold(
     backgroundColor: Color(0xFFF8FAFC),
-    appBar: AppBar(
-      centerTitle: true,
-      elevation: 0,
-      title: const Text(
-        'Pembelian',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 20,
-        ),
-      ),
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
-      ),
-      flexibleSpace: Container(
+    appBar: PreferredSize(
+      preferredSize: Size.fromHeight(kToolbarHeight),
+      child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+          ),
+        ),
+        child: AppBar(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          title: const Text(
+            'Pembelian',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
+          ),
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
           ),
         ),
       ),
@@ -615,4 +621,5 @@ Widget build(BuildContext context) {
     ),
   );
 }
+
 }
