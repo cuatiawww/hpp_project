@@ -163,7 +163,7 @@
           DataColumn(label: Text('Harga Terakhir')),
           DataColumn(label: Text('Total Nilai')),
         ],
-        rows: _buildTableRows(_persediaanData), // Gunakan _persediaanData langsung
+        rows: _buildTableRows(_persediaanData),
       ),
     ),
   );

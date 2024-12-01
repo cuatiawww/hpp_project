@@ -21,7 +21,7 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final auth = FirebaseAuth.instance;
   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
-  final List<String> _months = [];
+  List<String> _months = [];
   bool _isLoading = false;
   
   // Data holders for preview
@@ -44,13 +44,24 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
   }
 
   void _generateMonths() {
-    final now = DateTime.now();
-    for (int i = 0; i < 12; i++) {
-      final month = DateTime(now.year, now.month - i, 1);
-      _months.add(DateFormat('yyyy-MM').format(month));
-    }
+  final now = DateTime.now();
+  _months = [];
+  
+  // 6 bulan sebelumnya
+  for (int i = 6; i >= 1; i--) {
+    final month = DateTime(now.year, now.month - i, 1);
+    _months.add(DateFormat('yyyy-MM').format(month));
   }
   
+  // Bulan sekarang
+  _months.add(DateFormat('yyyy-MM').format(now));
+  
+  // 6 bulan kedepan
+  for (int i = 1; i <= 6; i++) {
+    final month = DateTime(now.year, now.month + i, 1);
+    _months.add(DateFormat('yyyy-MM').format(month));
+  }
+}
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
@@ -134,16 +145,8 @@ pw.Widget _buildPDFHeader(pw.Font font, pw.Font fontBold) {
           text: pw.TextSpan(
             children: [
               pw.TextSpan(
-                text: 'Laporan ',
+                text: 'Laporan Persediaan',
                 style: pw.TextStyle(font: fontBold, fontSize: 24),
-              ),
-              pw.TextSpan(
-                text: 'Persediaan',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 24,
-                  color: PdfColor.fromHex('#4F46E5'),
-                ),
               ),
             ],
           ),
@@ -438,17 +441,19 @@ pw.Widget _buildHeaderCell(String text, pw.Font font) {
     ),
   );
 }
-pw.Widget _buildPDFCell(String text) {
-  return pw.Container(
-    padding: const pw.EdgeInsets.all(5),
-    alignment: pw.Alignment.centerRight,
-    child: pw.Text(
-      text,
-      style: const pw.TextStyle(fontSize: 10),
-    ),
-  );
-}
+// pw.Widget _buildPDFCell(String text) {
+//   return pw.Container(
+//     padding: const pw.EdgeInsets.all(5),
+//     alignment: pw.Alignment.centerRight,
+//     child: pw.Text(
+//       text,
+//       style: const pw.TextStyle(fontSize: 10),
+//     ),
+//   );
+// }
   // Preview Table Building
+
+
 Widget _buildPreviewTable() {
   Set<String> allItems = {
     ...persAwalData.keys,
@@ -719,18 +724,105 @@ Widget _buildPreviewDataGroup({
   );
 }
 
-  // Data fetching methods
+Widget _buildMonthDropdown() {
+  return Container(
+    margin: EdgeInsets.all(16),
+    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 20,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.calendar_today_rounded,
+            color: Color(0xFF080C67),
+            size: 20,
+          ),
+        ),
+        SizedBox(width: 12),
+        Text(
+          "Filter Bulan:",
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: Color(0xFF080C67),
+          ),
+        ),
+        SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedMonth,
+                icon: Icon(
+                  Icons.keyboard_arrow_down_rounded, 
+                  color: Color(0xFF080C67)
+                ),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[800],
+                ),
+                items: _months.map((String month) {
+                  return DropdownMenuItem<String>(
+                    value: month,
+                    child: Text(
+                      DateFormat('MMMM yyyy').format(DateTime.parse('$month-01')),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedMonth = newValue;
+                      _fetchData();
+                    });
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+// Data fetching methods
 Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate) async {
     final userId = auth.currentUser?.uid;
     
-    // Parse startDate untuk mendapatkan bulan dan tahun
+    // Parse startDate to get month and year
     final targetDate = DateTime.parse(startDate);
-    final previousMonth = DateTime(targetDate.year, targetDate.month - 1, 1);
-    final formattedPreviousMonth = DateFormat('yyyy-MM-dd').format(previousMonth);
+    final firstDayOfMonth = DateTime(targetDate.year, targetDate.month, 1);
     
     Map<String, Map<String, dynamic>> result = {};
 
-    // 1. Coba ambil data dari StokBulanan bulan sebelumnya
+    // First try to get data from previous month's StokBulanan
+    final previousMonth = DateTime(targetDate.year, targetDate.month - 1, 1);
+    final formattedPreviousMonth = DateFormat('yyyy-MM-dd').format(previousMonth);
+    
     final snapshotStokBulanan = await _db
         .collection("Users")
         .doc(userId)
@@ -739,7 +831,7 @@ Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate)
         .get();
 
     if (snapshotStokBulanan.docs.isNotEmpty) {
-        // Jika ada data di StokBulanan, gunakan itu
+        // Use StokBulanan if available
         for (var doc in snapshotStokBulanan.docs) {
             var data = doc.data();
             String key = '${data['Name']}_${data['Tipe']}';
@@ -751,7 +843,7 @@ Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate)
             };
         }
     } else {
-        // 2. Jika tidak ada di StokBulanan, ambil dari Barang dengan filter tanggal
+        // If no StokBulanan, calculate from Barang and previous transactions
         final snapshotBarang = await _db
             .collection("Users")
             .doc(userId)
@@ -761,20 +853,50 @@ Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate)
             
         for (var doc in snapshotBarang.docs) {
             var data = doc.data();
-            
-            // Check if the item was created before the target month
             String itemDate = data['Tanggal'] ?? '';
-            if (itemDate.isEmpty || itemDate.compareTo(startDate) >= 0) {
-                continue; // Skip items created in or after the target month
+            
+            // Changed logic: Include items if they were created before the start of current month
+            if (!itemDate.isEmpty && DateTime.parse(itemDate).isBefore(firstDayOfMonth)) {
+                String key = '${data['Name']}_${data['Tipe']}';
+                result[key] = {
+                    'name': data['Name'],
+                    'tipe': data['Tipe'],
+                    'jumlah': (data['Jumlah'] ?? 0).toInt(),
+                    'price': ((data['Price'] ?? 0) as num).toDouble(),
+                };
             }
-
-            String key = '${data['Name']}_${data['Tipe']}';
-            result[key] = {
-                'name': data['Name'],
-                'tipe': data['Tipe'],
-                'jumlah': (data['Jumlah'] ?? 0).toInt(),
-                'price': ((data['Price'] ?? 0) as num).toDouble(),
-            };
+        }
+        
+        // Add previous month's purchases
+        final previousPurchases = await _db
+            .collection("Users")
+            .doc(userId)
+            .collection("Pembelian")
+            .where('Tanggal', isLessThan: startDate)
+            .get();
+            
+        for (var doc in previousPurchases.docs) {
+            var data = doc.data();
+            String key = '${data['Name']}_${data['Type']}';
+            
+            if (result.containsKey(key)) {
+                // Update existing item
+                result[key]!['jumlah'] = (result[key]!['jumlah'] as int) + (data['Jumlah'] ?? 0);
+                // Update price if this purchase is more recent
+                if (data['Tanggal'].compareTo(result[key]!['lastUpdate'] ?? '') > 0) {
+                    result[key]!['price'] = data['Price'] ?? 0;
+                    result[key]!['lastUpdate'] = data['Tanggal'];
+                }
+            } else {
+                // Add new item
+                result[key] = {
+                    'name': data['Name'],
+                    'tipe': data['Type'],
+                    'jumlah': data['Jumlah'] ?? 0,
+                    'price': data['Price'] ?? 0,
+                    'lastUpdate': data['Tanggal'],
+                };
+            }
         }
     }
 
@@ -928,11 +1050,11 @@ Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
     ).format(value);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text(
         'Report Persediaan',
         style: TextStyle(
           color: Colors.white,
@@ -941,90 +1063,55 @@ Future<Map<String, Map<String, dynamic>>> _calculatePersediaanAkhir(
         ),
       ),
       leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: Colors.white), // Ikon back putih
+        icon: Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => Navigator.of(context).pop(),
       ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF080C67),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Pilih Periode:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+      centerTitle: true,
+      backgroundColor: const Color(0xFF080C67),
+    ),
+    body: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          _buildMonthDropdown(), // Use the styled dropdown here
+          const SizedBox(height: 16),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: _buildPreviewTable(),
                     ),
-                    const SizedBox(height: 8),
-                    DropdownButton<String>(
-                      isExpanded: true,
-                      value: _selectedMonth,
-                      items: _months.map((String month) {
-                        return DropdownMenuItem<String>(
-                          value: month,
-                          child: Text(
-                            DateFormat('MMMM yyyy').format(
-                              DateTime.parse('$month-01'),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          setState(() => _selectedMonth = newValue);
-                          _fetchData();
-                        }
-                      },
+                  ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _isLoading ? null : _generatePDF,
+            icon: _isLoading 
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
                     ),
-                  ],
-                ),
+                  )
+                : const Icon(Icons.print, color: Colors.white),
+            label: Text(_isLoading ? 'Generating...' : 'Generate PDF', 
+              style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF080C67),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
               ),
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SingleChildScrollView(
-                        child: _buildPreviewTable(),
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _isLoading ? null : _generatePDF,
-              icon: _isLoading 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Icon(Icons.print, color: Colors.white),
-              label: Text(_isLoading ? 'Generating...' : 'Generate PDF', style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF080C67),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

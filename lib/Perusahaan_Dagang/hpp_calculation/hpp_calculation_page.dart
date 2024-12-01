@@ -1134,23 +1134,15 @@ pw.Widget _buildPDFHeader(pw.Font font, pw.Font fontBold) {
           text: pw.TextSpan(
             children: [
               pw.TextSpan(
-                text: 'Laporan ',
+                text: 'Laporan HPP',
                 style: pw.TextStyle(font: fontBold, fontSize: 24),
-              ),
-              pw.TextSpan(
-                text: 'HPP',
-                style: pw.TextStyle(
-                  font: fontBold,
-                  fontSize: 24,
-                  color: PdfColor.fromHex('#4F46E5'),
-                ),
               ),
             ],
           ),
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          dataUsahaC.namaUsaha.value, // Menggunakan nama usaha dari controller
+          dataUsahaC.namaUsaha.value,
           style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey800),
         ),
         pw.SizedBox(height: 4),

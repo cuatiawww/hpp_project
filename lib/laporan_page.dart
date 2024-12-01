@@ -480,7 +480,7 @@ void _initializeData() {
               valueListenable: percentageNotifier,
               builder: (context, percentage, _) {
                 final isPositiveChange = percentage >= 0;
-                final displayColor = isPositiveChange 
+                final displayColor = isPositiveChange
                     ? const Color(0xFF4CAF50)  // Warna hijau untuk positif
                     : const Color(0xFFE53935);  // Warna merah untuk negatif
                     
