@@ -15,7 +15,7 @@ class _PembelianPageState extends State<PembelianPage> {
   // Data holders
   final Map<String, Map<String, dynamic>> _barangCache = {};
   final Map<String, Map<String, dynamic>> _combinedData = {};
-  final List<String> _months = [];
+  List<String> _months = [];
   List<QueryDocumentSnapshot> _pembelianDocs = [];
   
   // State variables
@@ -37,12 +37,24 @@ class _PembelianPageState extends State<PembelianPage> {
   }
 
   void _generateMonths() {
-    final now = DateTime.now();
-    for (int i = 0; i < 12; i++) {
-      final month = DateTime(now.year, now.month - i, 1);
-      _months.add(DateFormat('yyyy-MM').format(month));
-    }
+  final now = DateTime.now();
+  _months = [];
+  
+  // 6 bulan sebelumnya
+  for (int i = 6; i >= 1; i--) {
+    final month = DateTime(now.year, now.month - i, 1);
+    _months.add(DateFormat('yyyy-MM').format(month));
   }
+  
+  // Bulan sekarang
+  _months.add(DateFormat('yyyy-MM').format(now));
+  
+  // 6 bulan kedepan
+  for (int i = 1; i <= 6; i++) {
+    final month = DateTime(now.year, now.month + i, 1);
+    _months.add(DateFormat('yyyy-MM').format(month));
+  }
+}
 
   Future<void> _initializeData() async {
     setState(() {
@@ -382,147 +394,167 @@ class _PembelianPageState extends State<PembelianPage> {
   }
 
 Widget _buildHeaderSection() {
-  return SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Container(
-      constraints: BoxConstraints(
-        minWidth: MediaQuery.of(context).size.width,
-      ),
-      padding: EdgeInsets.all(16),
-      child: Row(
-        children: [
-          // Filter Bulan (Left Side)
-          SizedBox(
-            width: MediaQuery.of(context).size.width * 0.45, // 45% dari lebar layar
-            child: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    child: Row(
+      children: [
+        // Filter Bulan button
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                _showMonthPicker();
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      color: Color(0xFF080C67),
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      DateFormat('MMMM yyyy').format(
+                        DateTime.parse('$_selectedMonth-01'),
+                      ),
+                      style: TextStyle(
+                        color: Color(0xFF080C67),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+        ),
+        SizedBox(width: 8),
+        // Input Pembelian button
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const InputPembelianPage(),
+                ),
+              );
+              if (result == true) {
+                _refreshData();
+              }
+            },
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xFF080C67).withOpacity(0.2),
+                    spreadRadius: 0,
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  SizedBox(width: 4),
                   Text(
-                    "Filter Bulan",
+                    "Input Pembelian",
                     style: TextStyle(
+                      color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF080C67),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isDense: true, // Membuat dropdown lebih compact
-                        isExpanded: true,
-                        value: _selectedMonth,
-                        icon: Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          color: Color(0xFF080C67),
-                          size: 20,
-                        ),
-                        items: _months.map((month) {
-                          return DropdownMenuItem(
-                            value: month,
-                            child: Text(
-                              DateFormat('MMMM yyyy').format(
-                                DateTime.parse('$month-01')
-                              ),
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          if (newValue != null && newValue != _selectedMonth) {
-                            setState(() {
-                              _selectedMonth = newValue;
-                              _isLoadingPembelian = true;
-                            });
-                            _loadPembelianData();
-                          }
-                        },
-                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          SizedBox(width: 12),
-          // Input Pembelian (Right Side)
-          SizedBox(
-            width: MediaQuery.of(context).size.width * 0.45, // 45% dari lebar layar
-            child: Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Input Pembelian",
+        ),
+      ],
+    ),
+  );
+}
+
+void _showMonthPicker() {
+  showModalBottomSheet(
+    context: context,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => Container(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Text(
+            'Pilih Bulan',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF080C67),
+            ),
+          ),
+          SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _months.length,
+              itemBuilder: (context, index) {
+                final month = _months[index];
+                final isSelected = month == _selectedMonth;
+                return ListTile(
+                  onTap: () {
+                    setState(() {
+                      _selectedMonth = month;
+                      _isLoadingPembelian = true;
+                    });
+                    _loadPembelianData();
+                    Navigator.pop(context);
+                  },
+                  title: Text(
+                    DateFormat('MMMM yyyy').format(
+                      DateTime.parse('$month-01'),
+                    ),
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF080C67),
+                      color: isSelected ? Color(0xFF080C67) : Colors.black87,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const InputPembelianPage(),
-                          ),
-                        );
-                        if (result == true) {
-                          _refreshData();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF080C67),
-                        padding: EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_rounded, size: 18, color: Colors.white,),
-                            SizedBox(width: 4),
-                            Text(
-                              'Tambah Pembelian',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 13,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                  trailing: isSelected
+                      ? Icon(Icons.check_circle, color: Color(0xFF080C67))
+                      : null,
+                );
+              },
             ),
           ),
         ],
@@ -530,6 +562,7 @@ Widget _buildHeaderSection() {
     ),
   );
 }
+
 // Update the build method to maintain consistent styling
 @override
 Widget build(BuildContext context) {
