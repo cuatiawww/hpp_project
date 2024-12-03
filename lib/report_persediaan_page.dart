@@ -63,39 +63,45 @@ class _ReportPersediaanPageState extends State<ReportPersediaanPage> {
   }
 }
 
-  Future<void> _fetchData() async {
+  
+Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final startDate = '$_selectedMonth-01';
-      final date = DateTime.parse(startDate);
-      final endDate = DateTime(date.year, date.month + 1, 0);
-      final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
+        final startDate = '$_selectedMonth-01';
+        final date = DateTime.parse(startDate);
+        final endDate = DateTime(date.year, date.month + 1, 0);
+        final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
-      persAwalData = await _fetchPersediaanAwal(startDate);
-      pembelianData = await _fetchPembelian(startDate, endDateStr);
-      penjualanData = await _fetchPenjualan(startDate, endDateStr);
-      persAkhirData = await _calculatePersediaanAkhir(
-        persAwalData,
-        pembelianData,
-        penjualanData,
-      );
-
-      setState(() {});
-    } catch (e) {
-      print('Error fetching data: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching data: $e')),
+        // Get beginning inventory from previous month's ending inventory
+        persAwalData = await _fetchPersediaanAwal(startDate);
+        
+        // Get current month's transactions
+        pembelianData = await _fetchPembelian(startDate, endDateStr);
+        penjualanData = await _fetchPenjualan(startDate, endDateStr);
+        
+        // Calculate ending inventory
+        persAkhirData = await _calculatePersediaanAkhir(
+            persAwalData,
+            pembelianData,
+            penjualanData,
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
 
-  //GENERATE TO PDF
+        // Save current ending inventory for next month
+        await _savePersediaanAkhir(persAkhirData);
+
+        if (mounted) setState(() {});
+    } catch (e) {
+        print('Error fetching data: $e');
+        if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error fetching data: $e')),
+            );
+        }
+    } finally {
+        if (mounted) setState(() => _isLoading = false);
+    }
+}
+
 
 Future<void> _generatePDF() async {
   setState(() => _isLoading = true);
@@ -812,97 +818,111 @@ Widget _buildMonthDropdown() {
 // Data fetching methods
 Future<Map<String, Map<String, dynamic>>> _fetchPersediaanAwal(String startDate) async {
     final userId = auth.currentUser?.uid;
-    
-    // Parse startDate to get month and year
     final targetDate = DateTime.parse(startDate);
-    final firstDayOfMonth = DateTime(targetDate.year, targetDate.month, 1);
-    
     Map<String, Map<String, dynamic>> result = {};
 
-    // First try to get data from previous month's StokBulanan
-    final previousMonth = DateTime(targetDate.year, targetDate.month - 1, 1);
-    final formattedPreviousMonth = DateFormat('yyyy-MM-dd').format(previousMonth);
-    
-    final snapshotStokBulanan = await _db
-        .collection("Users")
-        .doc(userId)
-        .collection("StokBulanan")
-        .where('tanggal', isEqualTo: formattedPreviousMonth)
-        .get();
+    try {
+        // Check previous month's ending inventory first
+        final lastDayPrevMonth = DateTime(targetDate.year, targetDate.month, 0);
+        final formattedLastDayPrevMonth = DateFormat('yyyy-MM-dd').format(lastDayPrevMonth);
+        
+        final prevMonthPersAkhir = await _db
+            .collection("Users")
+            .doc(userId)
+            .collection("PersediaanAkhir")
+            .where('tanggal', isEqualTo: formattedLastDayPrevMonth)
+            .get();
 
-    if (snapshotStokBulanan.docs.isNotEmpty) {
-        // Use StokBulanan if available
-        for (var doc in snapshotStokBulanan.docs) {
-            var data = doc.data();
-            String key = '${data['Name']}_${data['Tipe']}';
-            result[key] = {
-                'name': data['Name'],
-                'tipe': data['Tipe'],
-                'jumlah': (data['Jumlah'] ?? 0).toInt(),
-                'price': ((data['Price'] ?? 0) as num).toDouble(),
-            };
+        if (prevMonthPersAkhir.docs.isNotEmpty) {
+            for (var doc in prevMonthPersAkhir.docs) {
+                var data = doc.data();
+                String key = '${data['name']}_${data['tipe']}';
+                result[key] = {
+                    'name': data['name'],
+                    'tipe': data['tipe'],
+                    'jumlah': data['jumlah'] ?? 0,
+                    'price': data['price'] ?? 0,
+                };
+            }
+            return result;
         }
-    } else {
-        // If no StokBulanan, calculate from Barang and previous transactions
-        final snapshotBarang = await _db
+
+        // If no previous ending inventory, check initial inventory
+        final initialInventory = await _db
             .collection("Users")
             .doc(userId)
             .collection("Barang")
             .where('isInitialInventory', isEqualTo: true)
             .get();
             
-        for (var doc in snapshotBarang.docs) {
+        for (var doc in initialInventory.docs) {
             var data = doc.data();
-            String itemDate = data['Tanggal'] ?? '';
-            
-            // Changed logic: Include items if they were created before the start of current month
-            if (!itemDate.isEmpty && DateTime.parse(itemDate).isBefore(firstDayOfMonth)) {
-                String key = '${data['Name']}_${data['Tipe']}';
-                result[key] = {
-                    'name': data['Name'],
-                    'tipe': data['Tipe'],
-                    'jumlah': (data['Jumlah'] ?? 0).toInt(),
-                    'price': ((data['Price'] ?? 0) as num).toDouble(),
-                };
-            }
+            String key = '${data['Name']}_${data['Tipe']}';
+            result[key] = {
+                'name': data['Name'],
+                'tipe': data['Tipe'],
+                'jumlah': data['Jumlah'] ?? 0,
+                'price': data['Price'] ?? 0,
+            };
         }
-        
-        // Add previous month's purchases
-        final previousPurchases = await _db
-            .collection("Users")
-            .doc(userId)
-            .collection("Pembelian")
-            .where('Tanggal', isLessThan: startDate)
-            .get();
-            
-        for (var doc in previousPurchases.docs) {
-            var data = doc.data();
-            String key = '${data['Name']}_${data['Type']}';
-            
-            if (result.containsKey(key)) {
-                // Update existing item
-                result[key]!['jumlah'] = (result[key]!['jumlah'] as int) + (data['Jumlah'] ?? 0);
-                // Update price if this purchase is more recent
-                if (data['Tanggal'].compareTo(result[key]!['lastUpdate'] ?? '') > 0) {
-                    result[key]!['price'] = data['Price'] ?? 0;
-                    result[key]!['lastUpdate'] = data['Tanggal'];
-                }
-            } else {
-                // Add new item
-                result[key] = {
-                    'name': data['Name'],
-                    'tipe': data['Type'],
-                    'jumlah': data['Jumlah'] ?? 0,
-                    'price': data['Price'] ?? 0,
-                    'lastUpdate': data['Tanggal'],
-                };
-            }
-        }
-    }
 
-    return result;
+        return result;
+    } catch (e) {
+        print('Error in _fetchPersediaanAwal: $e');
+        throw e;
+    }
 }
 
+Future<void> _savePersediaanAkhir(Map<String, Map<String, dynamic>> persAkhirData) async {
+    final userId = auth.currentUser?.uid;
+    final batch = _db.batch();
+    
+    try {
+        // Use the last day of selected month instead of today
+        final selectedDate = DateTime.parse('$_selectedMonth-01');
+        final lastDayOfMonth = DateTime(selectedDate.year, selectedDate.month + 1, 0);
+        final endDateStr = DateFormat('yyyy-MM-dd').format(lastDayOfMonth);
+        
+        // Clear existing ending inventory for the month
+        final existingDocs = await _db
+            .collection("Users")
+            .doc(userId)
+            .collection("PersediaanAkhir")
+            .where('tanggal', isEqualTo: endDateStr)
+            .get();
+            
+        for (var doc in existingDocs.docs) {
+            batch.delete(doc.reference);
+        }
+
+        // Save new ending inventory with correct end date
+        for (var entry in persAkhirData.entries) {
+            final data = entry.value;
+            if ((data['jumlah'] ?? 0) > 0) {
+                batch.set(
+                    _db
+                        .collection("Users")
+                        .doc(userId)
+                        .collection("PersediaanAkhir")
+                        .doc(),
+                    {
+                        'name': data['name'],
+                        'tipe': data['tipe'],
+                        'jumlah': data['jumlah'],
+                        'price': data['price'],
+                        'tanggal': endDateStr,
+                        'lastUpdated': FieldValue.serverTimestamp(),
+                    }
+                );
+            }
+        }
+
+        await batch.commit();
+    } catch (e) {
+        print('Error saving persediaan akhir: $e');
+        throw e;
+    }
+}
 // Perbaiki juga method fetching pembelian untuk konsistensi
 Future<Map<String, Map<String, dynamic>>> _fetchPembelian(String startDate, String endDate) async {
     final userId = auth.currentUser?.uid;
