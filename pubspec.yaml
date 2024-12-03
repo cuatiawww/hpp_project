@@ -105,6 +105,7 @@ flutter:
     - assets/images/logo-taxcenter.png
     - assets/images/splash.png
     - assets/images/logo-splash.png
+    - assets/images/splash-omseto.png
     - assets/images/profile.jpg
     - assets/images/default_avatar.png
     - assets/images/notification.png

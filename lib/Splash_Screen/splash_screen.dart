@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Image.asset(
-              'assets/images/logo-splash.png',
+              'assets/images/splash-omseto.png',
               width: 250,
               height: 250,
             ),
