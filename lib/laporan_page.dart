@@ -19,7 +19,7 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   final ValueNotifier<double> _totalPenjualan = ValueNotifier(0);
   final ValueNotifier<double> _totalPembelian = ValueNotifier(0);
   final ValueNotifier<int> _totalBarangTerjual = ValueNotifier(0);
-   final ValueNotifier<double> _penjualanPercentage = ValueNotifier(0);
+  final ValueNotifier<double> _penjualanPercentage = ValueNotifier(0);
   final ValueNotifier<double> _pembelianPercentage = ValueNotifier(0);
   final ValueNotifier<double> _profitPercentage = ValueNotifier(0);
   
@@ -27,117 +27,63 @@ class _LaporanPageState extends State<LaporanPage> with SingleTickerProviderStat
   Stream<QuerySnapshot<Map<String, dynamic>>>? _pembelianStream;
 
   @override
-   void initState() {
+  void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    // Delay inisialisasi data untuk mengurangi beban awal
-    Future.microtask(() => _initializeData());
+    _initializeData();
   }
 
-void _initializeData() {
-  if (!mounted) return;
-  
-  final startDate = '$_selectedMonth-01';
-  final date = DateTime.parse(startDate);
-  final endDate = DateTime(date.year, date.month + 1, 0);
-  final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
-
-  setState(() {
-    // Gunakan where clause di query Firestore langsung untuk filtering
-    _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr)
-      .map((snapshot) {
-        final filteredDocs = snapshot.docs.where((doc) {
-          final data = doc.data();
-          return data['tanggal'] != null && 
-                 data['tanggal'].toString().startsWith(_selectedMonth);
-        }).toList();
-        return snapshot;
-      });
+  void _initializeData() {
+    if (!mounted) return;
     
-    _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr)
-      .map((snapshot) {
-        final filteredDocs = snapshot.docs.where((doc) {
-          final data = doc.data();
-          return data['Tanggal'] != null && 
-                 data['Tanggal'].toString().startsWith(_selectedMonth);
-        }).toList();
-        return snapshot;
-      });
-  });
-  
-  _loadInitialData();
-}
-
- void _loadInitialData() async {
-  try {
     final startDate = '$_selectedMonth-01';
     final date = DateTime.parse(startDate);
     final endDate = DateTime(date.year, date.month + 1, 0);
     final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
 
-    // Reset the values before loading new data
+    setState(() {
+      _penjualanStream = _db.getLaporanPenjualanStream(startDate, endDateStr);
+      _pembelianStream = _db.getLaporanPembelianStream(startDate, endDateStr);
+    });
+    
+    _loadInitialData(startDate, endDateStr);
+  }
+
+  void _loadInitialData(String startDate, String endDate) async {
+    try {
+      _resetValues();
+
+      final penjualanSnapshot = await _db.getLaporanPenjualanStream(startDate, endDate).first;
+      if (penjualanSnapshot.docs.isNotEmpty) {
+        await _calculatePenjualanStats(penjualanSnapshot.docs);
+      }
+
+      final pembelianSnapshot = await _db.getLaporanPembelianStream(startDate, endDate).first;
+      if (pembelianSnapshot.docs.isNotEmpty) {
+        await _calculatePembelianStats(pembelianSnapshot.docs);
+      }
+
+      _calculateProfit();
+    } catch (e) {
+      print('Error loading initial data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading data: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  void _resetValues() {
     _totalPenjualan.value = 0;
     _totalPembelian.value = 0;
     _totalBarangTerjual.value = 0;
-
-    final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDateStr).first;
-    if (penjualanDocs.docs.isNotEmpty) {
-      _calculatePenjualanStats(penjualanDocs.docs);
-    }
-
-    final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDateStr).first;
-    if (pembelianDocs.docs.isNotEmpty) {
-      _calculatePembelianStats(pembelianDocs.docs);
-    }
-  } catch (e) {
-    print('Error loading initial data: $e');
+    _penjualanPercentage.value = 0;
+    _pembelianPercentage.value = 0;
+    _profitPercentage.value = 0;
   }
-}
 
-  Future<Map<String, double>> _getPreviousMonthData(String currentMonth) async {
-    final currentDate = DateTime.parse('$currentMonth-01');
-    final previousMonth = DateTime(currentDate.year, currentDate.month - 1);
-    final previousMonthStr = DateFormat('yyyy-MM').format(previousMonth);
-    
-    final startDate = '$previousMonthStr-01';
-    final endDate = DateTime(previousMonth.year, previousMonth.month + 1, 0);
-    final endDateStr = DateFormat('yyyy-MM-dd').format(endDate);
-
-    double previousPenjualan = 0;
-    double previousPembelian = 0;
-
-    try {
-      final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDateStr).first;
-      final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDateStr).first;
-
-      for (var doc in penjualanDocs.docs) {
-        final data = doc.data();
-        if (data['tanggal'] != null && data['tanggal'].toString().startsWith(previousMonthStr)) {
-          final hargaJual = (data['hargaJual'] as num?)?.toDouble() ?? 0;
-          final jumlah = (data['jumlah'] as num?)?.toInt() ?? 0;
-          previousPenjualan += (hargaJual * jumlah);
-        }
-      }
-
-      for (var doc in pembelianDocs.docs) {
-        final data = doc.data();
-        if (data['Tanggal'] != null && data['Tanggal'].startsWith(previousMonthStr)) {
-          final harga = (data['Price'] as num?)?.toDouble() ?? 0;
-          final jumlah = (data['Jumlah'] as num?)?.toInt() ?? 0;
-          previousPembelian += (harga * jumlah);
-        }
-      }
-    } catch (e) {
-      print('Error getting previous month data: $e');
-    }
-
-    return {
-      'penjualan': previousPenjualan,
-      'pembelian': previousPembelian,
-    };
-  }
- 
- void _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
+  Future<void> _calculatePenjualanStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
     if (!mounted) return;
     
     double tempTotalPenjualan = 0;
@@ -156,19 +102,16 @@ void _initializeData() {
     final previousData = await _getPreviousMonthData(_selectedMonth);
     final previousPenjualan = previousData['penjualan'] ?? 0;
     
-    double percentageChange = 0;
-    if (previousPenjualan > 0 && tempTotalPenjualan > 0) {
-      percentageChange = ((tempTotalPenjualan - previousPenjualan) / previousPenjualan) * 100;
-    }
+    double percentageChange = _calculatePercentageChange(tempTotalPenjualan, previousPenjualan);
 
     if (mounted) {
       _totalPenjualan.value = tempTotalPenjualan;
       _totalBarangTerjual.value = tempTotalBarangTerjual;
       _penjualanPercentage.value = percentageChange;
     }
-}
+  }
 
-void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
+  Future<void> _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
     if (!mounted) return;
     
     double tempTotalPembelian = 0;
@@ -185,17 +128,73 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
     final previousData = await _getPreviousMonthData(_selectedMonth);
     final previousPembelian = previousData['pembelian'] ?? 0;
     
-    double percentageChange = 0;
-    if (previousPembelian > 0 && tempTotalPembelian > 0) {
-      percentageChange = ((tempTotalPembelian - previousPembelian) / previousPembelian) * 100;
-    }
+    double percentageChange = _calculatePercentageChange(tempTotalPembelian, previousPembelian);
 
     if (mounted) {
       _totalPembelian.value = tempTotalPembelian;
       _pembelianPercentage.value = percentageChange;
     }
-} 
- 
+  }
+
+  double _calculatePercentageChange(double current, double previous) {
+    if (previous <= 0) return 0;
+    return ((current - previous) / previous) * 100;
+  }
+
+  void _calculateProfit() {
+    final profit = _totalPenjualan.value - _totalPembelian.value;
+    _profitPercentage.value = _calculateProfitPercentage(profit);
+  }
+
+  double _calculateProfitPercentage(double profit) {
+    if (_totalPenjualan.value <= 0) return 0;
+    return (profit / _totalPenjualan.value) * 100;
+  }
+
+  Future<Map<String, double>> _getPreviousMonthData(String currentMonth) async {
+    try {
+      final currentDate = DateTime.parse('$currentMonth-01');
+      final previousMonth = DateTime(currentDate.year, currentDate.month - 1);
+      final previousMonthStr = DateFormat('yyyy-MM').format(previousMonth);
+      
+      final startDate = '$previousMonthStr-01';
+      final endDate = DateFormat('yyyy-MM-dd')
+          .format(DateTime(previousMonth.year, previousMonth.month + 1, 0));
+
+      final penjualanDocs = await _db.getLaporanPenjualanStream(startDate, endDate).first;
+      final pembelianDocs = await _db.getLaporanPembelianStream(startDate, endDate).first;
+
+      double previousPenjualan = _calculateTotalPenjualan(penjualanDocs.docs);
+      double previousPembelian = _calculateTotalPembelian(pembelianDocs.docs);
+
+      return {
+        'penjualan': previousPenjualan,
+        'pembelian': previousPembelian,
+      };
+    } catch (e) {
+      print('Error getting previous month data: $e');
+      return {'penjualan': 0, 'pembelian': 0};
+    }
+  }
+
+  double _calculateTotalPenjualan(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    return docs.fold(0, (sum, doc) {
+      final data = doc.data();
+      final hargaJual = (data['hargaJual'] as num?)?.toDouble() ?? 0;
+      final jumlah = (data['jumlah'] as num?)?.toInt() ?? 0;
+      return sum + (hargaJual * jumlah);
+    });
+  }
+
+  double _calculateTotalPembelian(List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    return docs.fold(0, (sum, doc) {
+      final data = doc.data();
+      final harga = (data['Price'] as num?)?.toDouble() ?? 0;
+      final jumlah = (data['Jumlah'] as num?)?.toInt() ?? 0;
+      return sum + (harga * jumlah);
+    });
+  }
+
   List<DropdownMenuItem<String>> _buildMonthDropdownItems() {
     return List.generate(12, (index) {
       final date = DateTime.now().subtract(Duration(days: 30 * index));
@@ -211,22 +210,16 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
   }
 
   void _onMonthChanged(String? newValue) {
-  if (newValue != null && mounted) {
-    setState(() {
-      _selectedMonth = newValue;
-      // Reset all values
-      _totalPenjualan.value = 0;
-      _totalPembelian.value = 0;
-      _totalBarangTerjual.value = 0;
-      _penjualanPercentage.value = 0;
-      _pembelianPercentage.value = 0;
-      _profitPercentage.value = 0;
-      _initializeData();
-    });
+    if (newValue != null && mounted) {
+      setState(() {
+        _selectedMonth = newValue;
+        _initializeData();
+      });
+    }
   }
-}
+
   @override
- Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -240,7 +233,6 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
-              // Modern App Bar
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
@@ -261,8 +253,6 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
                   ),
                 ),
               ),
-
-              // Main Content
               SliverToBoxAdapter(
                 child: Container(
                   decoration: const BoxDecoration(
@@ -278,7 +268,7 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
                       _buildModernStatisticsCards(),
                       const SizedBox(height: 24),
                       _buildProfitSection(),
-                      const SizedBox(height: 24), 
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -290,7 +280,7 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
     );
   }
 
-   Widget _buildModernMonthPicker() {
+  Widget _buildModernMonthPicker() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -332,78 +322,85 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
     );
   }
 
- Widget _buildModernStatisticsCards() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 20),
-    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _penjualanStream,
-      builder: (context, penjualanSnapshot) {
-        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: _pembelianStream,
-          builder: (context, pembelianSnapshot) {
-            if (penjualanSnapshot.hasData) {
-              _calculatePenjualanStats(penjualanSnapshot.data!.docs);
-            }
-            if (pembelianSnapshot.hasData) {
-              _calculatePembelianStats(pembelianSnapshot.data!.docs);
-            }
+  Widget _buildModernStatisticsCards() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _penjualanStream,
+        builder: (context, penjualanSnapshot) {
+          return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _pembelianStream,
+            builder: (context, pembelianSnapshot) {
+              if (penjualanSnapshot.hasData) {
+                _calculatePenjualanStats(penjualanSnapshot.data!.docs);
+              }
+              if (pembelianSnapshot.hasData) {
+                _calculatePembelianStats(pembelianSnapshot.data!.docs);
+              }
 
-            return Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: _buildModernStatCard(
-                      'Total Penjualan',
-                      _totalPenjualan,
-                      Icons.trending_up_rounded,
-                      const Color(0xFF4CAF50),
-                      isPositive: true,
-                      percentageNotifier: _penjualanPercentage,
-                    )),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildModernStatCard(
-                      'Total Pembelian',
-                      _totalPembelian,
-                      Icons.trending_down_rounded,
-                      const Color(0xFFE53935),
-                      isPositive: false,
-                      percentageNotifier: _pembelianPercentage,
-                    )),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: ValueListenableBuilder<int>(
-                      valueListenable: _totalBarangTerjual,
-                      builder: (context, value, _) => _buildModernStatCard(
-                        'Jumlah Terjual',
-                        ValueNotifier(value.toDouble()),
-                        Icons.inventory_2_rounded,
-                        const Color(0xFF1976D2),
-                        isCount: true,
+              return Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildModernStatCard(
+                          'Total Penjualan',
+                          _totalPenjualan,
+                          Icons.trending_up_rounded,
+                          const Color(0xFF4CAF50),
+                          isPositive: true,
+                          percentageNotifier: _penjualanPercentage,
+                        ),
                       ),
-                    )),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildProfitStatCard()),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
-    ),
-  );
-}
- Widget _buildModernStatCard(
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildModernStatCard(
+                          'Total Pembelian',
+                          _totalPembelian,
+                          Icons.trending_down_rounded,
+                          const Color(0xFFE53935),
+                          isPositive: false,
+                          percentageNotifier: _pembelianPercentage,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: _totalBarangTerjual,
+                          builder: (context, value, _) => _buildModernStatCard(
+                            'Jumlah Terjual',
+                            ValueNotifier(value.toDouble()),
+                            Icons.inventory_2_rounded,
+                            const Color(0xFF1976D2),
+                            isCount: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildProfitStatCard()),
+                      ],
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildModernStatCard(
     String title,
     ValueNotifier<double> value,
     IconData icon,
     Color color, {
     bool isCount = false,
     bool isPositive = true,
-    ValueNotifier<double>? percentageNotifier, // Tambah parameter untuk persentase
+    ValueNotifier<double>? percentageNotifier,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -469,8 +466,8 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
               builder: (context, percentage, _) {
                 final isPositiveChange = percentage >= 0;
                 final displayColor = isPositiveChange
-                    ? const Color(0xFF4CAF50)  // Warna hijau untuk positif
-                    : const Color(0xFFE53935);  // Warna merah untuk negatif
+                    ? const Color(0xFF4CAF50)
+                    : const Color(0xFFE53935);
                     
                 return Row(
                   children: [
@@ -483,7 +480,6 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      // Tambah tanda + untuk nilai positif
                       '${isPositiveChange ? "+" : ""}${percentage.toStringAsFixed(1)}%',
                       style: TextStyle(
                         color: displayColor,
@@ -500,30 +496,33 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
       ),
     );
   }
+
   Widget _buildProfitStatCard() {
-  return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-    stream: _penjualanStream,
-    builder: (context, penjualanSnapshot) {
-      return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: _pembelianStream,
-        builder: (context, pembelianSnapshot) {
-          double profit = _totalPenjualan.value - _totalPembelian.value;
-          final isPositive = profit >= 0;
-          final color = isPositive ? const Color(0xFF9C27B0) : const Color(0xFFFF7043);
-          
-          return _buildModernStatCard(
-            'Profit',
-            ValueNotifier(profit.abs()),
-            isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-            color,
-            isPositive: isPositive,
-          );
-        },
-      );
-    },
-  );
-}
- Widget _buildProfitSection() {
+    return ValueListenableBuilder<double>(
+      valueListenable: _totalPenjualan,
+      builder: (context, penjualan, _) {
+        return ValueListenableBuilder<double>(
+          valueListenable: _totalPembelian,
+          builder: (context, pembelian, _) {
+            double profit = penjualan - pembelian;
+            final isPositive = profit >= 0;
+            final color = isPositive ? const Color(0xFF9C27B0) : const Color(0xFFFF7043);
+            
+            return _buildModernStatCard(
+              'Profit',
+              ValueNotifier(profit.abs()),
+              isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+              color,
+              isPositive: isPositive,
+              percentageNotifier: _profitPercentage,
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProfitSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -589,13 +588,16 @@ void _calculatePembelianStats(List<QueryDocumentSnapshot<Map<String, dynamic>>> 
       ),
     );
   }
- 
+
   @override
   void dispose() {
     _tabController.dispose();
     _totalPenjualan.dispose();
     _totalPembelian.dispose();
     _totalBarangTerjual.dispose();
+    _penjualanPercentage.dispose();
+    _pembelianPercentage.dispose();
+    _profitPercentage.dispose();
     super.dispose();
   }
 }

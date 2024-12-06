@@ -345,7 +345,7 @@ Widget _buildTypeDropdown() {
               ),
               Expanded(
                 child: RadioListTile<bool>(
-                  title: Text('Barang Ada'),
+                  title: Text('Barang Tersedia Di Stok'),
                   value: false,
                   groupValue: _isNewItem,
                   onChanged: (value) {
