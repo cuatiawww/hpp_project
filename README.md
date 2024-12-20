@@ -10,6 +10,9 @@
 - **Manajemen Keuangan**:
   - Pelacakan keuangan bulanan dan tahunan.
   - Analisis arus kas untuk memahami kondisi bisnis secara menyeluruh.
+  - Halaman laporan dengan data visualisasi berupa diagram chart mingguan.
+  - Ringkasan total penjualan, total pembelian, jumlah terjual, dan profit.
+- **Cetak PDF**: Ekspor hasil perhitungan HPP dan laporan ke format PDF untuk keperluan dokumentasi.
 - **Antarmuka Pengguna yang Ramah**: Sederhana, intuitif, dan mudah digunakan oleh siapa saja.
 - **Integrasi Firebase**: Menjamin data pengguna aman dan tersinkronisasi secara real-time.
 
@@ -17,9 +20,9 @@
 
 ## 🛠️ Teknologi yang Digunakan
 
-- **Flutter**: Framework untuk pengembangan aplikasi multiplatform.
-- **Firebase**: Digunakan untuk autentikasi, database real-time, dan penyimpanan cloud.
-- **Dart**: Bahasa pemrograman utama untuk aplikasi ini.
+- [**Flutter**](https://flutter.dev/?gad_source=1&gclid=CjwKCAiApY-7BhBjEiwAQMrrEVe8JVwaIFdcZZ1P53SMxsAjJli1SX9z78GmDTyTnR0skpwpb_4BQRoCPtUQAvD_BwE&gclsrc=aw.ds): Framework untuk pengembangan aplikasi multiplatform.
+- [**Firebase**](https://firebase.google.com/?hl=id): Digunakan untuk autentikasi, database real-time, dan penyimpanan cloud.
+- [**Dart**](https://dart.dev/): Bahasa pemrograman utama untuk aplikasi ini.
 
 ---
 
@@ -31,7 +34,6 @@ Ikuti langkah-langkah berikut untuk menjalankan Omseto di perangkat Anda:
    ```bash
    git clone https://github.com/cuatiawww/hpp_project.git
    cd hpp_project
-   ```
 
 2. **Install Dependencies**
    Pastikan Anda memiliki Flutter terinstal. Jalankan:
@@ -55,21 +57,40 @@ Ikuti langkah-langkah berikut untuk menjalankan Omseto di perangkat Anda:
 
 Omseto dikembangkan oleh tim berbakat yang terdiri dari:
 
-- **[Nama Anggota 1]** - *Project Manager & Developer*
-- **[Nama Anggota 2]** - *UI/UX Designer*
-- **[Nama Anggota 3]** - *Backend Specialist*
+- [**Azkhal Zavier**](https://www.linkedin.com/in/azkhal-zavier/) (Universitas Gunadama) - *Developer*
+- [**Fariz Surya Vigianto**](https://www.linkedin.com/in/farizsurya/) (Universitas Gunadama) - *UI/UX Designer*
+- **Yosua Elwistio Malau** (Universitas Gunadama) - *Developer*
 
 Kami bekerja sama untuk menghadirkan solusi terbaik bagi UMKM di Indonesia!
 
 ---
 
-## 📷 Tangkapan Layar
+## 📷 Screenshot
 
-**Halaman Dashboard**
-![Dashboard](link-gambar-dashboard)
+### Halaman Beranda
 
-**Fitur Perhitungan HPP**
-![HPP](link-gambar-hpp)
+Tampilan utama aplikasi dengan akses cepat ke fitur utama.
+
+![Dashboard](https://github.com/user-attachments/assets/eadd48b8-01e8-47c7-9767-513371be984e)
+
+### Fitur Perhitungan HPP
+
+Formulir perhitungan HPP dengan hasil yang dapat diekspor ke PDF.
+
+![Perhitungan HPP](https://github.com/user-attachments/assets/888fc45a-c6be-4910-8ab7-641b07aebb9f)
+
+### Halaman Laporan
+
+- Diagram chart mingguan untuk total penjualan dan pembelian.
+- Ringkasan laporan: total penjualan, total pembelian, jumlah terjual, dan profit.
+
+![Halaman Laporan](https://github.com/user-attachments/assets/c94e77c3-012e-4d67-90ba-df1828048ca3)
+
+### Fitur Cetak PDF
+
+Contoh hasil laporan yang dicetak ke format PDF.
+
+![Cetak PDF](https://github.com/user-attachments/assets/7c11c14e-95ca-48fd-84cf-5a23182b64e7)
 
 ---
 
