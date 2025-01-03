@@ -5,9 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     
     <application
-        android:label="HPP Apps"
+        android:label="Omseto"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon"
+        android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true">
         <!-- Konfigurasi Dynamic Links Domain -->
         <meta-data
