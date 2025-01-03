@@ -549,4 +549,6 @@ Future<Map<String, Map<String, dynamic>>> getAvailableStock() async {
     }
   }
 
+  getUserData() {}
+
 }

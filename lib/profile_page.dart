@@ -510,7 +510,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildDropdown(TextEditingController controller) {
+ Widget _buildDropdown(TextEditingController controller) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
@@ -534,7 +534,13 @@ class _ProfilePageState extends State<ProfilePage> {
         items: jenisKelaminOptions.map((String value) {
           return DropdownMenuItem<String>(
             value: value,
-            child: Text(value),
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Colors.white,  // Explicitly set dropdown item text color
+                fontSize: 16,
+              ),
+            ),
           );
         }).toList(),
         onChanged: isEditing ? (String? newValue) {
@@ -545,7 +551,6 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
   Widget _buildDivider() {
     return Divider(
       color: Colors.white.withOpacity(0.1),

@@ -1,8 +1,5 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/service/database.dart';
@@ -107,98 +104,74 @@ Future<void> _fetchData() async {
 
 
 Future<void> _generatePDF() async {
- setState(() => _isLoading = true);
- try {
-   final pdf = pw.Document();
-   final font = await PdfGoogleFonts.nunitoRegular();
-   final fontBold = await PdfGoogleFonts.nunitoBold();
+  setState(() => _isLoading = true);
+  try {
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.nunitoRegular();
+    final fontBold = await PdfGoogleFonts.nunitoBold();
 
-   // Load logo image
-   final ByteData imageData = await rootBundle.load('assets/images/logo-apps.png'); 
-   final Uint8List imageBytes = imageData.buffer.asUint8List();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: pw.EdgeInsets.all(40),
+        build: (context) {
+          return pw.Column(
+            children: [
+              _buildPDFHeader(font, fontBold),
+              pw.SizedBox(height: 20),
+              _buildPDFTable(font),
+            ],
+          );
+        },
+      ),
+    );
 
-   // Helper function untuk header
-   pw.Widget buildHeader() {
-     return pw.Row(
-       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-       crossAxisAlignment: pw.CrossAxisAlignment.start,
-       children: [
-         pw.Expanded(
-           flex: 3,
-           child: pw.Column(
-             crossAxisAlignment: pw.CrossAxisAlignment.start,
-             children: [
-               pw.RichText(
-                 text: pw.TextSpan(
-                   children: [
-                     pw.TextSpan(
-                       text: 'Laporan Persediaan',
-                       style: pw.TextStyle(font: fontBold, fontSize: 24),
-                     ),
-                   ],
-                 ),
-               ),
-               pw.SizedBox(height: 4),
-               pw.Text(
-                 dataUsahaC.namaUsaha.value,
-                 style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey800),
-               ),
-               pw.SizedBox(height: 4),
-               pw.Text(
-                 'Periode: ${DateFormat('MMMM yyyy').format(DateTime.parse('$_selectedMonth-01'))}',
-                 style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600),
-               ),
-             ],
-           ),
-         ),
-         pw.Expanded(
-           flex: 1,
-           child: pw.Container(
-             height: 60,
-             width: 60,
-             alignment: pw.Alignment.topRight,
-             child: pw.Image(
-               pw.MemoryImage(imageBytes),
-               fit: pw.BoxFit.contain,
-             ),
-           ),
-         ),
-       ],
-     );
-   }
-
-   pdf.addPage(
-     pw.Page(
-       pageFormat: PdfPageFormat.a4.landscape,
-       margin: pw.EdgeInsets.all(40),
-       build: (context) {
-         return pw.Column(
-           children: [
-             buildHeader(),
-             pw.SizedBox(height: 20),
-             _buildPDFTable(font),
-           ],
-         );
-       },
-     ),
-   );
-
-   await Printing.layoutPdf(
-     onLayout: (format) => pdf.save(),
-   );
- } catch (e) {
-   print('Error generating PDF: $e');
-   if (mounted) {
-     ScaffoldMessenger.of(context).showSnackBar(
-       SnackBar(content: Text('Error generating PDF: $e')),
-     );
-   }
- } finally {
-   if (mounted) {
-     setState(() => _isLoading = false);
-   }
- }
+    await Printing.layoutPdf(
+      onLayout: (format) => pdf.save(),
+    );
+  } catch (e) {
+    print('Error generating PDF: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error generating PDF: $e')),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
 }
+
+pw.Widget _buildPDFHeader(pw.Font font, pw.Font fontBold) {
+  return pw.Center(
+    child: pw.Column(
+      children: [
+        pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(
+                text: 'Laporan Persediaan',
+                style: pw.TextStyle(font: fontBold, fontSize: 24),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          dataUsahaC.namaUsaha.value,
+          style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey800),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          'Periode: ${DateFormat('MMMM yyyy').format(DateTime.parse('$_selectedMonth-01'))}',
+          style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600),
+        ),
+      ],
+    ),
+  );
+}
+
   // PDF Table Building
 pw.Widget _buildPDFTable(pw.Font font) {
   Set<String> allItems = {

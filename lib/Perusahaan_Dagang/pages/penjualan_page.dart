@@ -257,144 +257,226 @@ Widget build(BuildContext context) {
     );
   }
 
-  Widget _buildReportCard() {
-    return Container(
-      padding: EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 0,
-            blurRadius: 20,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Report Invoice',
+ Widget _buildReportCard() {
+  return Container(
+    margin: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 20,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            "Data Penjualan",
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Color(0xFF080C67),
             ),
           ),
-          SizedBox(height: 24),
-          _buildInvoiceList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvoiceList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: DatabaseMethods().getPenjualanStream(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
-            ),
-          );
-        }
-
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.receipt_long_rounded,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                SizedBox(height: 16),
-                Text(
-                  "Belum ada data penjualan",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: snapshot.data!.docs.length,
-          itemBuilder: (context, index) {
-            final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-            return Container(
-              margin: EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Color(0xFFEEF2FF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                leading: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF080C67),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.shopping_cart_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                title: Text(
-                  data['namaBarang'],
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF080C67),
-                  ),
-                ),
-                subtitle: Text(
-                  '${data['jumlah']} ${data['satuan']} - ${data['tipe']}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      NumberFormat.currency(
-                        locale: 'id',
-                        symbol: 'Rp ',
-                        decimalDigits: 0,
-                      ).format(data['total']),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF080C67),
-                      ),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: DatabaseMethods().getPenjualanStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
                     ),
-                    Text(
-                      data['tanggal'],
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                  ),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.receipt_long_rounded,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          "Belum ada data penjualan",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                onTap: () => _showInvoiceDetail(data),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+                  ),
+                );
+              }
+
+              return DataTable(
+                headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
+                columns: const [
+                  DataColumn(label: Text("Nama Barang")),
+                  DataColumn(label: Text("Jumlah")),
+                  DataColumn(label: Text("Harga per Unit")),
+                  DataColumn(label: Text("Tipe")),
+                  DataColumn(label: Text("Tanggal")),
+                  DataColumn(label: Text("Total")),
+                  DataColumn(label: Text("Aksi")),
+                ],
+                rows: snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return DataRow(cells: [
+                    DataCell(Text(data['namaBarang'] ?? "Loading...")),
+                    DataCell(Text("${data['jumlah']} ${data['satuan']}")),
+                    DataCell(Text(NumberFormat.currency(
+                      locale: 'id',
+                      symbol: 'Rp ',
+                      decimalDigits: 0,
+                    ).format(data['hargaJual']))),
+                    DataCell(Text(data['tipe'] ?? "")),
+                    DataCell(Text(data['tanggal'] ?? "")),
+                    DataCell(Text(NumberFormat.currency(
+                      locale: 'id',
+                      symbol: 'Rp ',
+                      decimalDigits: 0,
+                    ).format(data['total']))),
+                    DataCell(IconButton(
+                      icon: Icon(Icons.receipt_rounded, color: Color(0xFF080C67)),
+                      onPressed: () => _showInvoiceDetail(data),
+                      tooltip: 'Lihat Invoice',
+                    )),
+                  ]);
+                }).toList(),
+              );
+            },
+          ),
+        ),
+      ],
+    ),
+  );
+}
+  // Widget _buildInvoiceList() {
+  //   return StreamBuilder<QuerySnapshot>(
+  //     stream: DatabaseMethods().getPenjualanStream(),
+  //     builder: (context, snapshot) {
+  //       if (snapshot.connectionState == ConnectionState.waiting) {
+  //         return Center(
+  //           child: CircularProgressIndicator(
+  //             valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+  //           ),
+  //         );
+  //       }
+
+  //       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+  //         return Center(
+  //           child: Column(
+  //             mainAxisAlignment: MainAxisAlignment.center,
+  //             children: [
+  //               Icon(
+  //                 Icons.receipt_long_rounded,
+  //                 size: 64,
+  //                 color: Colors.grey[400],
+  //               ),
+  //               SizedBox(height: 16),
+  //               Text(
+  //                 "Belum ada data penjualan",
+  //                 style: TextStyle(
+  //                   fontSize: 16,
+  //                   color: Colors.grey[600],
+  //                   fontWeight: FontWeight.w500,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         );
+  //       }
+
+  //       return ListView.builder(
+  //         shrinkWrap: true,
+  //         physics: NeverScrollableScrollPhysics(),
+  //         itemCount: snapshot.data!.docs.length,
+  //         itemBuilder: (context, index) {
+  //           final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+  //           return Container(
+  //             margin: EdgeInsets.only(bottom: 12),
+  //             decoration: BoxDecoration(
+  //               color: Color(0xFFEEF2FF),
+  //               borderRadius: BorderRadius.circular(12),
+  //             ),
+  //             child: ListTile(
+  //               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  //               leading: Container(
+  //                 padding: EdgeInsets.all(8),
+  //                 decoration: BoxDecoration(
+  //                   color: Color(0xFF080C67),
+  //                   borderRadius: BorderRadius.circular(8),
+  //                 ),
+  //                 child: Icon(
+  //                   Icons.shopping_cart_rounded,
+  //                   color: Colors.white,
+  //                   size: 24,
+  //                 ),
+  //               ),
+  //               title: Text(
+  //                 data['namaBarang'],
+  //                 style: TextStyle(
+  //                   fontWeight: FontWeight.w600,
+  //                   color: Color(0xFF080C67),
+  //                 ),
+  //               ),
+  //               subtitle: Text(
+  //                 '${data['jumlah']} ${data['satuan']} - ${data['tipe']}',
+  //                 style: TextStyle(color: Colors.grey[600]),
+  //               ),
+  //               trailing: Column(
+  //                 mainAxisAlignment: MainAxisAlignment.center,
+  //                 crossAxisAlignment: CrossAxisAlignment.end,
+  //                 children: [
+  //                   Text(
+  //                     NumberFormat.currency(
+  //                       locale: 'id',
+  //                       symbol: 'Rp ',
+  //                       decimalDigits: 0,
+  //                     ).format(data['total']),
+  //                     style: TextStyle(
+  //                       fontWeight: FontWeight.w600,
+  //                       color: Color(0xFF080C67),
+  //                     ),
+  //                   ),
+  //                   Text(
+  //                     data['tanggal'],
+  //                     style: TextStyle(
+  //                       fontSize: 12,
+  //                       color: Colors.grey[600],
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //               onTap: () => _showInvoiceDetail(data),
+  //             ),
+  //           );
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
 
 Widget _buildBarangDropdown() {
   return FutureBuilder<Map<String, Map<String, dynamic>>>(
@@ -656,6 +738,8 @@ Widget _buildDropdownField({
       builder: (context) => InvoiceDetailDialog(data: data),
     );
   }
+  
+  
   void _calculateTotal() {
     if (_unitController.text.isNotEmpty && _priceController.text.isNotEmpty) {
       setState(() {
