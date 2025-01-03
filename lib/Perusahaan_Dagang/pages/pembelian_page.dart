@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/Perusahaan_Dagang/pages/input_pembelian_page.dart';
+import 'package:hpp_project/Perusahaan_Dagang/pages/invoice_pembelian.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:intl/intl.dart';
 
@@ -332,66 +333,316 @@ class _PembelianPageState extends State<PembelianPage> {
     );
   }
 
-  Widget _buildDataTable() {
-    return Container(
-      margin: EdgeInsets.all(16),
+Widget _buildDataTable() {
+  return Container(
+    margin: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 0,
+          blurRadius: 20,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Data Pembelian",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF080C67),
+                ),
+              ),
+              // Invoice Bulanan Button
+              ElevatedButton.icon(
+                onPressed: () => _showMonthlyInvoice(),
+                icon: Icon(Icons.assessment_rounded),
+                label: Text('Invoice Bulanan'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF080C67),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
+            columns: const [
+              DataColumn(label: Text("Nama Barang")),
+              DataColumn(label: Text("Jumlah")),
+              DataColumn(label: Text("Harga per Unit")),
+              DataColumn(label: Text("Tipe")),
+              DataColumn(label: Text("Tanggal")),
+              DataColumn(label: Text("Aksi")),
+            ],
+            rows: _pembelianDocs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return DataRow(cells: [
+                DataCell(Text(data['Name'] ?? "Loading...")),
+                DataCell(Text(data["Jumlah"]?.toString() ?? "0")),
+                DataCell(Text(NumberFormat.currency(
+                  locale: 'id',
+                  symbol: 'Rp ',
+                  decimalDigits: 0,
+                ).format(data["Price"] ?? 0))),
+                DataCell(Text(data["Type"] ?? "")),
+                DataCell(Text(data["Tanggal"] ?? "")),
+                DataCell(IconButton(
+                  icon: Icon(Icons.receipt_rounded, color: Color(0xFF080C67)),
+                  onPressed: () => _showInvoicePreview(doc.id, data),
+                  tooltip: 'Lihat Invoice',
+                )),
+              ]);
+            }).toList(),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showInvoicePreview(String pembelianId, Map<String, dynamic> data) {
+  final subtotal = data['Jumlah'] * data['Price'];
+  final ppn = subtotal * 0.12;
+  final total = subtotal + ppn;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => Container(
+      height: MediaQuery.of(context).size.height * 0.8,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 0,
-            blurRadius: 20,
-            offset: Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
+          Container(
             padding: EdgeInsets.all(16),
-            child: Text(
-              "Data Pembelian",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF080C67),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Preview Invoice',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    // IconButton(
+                    //   icon: Icon(Icons.print, color: Colors.white),
+                    //   onPressed: () {
+                    //     Navigator.pop(context);
+                    //     _printSingleInvoice(pembelianId, data);
+                    //   },
+                    //   tooltip: 'Cetak Invoice',
+                    // ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Company Info
+                  Text(
+                    'NAMA USAHA ANDA',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF080C67),
+                    ),
+                  ),
+                  Text('Jalan Contoh No. 123, Kota, Provinsi'),
+                  Text('Tel: (021) 1234567'),
+                  Text('Email: email@usaha.com'),
+                  SizedBox(height: 24),
+
+                  // Invoice Info
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Invoice No:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text('INV-${pembelianId.substring(0, 8)}'),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Tanggal:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(data['Tanggal']),
+                        ],
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24),
+
+                  // Item Details
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Detail Item',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF080C67),
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        _buildDetailRow('Nama Barang', data['Name']),
+                        _buildDetailRow('Tipe', data['Type']),
+                        _buildDetailRow(
+                          'Jumlah', 
+                          '${data['Jumlah']} ${data['Satuan']}'
+                        ),
+                        _buildDetailRow(
+                          'Harga Satuan',
+                          NumberFormat.currency(
+                            locale: 'id',
+                            symbol: 'Rp ',
+                            decimalDigits: 0,
+                          ).format(data['Price']),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Totals
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildDetailRow(
+                          'Subtotal',
+                          NumberFormat.currency(
+                            locale: 'id',
+                            symbol: 'Rp ',
+                            decimalDigits: 0,
+                          ).format(subtotal),
+                        ),
+                        _buildDetailRow(
+                          'PPN (12%)',
+                          NumberFormat.currency(
+                            locale: 'id',
+                            symbol: 'Rp ',
+                            decimalDigits: 0,
+                          ).format(ppn),
+                        ),
+                        Divider(height: 16),
+                        _buildDetailRow(
+                          'Total',
+                          NumberFormat.currency(
+                            locale: 'id',
+                            symbol: 'Rp ',
+                            decimalDigits: 0,
+                          ).format(total),
+                          isBold: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowColor: WidgetStateProperty.all(Color(0xFFEEF2FF)),
-              columns: const [
-                DataColumn(label: Text("Nama Barang")),
-                DataColumn(label: Text("Jumlah")),
-                DataColumn(label: Text("Harga per Unit")),
-                DataColumn(label: Text("Tipe")),
-                DataColumn(label: Text("Tanggal")),
-              ],
-              rows: _pembelianDocs.map((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                return DataRow(cells: [
-                  DataCell(Text(data['Name'] ?? "Loading...")),
-                  DataCell(Text(data["Jumlah"]?.toString() ?? "0")),
-                  DataCell(Text(NumberFormat.currency(
-                    locale: 'id',
-                    symbol: 'Rp ',
-                    decimalDigits: 0,
-                  ).format(data["Price"] ?? 0))),
-                  DataCell(Text(data["Type"] ?? "")),
-                  DataCell(Text(data["Tanggal"] ?? "")),
-                ]);
-              }).toList(),
-            ),
-          ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+Widget _buildDetailRow(String label, String value, {bool isBold = false}) {
+  return Padding(
+    padding: EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+void _showMonthlyInvoice() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => InvoicePembelianPage(
+        selectedMonth: _selectedMonth,
+        pembelianDocs: _pembelianDocs,
+      ),
+    ),
+  );
+}
+
 
 Widget _buildHeaderSection() {
   return Container(
