@@ -98,7 +98,6 @@ class _ProfitReportWidgetState extends State<ProfitReportWidget> with SingleTick
       builder: (context, constraints) {
         // Calculate responsive dimensions
         final double chartHeight = constraints.maxHeight * 0.5;
-        final double summaryHeight = constraints.maxHeight * 0.25;
         final double tabHeight = 40.0;
         final double padding = 8.0;
 

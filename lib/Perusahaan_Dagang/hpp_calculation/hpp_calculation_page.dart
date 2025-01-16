@@ -1,10 +1,8 @@
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'dart:io';
 import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_model.dart';
 import 'package:hpp_project/perusahaan_dagang/hpp_calculation/hpp_widgets.dart';
@@ -1178,61 +1176,62 @@ pw.TableRow _buildDataRowNew(
     ],
   );
 }
-Future<pw.Widget> _buildPDFHeader(pw.Font font, pw.Font fontBold) async {
-  // Ubah fungsi menjadi async dan return Future
-  final ByteData imageData = await rootBundle.load('assets/images/logo-apps.png');
-  final Uint8List imageBytes = imageData.buffer.asUint8List();
+// Future<pw.Widget> _buildPDFHeader(pw.Font font, pw.Font fontBold) async {
+//   // Ubah fungsi menjadi async dan return Future
+//   final ByteData imageData = await rootBundle.load('assets/images/logo-apps.png');
+//   final Uint8List imageBytes = imageData.buffer.asUint8List();
 
-  return pw.Row(
-    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-    crossAxisAlignment: pw.CrossAxisAlignment.start, // Tambahkan ini untuk alignment vertikal
-    children: [
-      // Left side - Title and details
-      pw.Expanded(  // Tambahkan Expanded untuk mengatur ruang
-        flex: 3,   // Berikan flex lebih besar untuk sisi kiri
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.RichText(
-              text: pw.TextSpan(
-                children: [
-                  pw.TextSpan(
-                    text: 'Laporan HPP',
-                    style: pw.TextStyle(font: fontBold, fontSize: 24),
-                  ),
-                ],
-              ),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              dataUsahaC.namaUsaha.value,
-              style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey800),
-            ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              'Dari ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.startDate))} sampai ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.endDate))}',
-              style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600),
-            ),
-          ],
-        ),
-      ),
+//   return pw.Row(
+//     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+//     crossAxisAlignment: pw.CrossAxisAlignment.start, // Tambahkan ini untuk alignment vertikal
+//     children: [
+//       // Left side - Title and details
+//       pw.Expanded(  // Tambahkan Expanded untuk mengatur ruang
+//         flex: 3,   // Berikan flex lebih besar untuk sisi kiri
+//         child: pw.Column(
+//           crossAxisAlignment: pw.CrossAxisAlignment.start,
+//           children: [
+//             pw.RichText(
+//               text: pw.TextSpan(
+//                 children: [
+//                   pw.TextSpan(
+//                     text: 'Laporan HPP',
+//                     style: pw.TextStyle(font: fontBold, fontSize: 24),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//             pw.SizedBox(height: 4),
+//             pw.Text(
+//               dataUsahaC.namaUsaha.value,
+//               style: pw.TextStyle(font: font, fontSize: 14, color: PdfColors.grey800),
+//             ),
+//             pw.SizedBox(height: 4),
+//             pw.Text(
+//               'Dari ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.startDate))} sampai ${DateFormat('dd MMMM yyyy').format(DateTime.parse(_hppData.endDate))}',
+//               style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey600),
+//             ),
+//           ],
+//         ),
+//       ),
       
-      // Right side - Logo
-      pw.Expanded(  // Tambahkan Expanded untuk sisi kanan
-        flex: 1,    // Berikan flex lebih kecil untuk logo
-        child: pw.Container(
-          height: 60,
-          width: 60,
-          alignment: pw.Alignment.topRight, // Atur alignment logo ke kanan atas
-          child: pw.Image(
-            pw.MemoryImage(imageBytes),
-            fit: pw.BoxFit.contain,
-          ),
-        ),
-      ),
-    ],
-  );
-}
+//       // Right side - Logo
+//       pw.Expanded(  // Tambahkan Expanded untuk sisi kanan
+//         flex: 1,    // Berikan flex lebih kecil untuk logo
+//         child: pw.Container(
+//           height: 60,
+//           width: 60,
+//           alignment: pw.Alignment.topRight, // Atur alignment logo ke kanan atas
+//           child: pw.Image(
+//             pw.MemoryImage(imageBytes),
+//             fit: pw.BoxFit.contain,
+//           ),
+//         ),
+//       ),
+//     ],
+//   );
+// }
+  
   @override
  Widget build(BuildContext context) {
     return Scaffold(

@@ -20,6 +20,7 @@ class _InputPembelianPageState extends State<InputPembelianPage> {
   final TextEditingController _satuanCustomController = TextEditingController();
   final TextEditingController _tipeCustomController = TextEditingController();
   final TextEditingController _tanggalController = TextEditingController();
+  final TextEditingController _namaTokoController = TextEditingController();
   
   // Variables
   String _selectedUnit = 'Pcs';
@@ -81,131 +82,125 @@ class _InputPembelianPageState extends State<InputPembelianPage> {
     });
   }
 
-  Future<void> _saveItem() async {
-    if (!_validateInput()) return;
-    
-    setState(() => _isLoading = true);
-    
-    try {
-      final userId = DatabaseMethods().currentUserId;
-      final String finalType = _isOtherTypeSelected ? _tipeCustomController.text : _selectedType;
-      final String finalSatuan = _isOtherSelected ? _satuanCustomController.text : _selectedUnit;
+ Future<void> _saveItem() async {
+  if (!_validateInput()) return;
+  
+  setState(() => _isLoading = true);
+  
+  try {
+    final userId = DatabaseMethods().currentUserId;
+    final String finalType = _isOtherTypeSelected ? _tipeCustomController.text : _selectedType;
+    final String finalSatuan = _isOtherSelected ? _satuanCustomController.text : _selectedUnit;
 
-      String barangId;
-      if (_isExistingItem && _selectedBarangId != null) {
-        // Use existing barang ID
-        barangId = _selectedBarangId!;
-        
-        // Update the price if it has changed
-        if (int.parse(_hargaController.text) != _existingItems
-            .firstWhere((item) => item['id'] == barangId)['price']) {
-          await FirebaseFirestore.instance
-              .collection("Users")
-              .doc(userId)
-              .collection("Barang")
-              .doc(barangId)
-              .update({
-            "Price": int.parse(_hargaController.text),
-            "LastUpdated": FieldValue.serverTimestamp(),
-          });
-        }
-      } else {
-        // Check for existing item with same name and type
-        QuerySnapshot existing = await FirebaseFirestore.instance
-            .collection("Users")
-            .doc(userId)
-            .collection("Barang")
-            .where("Name", isEqualTo: _namaBarangController.text)
-            .where("Tipe", isEqualTo: finalType)
-            .get();
-
-        if (existing.docs.isNotEmpty) {
-          barangId = existing.docs.first.id;
-          // Update existing barang with new price
-          await FirebaseFirestore.instance
-              .collection("Users")
-              .doc(userId)
-              .collection("Barang")
-              .doc(barangId)
-              .update({
-            "Price": int.parse(_hargaController.text),
-            "LastUpdated": FieldValue.serverTimestamp(),
-          });
-        } else {
-          // Create new barang
-          barangId = randomAlphaNumeric(10);
-          await FirebaseFirestore.instance
-              .collection("Users")
-              .doc(userId)
-              .collection("Barang")
-              .doc(barangId)
-              .set({
-            "Name": _namaBarangController.text,
-            "Tipe": finalType,
-            "Satuan": finalSatuan,
-            "Price": int.parse(_hargaController.text),
-            "Jumlah": int.parse(_jumlahController.text),
-            "Tanggal": _tanggalController.text,
-            "CreatedAt": FieldValue.serverTimestamp(),
-          });
-        }
-      }
-
-      // Create Pembelian record
+    String barangId;
+    if (_isExistingItem && _selectedBarangId != null) {
+      barangId = _selectedBarangId!;
+      
       await FirebaseFirestore.instance
           .collection("Users")
           .doc(userId)
-          .collection("Pembelian")
-          .add({
-        "BarangId": barangId,
-        "Name": _namaBarangController.text,
-        "Jumlah": int.parse(_jumlahController.text),
+          .collection("Barang")
+          .doc(barangId)
+          .update({
         "Price": int.parse(_hargaController.text),
-        "Type": finalType,
-        "Satuan": finalSatuan,
-        "Tanggal": _tanggalController.text,
-        "CreatedAt": FieldValue.serverTimestamp(),
+        "LastUpdated": FieldValue.serverTimestamp(),
       });
+    } else {
+      QuerySnapshot existing = await FirebaseFirestore.instance
+          .collection("Users")
+          .doc(userId)
+          .collection("Barang")
+          .where("Name", isEqualTo: _namaBarangController.text)
+          .where("Tipe", isEqualTo: finalType)
+          .get();
 
-      // Add notification
-      await addPembelianNotification(
-        namaBarang: _namaBarangController.text,
-        jumlah: int.parse(_jumlahController.text),
-        satuan: finalSatuan,
-        type: finalType,
-      );
-
-      _showSuccess("Pembelian berhasil ditambahkan");
-      Navigator.pop(context, true);
-    } catch (e) {
-      print("Error saving purchase: $e");
-      _showError("Gagal menyimpan pembelian: $e");
-    } finally {
-      setState(() => _isLoading = false);
+      if (existing.docs.isNotEmpty) {
+        barangId = existing.docs.first.id;
+        await FirebaseFirestore.instance
+            .collection("Users")
+            .doc(userId)
+            .collection("Barang")
+            .doc(barangId)
+            .update({
+          "Price": int.parse(_hargaController.text),
+          "LastUpdated": FieldValue.serverTimestamp(),
+        });
+      } else {
+        barangId = randomAlphaNumeric(10);
+        await FirebaseFirestore.instance
+            .collection("Users")
+            .doc(userId)
+            .collection("Barang")
+            .doc(barangId)
+            .set({
+          "Name": _namaBarangController.text,
+          "Tipe": finalType,
+          "Satuan": finalSatuan,
+          "Price": int.parse(_hargaController.text),
+          "Jumlah": int.parse(_jumlahController.text),
+          "Tanggal": _tanggalController.text,
+          "CreatedAt": FieldValue.serverTimestamp(),
+        });
+      }
     }
+
+    // Create Pembelian record with store name
+    await FirebaseFirestore.instance
+        .collection("Users")
+        .doc(userId)
+        .collection("Pembelian")
+        .add({
+          "BarangId": barangId,
+          "Name": _namaBarangController.text,
+          "Jumlah": int.parse(_jumlahController.text),
+          "Price": int.parse(_hargaController.text),
+          "Type": finalType,
+          "Satuan": finalSatuan,
+          "Tanggal": _tanggalController.text,
+          "NamaToko": _namaTokoController.text, // Add store name
+          "CreatedAt": FieldValue.serverTimestamp(),
+    });
+
+    // Add notification
+    await addPembelianNotification(
+      namaBarang: _namaBarangController.text,
+      jumlah: int.parse(_jumlahController.text),
+      satuan: finalSatuan,
+      type: finalType,
+    );
+
+    _showSuccess("Pembelian berhasil ditambahkan");
+    Navigator.pop(context, true);
+  } catch (e) {
+    print("Error saving purchase: $e");
+    _showError("Gagal menyimpan pembelian: $e");
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
   bool _validateInput() {
-    if (_namaBarangController.text.isEmpty ||
-        _jumlahController.text.isEmpty ||
-        _hargaController.text.isEmpty ||
-        _tanggalController.text.isEmpty) {
-      _showError("Semua field harus diisi");
-      return false;
-    }
-
-    if (_isOtherTypeSelected && _tipeCustomController.text.isEmpty) {
-      _showError("Tipe custom harus diisi");
-      return false;
-    }
-
-    if (_isOtherSelected && _satuanCustomController.text.isEmpty) {
-      _showError("Satuan custom harus diisi");
-      return false;
-    }
-
-    return true;
+  if (_namaBarangController.text.isEmpty ||
+      _jumlahController.text.isEmpty ||
+      _hargaController.text.isEmpty ||
+      _tanggalController.text.isEmpty ||
+      _namaTokoController.text.isEmpty) { // Add this check
+    _showError("Semua field harus diisi");
+    return false;
   }
+
+  if (_isOtherTypeSelected && _tipeCustomController.text.isEmpty) {
+    _showError("Tipe custom harus diisi");
+    return false;
+  }
+
+  if (_isOtherSelected && _satuanCustomController.text.isEmpty) {
+    _showError("Satuan custom harus diisi");
+    return false;
+  }
+
+  return true;
+}
 
   Future<void> _selectDate() async {
     final DateTime? picked = await showDatePicker(
@@ -266,6 +261,13 @@ class _InputPembelianPageState extends State<InputPembelianPage> {
           // Autocomplete for existing items
           _buildAutoComplete(),
           SizedBox(height: 16),
+          _buildInputField(
+  label: 'Nama Toko',
+  controller: _namaTokoController,
+  icon: Icons.store_rounded,
+  hintText: 'Masukkan nama toko',
+),
+SizedBox(height: 16),
 
           _buildInputField(
             label: 'Nama Barang',
@@ -796,13 +798,14 @@ class _InputPembelianPageState extends State<InputPembelianPage> {
   }
   
   @override
-  void dispose() {
-    _namaBarangController.dispose();
-    _hargaController.dispose();
-    _jumlahController.dispose();
-    _satuanCustomController.dispose();
-    _tipeCustomController.dispose();
-    _tanggalController.dispose();
-    super.dispose();
-  }
+void dispose() {
+  _namaTokoController.dispose(); // Add this line
+  _namaBarangController.dispose();
+  _hargaController.dispose();
+  _jumlahController.dispose();
+  _satuanCustomController.dispose();
+  _tipeCustomController.dispose();
+  _tanggalController.dispose();
+  super.dispose();
+}
 }

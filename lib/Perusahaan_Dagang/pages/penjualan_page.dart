@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hpp_project/perusahaan_dagang/pages/invoice_detail.dart';
@@ -330,7 +332,7 @@ Widget build(BuildContext context) {
               }
 
               return DataTable(
-                headingRowColor: MaterialStateProperty.all(Color(0xFFEEF2FF)),
+                headingRowColor: WidgetStateProperty.all(Color(0xFFEEF2FF)),
                 columns: const [
                   DataColumn(label: Text("Nama Barang")),
                   DataColumn(label: Text("Jumlah")),
