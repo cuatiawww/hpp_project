@@ -63,7 +63,7 @@ class MyApp extends StatelessWidget {
           final currentUser = FirebaseAuth.instance.currentUser;
             
             if (isFirstTime) {
-              setFirstTimeCompleted(); // Tandai onboarding selesai.
+              // setFirstTimeCompleted(); // Tandai onboarding selesai.
               Get.offAllNamed(Routes.onboarding); // Arahkan ke Onboarding.
             } else if (currentUser != null) {
               Get.offAllNamed(Routes.home); // Jika sudah login, arahkan ke Home.

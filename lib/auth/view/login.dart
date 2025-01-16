@@ -177,7 +177,7 @@ class _LoginPageState extends State<LoginPage> {
                             Row(
                               children: [
                                 TextButton(
-                                  onPressed: () => Get.toNamed(Routes.forgot),
+                                  onPressed: () => Get.offAllNamed(Routes.forgot),
                                   child: Text(
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
