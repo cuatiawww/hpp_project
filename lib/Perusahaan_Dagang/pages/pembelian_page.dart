@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hpp_project/Perusahaan_Dagang/pages/input_pembelian_page.dart';
-// import 'package:hpp_project/Perusahaan_Dagang/pages/invoice_pembelian.dart';
+import 'package:hpp_project/auth/controllers/data_usaha_controller.dart';
 import 'package:hpp_project/service/database.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -22,24 +23,56 @@ class _PembelianPageState extends State<PembelianPage> {
   List<String> _months = [];
   List<QueryDocumentSnapshot> _pembelianDocs = [];
   
+  // Business data
+  late DataUsahaController _dataUsahaController;
+  Map<String, dynamic> _businessData = {
+    'Nama Usaha': '',
+    'Tipe Usaha': '',
+    'Nomor Telepon': '',
+  };
+  
   // State variables
   String _selectedMonth = DateFormat('yyyy-MM').format(DateTime.now());
   
   // Loading states
-  // ignore: unused_field
   bool _isLoadingBarang = true;
   bool _isLoadingPembelian = true;
+  bool _isLoadingBusinessData = true;
   
   // Firebase references
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  // ignore: unused_field
   late Query _pembelianQuery;
 
   @override
   void initState() {
     super.initState();
+    _initializeControllers(); // Add this line
     _generateMonths();
     _initializeData();
+  }
+
+  void _initializeControllers() {
+    final userId = DatabaseMethods().currentUserId;
+    _dataUsahaController = Get.put(DataUsahaController(uid: userId));
+    _loadBusinessData();
+  }
+
+  Future<void> _loadBusinessData() async {
+    setState(() => _isLoadingBusinessData = true);
+    try {
+      await _dataUsahaController.fetchDataUsaha(_dataUsahaController.uid);
+      setState(() {
+        _businessData = {
+          'Nama Usaha': _dataUsahaController.namaUsaha.value,
+          'Tipe Usaha': _dataUsahaController.tipeUsaha.value,
+          'Nomor Telepon': _dataUsahaController.nomorTelepon.value,
+        };
+        _isLoadingBusinessData = false;
+      });
+    } catch (e) {
+      print('Error loading business data: $e');
+      setState(() => _isLoadingBusinessData = false);
+    }
   }
 
   void _generateMonths() {
@@ -426,199 +459,199 @@ Widget _buildDataTable() {
 }
 
 Future<void> _generateStorePdf(String storeName, List<QueryDocumentSnapshot> purchases) async {
-  final doc = pw.Document();
-  final font = await PdfGoogleFonts.nunitoRegular();
-  final fontBold = await PdfGoogleFonts.nunitoBold();
+    final doc = pw.Document();
+    final font = await PdfGoogleFonts.nunitoRegular();
+    final fontBold = await PdfGoogleFonts.nunitoBold();
 
-  double totalAmount = 0;
-  final selectedMonthDate = DateTime.parse('${_selectedMonth}-01');
-  final monthYearStr = DateFormat('MMMM yyyy').format(selectedMonthDate);
+    double totalAmount = 0;
+    final selectedMonthDate = DateTime.parse('${_selectedMonth}-01');
+    final monthYearStr = DateFormat('MMMM yyyy').format(selectedMonthDate);
 
-  doc.addPage(
-    pw.Page(
-      pageFormat: PdfPageFormat.a4,
-      build: (pw.Context context) {
-        return pw.Padding(
-          padding: pw.EdgeInsets.all(16),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // Header with Company Info
-              pw.Container(
-                padding: pw.EdgeInsets.all(16),
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text(
-                          'NAMA USAHA ANDA',
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 20,
-                            color: PdfColor.fromHex('#080C67'),
-                          ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'Jalan Contoh No. 123, Kota, Provinsi',
-                          style: pw.TextStyle(font: font, fontSize: 10),
-                        ),
-                        pw.Text(
-                          'Tel: (021) 1234567',
-                          style: pw.TextStyle(font: font, fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Supplier Info
-              pw.Container(
-                padding: pw.EdgeInsets.all(12),
-                margin: pw.EdgeInsets.symmetric(vertical: 20),
-                decoration: pw.BoxDecoration(
-                  color: PdfColor.fromHex('#EEF2FF'),
-                  borderRadius: pw.BorderRadius.circular(8),
-                ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      'Supplier:',
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    pw.Text(
-                      storeName,
-                      style: pw.TextStyle(font: font, fontSize: 12),
-                    ),
-                    pw.SizedBox(height: 4),
-                    pw.Text(
-                      'Periode: $monthYearStr',
-                      style: pw.TextStyle(font: font, fontSize: 10),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Items Table
-              pw.Table(
-                border: pw.TableBorder.all(
-                  color: PdfColors.grey300,
-                  width: 0.5,
-                ),
-                children: [
-                  // Header
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(
-                      color: PdfColor.fromHex('#EEF2FF'),
-                    ),
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: pw.EdgeInsets.all(16),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                // Header with Company Info
+                pw.Container(
+                  padding: pw.EdgeInsets.all(16),
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildPdfCell('Nama Barang', font: fontBold, align: pw.TextAlign.left),
-                      _buildPdfCell('Jumlah', font: fontBold, align: pw.TextAlign.center),
-                      _buildPdfCell('Harga', font: fontBold, align: pw.TextAlign.right),
-                      _buildPdfCell('Tanggal', font: fontBold, align: pw.TextAlign.center),
-                      _buildPdfCell('Total', font: fontBold, align: pw.TextAlign.right),
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            _businessData['Nama Usaha'] ?? 'NAMA USAHA',
+                            style: pw.TextStyle(
+                              font: fontBold,
+                              fontSize: 20,
+                              color: PdfColor.fromHex('#080C67'),
+                            ),
+                          ),
+                          pw.SizedBox(height: 4),
+                          pw.Text(
+                            _businessData['Tipe Usaha'] ?? 'Tipe Usaha',
+                            style: pw.TextStyle(font: font, fontSize: 10),
+                          ),
+                          pw.Text(
+                            'Tel: ${_businessData['Nomor Telepon'] ?? '-'}',
+                            style: pw.TextStyle(font: font, fontSize: 10),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  // Items
-                  ...purchases.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    final itemTotal = (data['Jumlah'] as int) * (data['Price'] as int);
-                    totalAmount += itemTotal;
+                ),
 
-                    return pw.TableRow(
-                      children: [
-                        _buildPdfCell(
-                          '${data['Name']}\n(${data['Type']})',
-                          font: font,
-                          align: pw.TextAlign.left,
-                        ),
-                        _buildPdfCell(
-                          '${data['Jumlah']} ${data['Satuan']}',
-                          font: font,
-                          align: pw.TextAlign.center,
-                        ),
-                        _buildPdfCell(
-                          NumberFormat.currency(
-                            locale: 'id',
-                            symbol: 'Rp ',
-                            decimalDigits: 0,
-                          ).format(data['Price']),
-                          font: font,
-                          align: pw.TextAlign.right,
-                        ),
-                        _buildPdfCell(
-                          data['Tanggal'] ?? '-',
-                          font: font,
-                          align: pw.TextAlign.center,
-                        ),
-                        _buildPdfCell(
-                          NumberFormat.currency(
-                            locale: 'id',
-                            symbol: 'Rp ',
-                            decimalDigits: 0,
-                          ).format(itemTotal),
-                          font: font,
-                          align: pw.TextAlign.right,
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ],
-              ),
-
-              // Total
-              pw.Container(
-                alignment: pw.Alignment.centerRight,
-                padding: pw.EdgeInsets.only(top: 20),
-                child: pw.Container(
+                // Supplier Info
+                pw.Container(
                   padding: pw.EdgeInsets.all(12),
+                  margin: pw.EdgeInsets.symmetric(vertical: 20),
                   decoration: pw.BoxDecoration(
-                    color: PdfColor.fromHex('#080C67'),
+                    color: PdfColor.fromHex('#EEF2FF'),
                     borderRadius: pw.BorderRadius.circular(8),
                   ),
-                  child: pw.Row(
-                    mainAxisSize: pw.MainAxisSize.min,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(
-                        'Total Pembelian: ',
+                        'Supplier:',
                         style: pw.TextStyle(
                           font: fontBold,
-                          color: PdfColors.white,
+                          fontSize: 12,
                         ),
                       ),
                       pw.Text(
-                        NumberFormat.currency(
-                          locale: 'id',
-                          symbol: 'Rp ',
-                          decimalDigits: 0,
-                        ).format(totalAmount),
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          color: PdfColors.white,
-                        ),
+                        storeName,
+                        style: pw.TextStyle(font: font, fontSize: 12),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Periode: $monthYearStr',
+                        style: pw.TextStyle(font: font, fontSize: 10),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
 
-  await Printing.layoutPdf(
-    onLayout: (PdfPageFormat format) async => doc.save(),
-  );
-}
+                // Items Table
+                pw.Table(
+                  border: pw.TableBorder.all(
+                    color: PdfColors.grey300,
+                    width: 0.5,
+                  ),
+                  children: [
+                    // Header
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromHex('#EEF2FF'),
+                      ),
+                      children: [
+                        _buildPdfCell('Nama Barang', font: fontBold, align: pw.TextAlign.left),
+                        _buildPdfCell('Jumlah', font: fontBold, align: pw.TextAlign.center),
+                        _buildPdfCell('Harga', font: fontBold, align: pw.TextAlign.right),
+                        _buildPdfCell('Tanggal', font: fontBold, align: pw.TextAlign.center),
+                        _buildPdfCell('Total', font: fontBold, align: pw.TextAlign.right),
+                      ],
+                    ),
+                    // Items
+                    ...purchases.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final itemTotal = (data['Jumlah'] as int) * (data['Price'] as int);
+                      totalAmount += itemTotal;
+
+                      return pw.TableRow(
+                        children: [
+                          _buildPdfCell(
+                            '${data['Name']}\n(${data['Type']})',
+                            font: font,
+                            align: pw.TextAlign.left,
+                          ),
+                          _buildPdfCell(
+                            '${data['Jumlah']} ${data['Satuan']}',
+                            font: font,
+                            align: pw.TextAlign.center,
+                          ),
+                          _buildPdfCell(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(data['Price']),
+                            font: font,
+                            align: pw.TextAlign.right,
+                          ),
+                          _buildPdfCell(
+                            data['Tanggal'] ?? '-',
+                            font: font,
+                            align: pw.TextAlign.center,
+                          ),
+                          _buildPdfCell(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(itemTotal),
+                            font: font,
+                            align: pw.TextAlign.right,
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+
+                // Total
+                pw.Container(
+                  alignment: pw.Alignment.centerRight,
+                  padding: pw.EdgeInsets.only(top: 20),
+                  child: pw.Container(
+                    padding: pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('#080C67'),
+                      borderRadius: pw.BorderRadius.circular(8),
+                    ),
+                    child: pw.Row(
+                      mainAxisSize: pw.MainAxisSize.min,
+                      children: [
+                        pw.Text(
+                          'Total Pembelian: ',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                        pw.Text(
+                          NumberFormat.currency(
+                            locale: 'id',
+                            symbol: 'Rp ',
+                            decimalDigits: 0,
+                          ).format(totalAmount),
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            color: PdfColors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => doc.save(),
+    );
+  }
 
 pw.Widget _buildPdfCell(
   String text, {
@@ -635,468 +668,229 @@ pw.Widget _buildPdfCell(
   );
 }
 
-void _showStoreInvoicePreview(String storeName, List<QueryDocumentSnapshot> purchases) {
-  final selectedMonthDate = DateTime.parse('${_selectedMonth}-01');
-  final monthYearStr = DateFormat('MMMM yyyy').format(selectedMonthDate);
-  double totalAmount = 0;
-  
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
-              ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Invoice Toko $storeName',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
+ void _showStoreInvoicePreview(String storeName, List<QueryDocumentSnapshot> purchases) {
+    final selectedMonthDate = DateTime.parse('${_selectedMonth}-01');
+    final monthYearStr = DateFormat('MMMM yyyy').format(selectedMonthDate);
+    double totalAmount = 0;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
               padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
+                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Company Info
                   Text(
-                    'NAMA USAHA ANDA',
+                    'Invoice Toko $storeName',
                     style: TextStyle(
-                      fontSize: 24,
+                      color: Colors.white,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF080C67),
                     ),
                   ),
-                  Text('Jalan Contoh No. 123, Kota, Provinsi'),
-                  Text('Tel: (021) 1234567'),
-                  Text('Email: email@usaha.com'),
-                  SizedBox(height: 24),
-
-                  // Store Info
-                  Container(
-            padding: EdgeInsets.all(12),
-            margin: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Color(0xFFEEF2FF),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Supplier:',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF080C67),
-                  ),
-                ),
-                Text(storeName),
-                Text(
-                  'Periode: $monthYearStr',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-                  SizedBox(height: 24),
-
-                  // Items Table
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(12),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(flex: 3, child: Text('Nama Barang')),
-                              Expanded(flex: 1, child: Text('Jumlah')),
-                              Expanded(flex: 2, child: Text('Harga')),
-                              Expanded(flex: 2, child: Text('Total')),
-                            ],
-                          ),
-                        ),
-                        ...purchases.map((doc) {
-                          final data = doc.data() as Map<String, dynamic>;
-                          final itemTotal = (data['Jumlah'] as int) * (data['Price'] as int);
-                          totalAmount += itemTotal;
-                          
-                          return Container(
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(
-                                  color: Colors.grey.withOpacity(0.2),
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(data['Name']),
-                                      Text(
-                                        data['Type'],
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Text('${data['Jumlah']} ${data['Satuan']}'),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    NumberFormat.currency(
-                                      locale: 'id',
-                                      symbol: 'Rp ',
-                                      decimalDigits: 0,
-                                    ).format(data['Price']),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    NumberFormat.currency(
-                                      locale: 'id',
-                                      symbol: 'Rp ',
-                                      decimalDigits: 0,
-                                    ).format(itemTotal),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 24),
-
-                  // Total
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Color(0xFF080C67),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total Pembelian',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        Text(
-                          NumberFormat.currency(
-                            locale: 'id',
-                            symbol: 'Rp ',
-                            decimalDigits: 0,
-                          ).format(totalAmount),
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Company Info
+                    Text(
+                      _businessData['Nama Usaha'] ?? 'NAMA USAHA',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF080C67),
+                      ),
+                    ),
+                    Text(_businessData['Tipe Usaha'] ?? 'Tipe Usaha'),
+                    Text('Tel: ${_businessData['Nomor Telepon'] ?? '-'}'),
+                    SizedBox(height: 24),
+
+                    // Store Info
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Supplier:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF080C67),
+                            ),
+                          ),
+                          Text(storeName),
+                          Text(
+                            'Periode: $monthYearStr',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 24),
+
+                    // Items Table
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFEEF2FF),
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(flex: 3, child: Text('Nama Barang')),
+                                Expanded(flex: 1, child: Text('Jumlah')),
+                                Expanded(flex: 2, child: Text('Harga')),
+                                Expanded(flex: 2, child: Text('Total')),
+                              ],
+                            ),
+                          ),
+                          ...purchases.map((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final itemTotal = (data['Jumlah'] as int) * (data['Price'] as int);
+                            totalAmount += itemTotal;
+                            
+                            return Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: Colors.grey.withOpacity(0.2),
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(data['Name']),
+                                        Text(
+                                          data['Type'],
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Text('${data['Jumlah']} ${data['Satuan']}'),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      NumberFormat.currency(
+                                        locale: 'id',
+                                        symbol: 'Rp ',
+                                        decimalDigits: 0,
+                                      ).format(data['Price']),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      NumberFormat.currency(
+                                        locale: 'id',
+                                        symbol: 'Rp ',
+                                        decimalDigits: 0,
+                                      ).format(itemTotal),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 24),
+
+                    // Total
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF080C67),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Total Pembelian',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp ',
+                              decimalDigits: 0,
+                            ).format(totalAmount),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
-
-// void _showInvoicePreview(String pembelianId, Map<String, dynamic> data) {
-//   final subtotal = data['Jumlah'] * data['Price'];
-//   final ppn = subtotal * 0.12;
-//   final total = subtotal + ppn;
-
-//   showModalBottomSheet(
-//     context: context,
-//     isScrollControlled: true,
-//     backgroundColor: Colors.transparent,
-//     builder: (context) => Container(
-//       height: MediaQuery.of(context).size.height * 0.8,
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-//       ),
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.stretch,
-//         children: [
-//           Container(
-//             padding: EdgeInsets.all(16),
-//             decoration: BoxDecoration(
-//               gradient: LinearGradient(
-//                 colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
-//               ),
-//               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-//             ),
-//             child: Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text(
-//                   'Preview Invoice',
-//                   style: TextStyle(
-//                     color: Colors.white,
-//                     fontSize: 20,
-//                     fontWeight: FontWeight.bold,
-//                   ),
-//                 ),
-//                 Row(
-//                   children: [
-//                     // IconButton(
-//                     //   icon: Icon(Icons.print, color: Colors.white),
-//                     //   onPressed: () {
-//                     //     Navigator.pop(context);
-//                     //     _printSingleInvoice(pembelianId, data);
-//                     //   },
-//                     //   tooltip: 'Cetak Invoice',
-//                     // ),
-//                     IconButton(
-//                       icon: Icon(Icons.close, color: Colors.white),
-//                       onPressed: () => Navigator.pop(context),
-//                     ),
-//                   ],
-//                 ),
-//               ],
-//             ),
-//           ),
-//           Expanded(
-//             child: SingleChildScrollView(
-//               padding: EdgeInsets.all(16),
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   // Company Info
-//                   Text(
-//                     'NAMA USAHA ANDA',
-//                     style: TextStyle(
-//                       fontSize: 24,
-//                       fontWeight: FontWeight.bold,
-//                       color: Color(0xFF080C67),
-//                     ),
-//                   ),
-//                   Text('Jalan Contoh No. 123, Kota, Provinsi'),
-//                   Text('Tel: (021) 1234567'),
-//                   Text('Email: email@usaha.com'),
-//                   SizedBox(height: 24),
-//                   Text(
-//     'Supplier:',
-//     style: TextStyle(
-//       fontSize: 16,
-//       fontWeight: FontWeight.bold,
-//       color: Color(0xFF080C67),
-//     ),
-//   ),
-//   Text(data['NamaToko'] ?? 'N/A'),
-//   SizedBox(height: 24),
-
-//                   // Invoice Info
-//                   Row(
-//                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                     children: [
-//                       Column(
-//                         crossAxisAlignment: CrossAxisAlignment.start,
-//                         children: [
-//                           Text(
-//                             'Invoice No:',
-//                             style: TextStyle(fontWeight: FontWeight.bold),
-//                           ),
-//                           Text('INV-${pembelianId.substring(0, 8)}'),
-//                         ],
-//                       ),
-//                       Column(
-//                         crossAxisAlignment: CrossAxisAlignment.end,
-//                         children: [
-//                           Text(
-//                             'Tanggal:',
-//                             style: TextStyle(fontWeight: FontWeight.bold),
-//                           ),
-//                           Text(data['Tanggal']),
-//                         ],
-//                       ),
-//                     ],
-//                   ),
-//                   SizedBox(height: 24),
-
-//                   // Item Details
-//                   Container(
-//                     padding: EdgeInsets.all(16),
-//                     decoration: BoxDecoration(
-//                       color: Color(0xFFEEF2FF),
-//                       borderRadius: BorderRadius.circular(12),
-//                     ),
-//                     child: Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text(
-//                           'Detail Item',
-//                           style: TextStyle(
-//                             fontSize: 18,
-//                             fontWeight: FontWeight.bold,
-//                             color: Color(0xFF080C67),
-//                           ),
-//                         ),
-//                         SizedBox(height: 16),
-//                         _buildDetailRow('Nama Barang', data['Name']),
-//                         _buildDetailRow('Tipe', data['Type']),
-//                         _buildDetailRow(
-//                           'Jumlah', 
-//                           '${data['Jumlah']} ${data['Satuan']}'
-//                         ),
-//                         _buildDetailRow(
-//                           'Harga Satuan',
-//                           NumberFormat.currency(
-//                             locale: 'id',
-//                             symbol: 'Rp ',
-//                             decimalDigits: 0,
-//                           ).format(data['Price']),
-//                         ),
-//                       ],
-//                     ),
-//                   ),
-//                   SizedBox(height: 24),
-
-//                   // Totals
-//                   Container(
-//                     padding: EdgeInsets.all(16),
-//                     decoration: BoxDecoration(
-//                       border: Border.all(color: Colors.grey.withOpacity(0.2)),
-//                       borderRadius: BorderRadius.circular(12),
-//                     ),
-//                     child: Column(
-//                       children: [
-//                         _buildDetailRow(
-//                           'Subtotal',
-//                           NumberFormat.currency(
-//                             locale: 'id',
-//                             symbol: 'Rp ',
-//                             decimalDigits: 0,
-//                           ).format(subtotal),
-//                         ),
-//                         _buildDetailRow(
-//                           'PPN (12%)',
-//                           NumberFormat.currency(
-//                             locale: 'id',
-//                             symbol: 'Rp ',
-//                             decimalDigits: 0,
-//                           ).format(ppn),
-//                         ),
-//                         Divider(height: 16),
-//                         _buildDetailRow(
-//                           'Total',
-//                           NumberFormat.currency(
-//                             locale: 'id',
-//                             symbol: 'Rp ',
-//                             decimalDigits: 0,
-//                           ).format(total),
-//                           isBold: true,
-//                         ),
-//                       ],
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     ),
-//   );
-// }
-
-// Widget _buildDetailRow(String label, String value, {bool isBold = false}) {
-//   return Padding(
-//     padding: EdgeInsets.symmetric(vertical: 4),
-//     child: Row(
-//       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//       children: [
-//         Text(
-//           label,
-//           style: TextStyle(
-//             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-//           ),
-//         ),
-//         Text(
-//           value,
-//           style: TextStyle(
-//             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-//           ),
-//         ),
-//       ],
-//     ),
-//   );
-// }
-
-
-// void _showMonthlyInvoice() {
-//   Navigator.push(
-//     context,
-//     MaterialPageRoute(
-//       builder: (context) => InvoicePembelianPage(
-//         selectedMonth: _selectedMonth,
-//         pembelianDocs: _pembelianDocs,
-//       ),
-//     ),
-//   );
-// }
-
+    );
+  }
 
 Widget _buildHeaderSection() {
   return Container(
@@ -1269,62 +1063,67 @@ void _showMonthPicker() {
 }
 @override
 Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: Color(0xFFF8FAFC),
-    appBar: PreferredSize(
-      preferredSize: Size.fromHeight(kToolbarHeight),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(16),
-            bottomRight: Radius.circular(16),
-          ),
-        ),
-        child: AppBar(
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          title: const Text(
-            'Pembelian',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
+    return Scaffold(
+      backgroundColor: Color(0xFFF8FAFC),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(kToolbarHeight),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF080C67), Color(0xFF1E23A7)],
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(16),
+              bottomRight: Radius.circular(16),
             ),
           ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+          child: AppBar(
+            centerTitle: true,
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            title: const Text(
+              'Pembelian',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 20,
+              ),
+            ),
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
         ),
       ),
-    ),
-    body: RefreshIndicator(
-      onRefresh: _refreshData,
-      child: SingleChildScrollView(
-        physics: AlwaysScrollableScrollPhysics(),
-        child: Column(
-          children: [
-            _buildHeaderSection(),
-            if (_isLoadingPembelian)
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
-                  ),
+      body: _isLoadingBusinessData
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _refreshData,
+              child: SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildHeaderSection(),
+                    if (_isLoadingPembelian)
+                      Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF080C67)),
+                          ),
+                        ),
+                      )
+                    else
+                      _buildDataTable(),
+                  ],
                 ),
-              )
-            else
-              _buildDataTable(),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
+              ),
+            ),
+    );
+  }
 }
