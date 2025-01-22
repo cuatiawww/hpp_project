@@ -1,6 +1,6 @@
-# Omseto
+# HPP+
 
-**Omseto** adalah aplikasi berbasis Flutter dengan integrasi Firebase yang dirancang khusus untuk membantu UMKM dalam menghitung **Harga Pokok Penjualan (HPP)** serta mengelola keuangan bulanan dan tahunan. Dengan antarmuka yang sederhana dan fitur yang canggih, Omseto hadir untuk mendukung pengusaha kecil agar lebih mudah dan efisien dalam mengelola keuangan bisnis mereka.
+**HPP+** adalah aplikasi berbasis Flutter dengan integrasi Firebase yang dirancang khusus untuk membantu UMKM dalam menghitung **Harga Pokok Penjualan (HPP)** serta mengelola keuangan bulanan dan tahunan. Dengan antarmuka yang sederhana dan fitur yang canggih, HPP+ hadir untuk mendukung pengusaha kecil agar lebih mudah dan efisien dalam mengelola keuangan bisnis mereka.
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## 🚀 Instalasi dan Penggunaan
 
-Ikuti langkah-langkah berikut untuk menjalankan Omseto di perangkat Anda:
+Ikuti langkah-langkah berikut untuk menjalankan HPP+ di perangkat Anda:
 
 1. **Clone Repository**
    ```bash
@@ -55,7 +55,7 @@ Ikuti langkah-langkah berikut untuk menjalankan Omseto di perangkat Anda:
 
 ## 👥 Tim Pengembang
 
-Omseto dikembangkan oleh tim berbakat yang terdiri dari:
+HPP+ dikembangkan oleh tim berbakat yang terdiri dari:
 
 - [**Azkhal Zavier**](https://www.linkedin.com/in/azkhal-zavier/) (Universitas Gunadama) - *Developer*
 - [**Fariz Surya Vigianto**](https://www.linkedin.com/in/farizsurya/) (Universitas Gunadama) - *UI/UX Designer*
@@ -96,7 +96,7 @@ Contoh hasil laporan yang dicetak ke format PDF.
 
 ## 🤝 Kontribusi
 
-Kami sangat terbuka bagi siapa saja yang ingin berkontribusi untuk mengembangkan Omseto lebih jauh. Jika Anda memiliki ide baru, menemukan bug, atau ingin memperbaiki sesuatu, kami ingin mendengar dari Anda!
+Kami sangat terbuka bagi siapa saja yang ingin berkontribusi untuk mengembangkan HPP+ lebih jauh. Jika Anda memiliki ide baru, menemukan bug, atau ingin memperbaiki sesuatu, kami ingin mendengar dari Anda!
 
 1. Fork repository ini.
 2. Buat branch baru untuk fitur/perbaikan Anda:
