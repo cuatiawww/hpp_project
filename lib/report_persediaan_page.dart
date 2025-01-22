@@ -115,7 +115,7 @@ Future<void> _generatePDF() async {
    final fontBold = await PdfGoogleFonts.nunitoBold();
 
    // Load logo image
-   final ByteData imageData = await rootBundle.load('assets/images/logo-apps.png'); 
+   final ByteData imageData = await rootBundle.load('assets/images/logo-splash.png'); 
    final Uint8List imageBytes = imageData.buffer.asUint8List();
 
    // Helper function untuk header

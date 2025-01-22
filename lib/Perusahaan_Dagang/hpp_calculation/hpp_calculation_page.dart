@@ -618,7 +618,7 @@ Future<void> _generateAndPrintPDF() async {
     final endDate = _hppData.endDate;
 
     // Menyiapkan header image sekali saja
-    final ByteData imageData = await rootBundle.load('assets/images/logo-apps.png');
+    final ByteData imageData = await rootBundle.load('assets/images/logo-splash.png');
     final Uint8List imageBytes = imageData.buffer.asUint8List();
 
     // Fetch data dari Firebase
